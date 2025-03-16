@@ -12,43 +12,37 @@ A React component library for seamless integration of Shogun authentication into
 - 📱 Responsive design
 - 🌍 TypeScript support
 
-## Installation
-
-```bash
-npm install @shogun/shogun-button-react
-# or
-yarn add @shogun/shogun-button-react
-# or
-pnpm add @shogun/shogun-button-react
-```
-
 ## Quick Start
 
 ```tsx
-import React from 'react';
-import { ShogunButton, ShogunButtonProvider, shogunConnector } from '@shogun/shogun-button-react';
-import '@shogun/shogun-button-react/styles.css';
+import React from "react";
+import {
+  ShogunButton,
+  ShogunButtonProvider,
+  shogunConnector,
+} from "@shogun/shogun-button-react";
+import "@shogun/shogun-button-react/styles.css";
 
 function App() {
   const { sdk, options } = shogunConnector({
-    appName: 'My App',
-    appDescription: 'An awesome app with Shogun authentication',
-    appUrl: 'https://myapp.com',
-    appIcon: 'https://myapp.com/icon.png',
+    appName: "My App",
+    appDescription: "An awesome app with Shogun authentication",
+    appUrl: "https://myapp.com",
+    appIcon: "https://myapp.com/icon.png",
   });
 
   return (
-    <ShogunButtonProvider 
+    <ShogunButtonProvider
       sdk={sdk}
       options={options}
       onLoginSuccess={(data) => {
-        console.log('Login successful!', data);
+        console.log("Login successful!", data);
       }}
       onSignupSuccess={(data) => {
-        console.log('Signup successful!', data);
+        console.log("Signup successful!", data);
       }}
       onError={(error) => {
-        console.error('An error occurred:', error);
+        console.error("An error occurred:", error);
       }}
     >
       <div>
@@ -70,13 +64,13 @@ The provider component that supplies Shogun context to your application.
 
 #### Props
 
-| Name | Type | Description |
-|------|------|-------------|
-| sdk | ShogunSDK | Shogun SDK instance created by shogunConnector |
-| options | Object | Configuration options |
-| onLoginSuccess | (data: AuthData) => void | Callback fired on successful login |
-| onSignupSuccess | (data: AuthData) => void | Callback fired on successful signup |
-| onError | (error: Error) => void | Callback fired when an error occurs |
+| Name            | Type                     | Description                                    |
+| --------------- | ------------------------ | ---------------------------------------------- |
+| sdk             | ShogunSDK                | Shogun SDK instance created by shogunConnector |
+| options         | Object                   | Configuration options                          |
+| onLoginSuccess  | (data: AuthData) => void | Callback fired on successful login             |
+| onSignupSuccess | (data: AuthData) => void | Callback fired on successful signup            |
+| onError         | (error: Error) => void   | Callback fired when an error occurs            |
 
 ### ShogunButton
 
@@ -105,7 +99,7 @@ You can customize the button appearance using `ShogunButton.Custom`:
 A hook to access Shogun authentication state and functions.
 
 ```tsx
-import { useShogun } from '@shogun/shogun-button-react';
+import { useShogun } from "@shogun/shogun-button-react";
 
 function Profile() {
   const {
@@ -115,7 +109,7 @@ function Profile() {
     signup,
     logout,
     connectWithMetaMask,
-    connectWithWebAuthn
+    connectWithWebAuthn,
   } = useShogun();
 
   return isAuthenticated ? (
@@ -141,7 +135,7 @@ interface ShogunConnectorOptions {
   appIcon?: string;
   enableMetaMask?: boolean;
   enableWebAuthn?: boolean;
-  theme?: 'light' | 'dark' | 'system';
+  theme?: "light" | "dark" | "system";
   customStyles?: ShogunStyleOptions;
 }
 ```
