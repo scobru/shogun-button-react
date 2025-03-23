@@ -2,16 +2,16 @@ import { ShogunCore } from "shogun-core";
 /**
  * Crea un connettore Shogun per l'autenticazione
  */
-function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask = true, showWebauthn = true, darkMode = true, websocketSecure = false, didRegistryAddress = null, providerUrl = null }) {
+function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask = true, showWebauthn = true, darkMode = true, websocketSecure = false, didRegistryAddress = null, providerUrl = null, peers = ["http://localhost:8765/gun"] }) {
     // Configurazione dell'SDK Shogun
     const config = {
         // Configurazione principale per gun 
-        peers: ["http://localhost:8765/gun"],
+        peers: peers,
         // Configurazione WebSocket
         websocket: websocketSecure, // Convertito in booleano
         // Sottoconfigurazioni opzionali per Gun
         gundb: {
-            peers: ["http://localhost:8765/gun"],
+            peers: peers,
             localStorage: false,
             radisk: false
         },
@@ -48,7 +48,11 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
             appIcon,
             showMetamask,
             showWebauthn,
-            darkMode
+            darkMode,
+            websocketSecure,
+            didRegistryAddress,
+            providerUrl,
+            peers
         }
     };
 }

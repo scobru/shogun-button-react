@@ -3,7 +3,7 @@ import { ShogunConnectorOptions } from "../types/connector-options";
 /**
  * Crea un connettore Shogun per l'autenticazione
  */
-declare function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask, showWebauthn, darkMode, websocketSecure, didRegistryAddress, providerUrl }: ShogunConnectorOptions): {
+declare function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask, showWebauthn, darkMode, websocketSecure, didRegistryAddress, providerUrl, peers }: ShogunConnectorOptions): {
     sdk: ShogunCore;
     options: {
         appName: string;
@@ -13,6 +13,10 @@ declare function shogunConnector({ appName, appDescription, appUrl, appIcon, sho
         showMetamask: boolean;
         showWebauthn: boolean;
         darkMode: boolean;
+        websocketSecure: boolean;
+        didRegistryAddress: string;
+        providerUrl: string;
+        peers: string[];
     };
 };
 export { shogunConnector };
