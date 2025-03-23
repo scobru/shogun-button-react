@@ -14,19 +14,20 @@ function shogunConnector({
   darkMode = true,
   websocketSecure = false,
   didRegistryAddress = null,
-  providerUrl = null
+  providerUrl = null,
+  peers = ["http://localhost:8765/gun"]
 }: ShogunConnectorOptions) {
   // Configurazione dell'SDK Shogun
   const config = {
     // Configurazione principale per gun 
-    peers: ["http://localhost:8765/gun"],
+    peers: peers,
 
     // Configurazione WebSocket
     websocket: websocketSecure, // Convertito in booleano
     
     // Sottoconfigurazioni opzionali per Gun
     gundb: {
-      peers: ["http://localhost:8765/gun"],
+      peers: peers,
       localStorage: false,
       radisk: false
     },
@@ -71,7 +72,11 @@ function shogunConnector({
       appIcon,
       showMetamask,
       showWebauthn,
-      darkMode
+      darkMode,
+      websocketSecure,
+      didRegistryAddress,
+      providerUrl,
+      peers
     }
   };
 }
