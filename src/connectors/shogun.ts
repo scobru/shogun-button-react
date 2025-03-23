@@ -1,5 +1,5 @@
 import { ShogunCore } from "shogun-core";
-import { ShogunConnectorOptions } from "../types";
+import { ShogunConnectorOptions } from "../types/connector-options";
 
 /**
  * Crea un connettore Shogun per l'autenticazione
@@ -13,6 +13,8 @@ function shogunConnector({
   showWebauthn = true,
   darkMode = true,
   websocketSecure = false,
+  didRegistryAddress = null,
+  providerUrl = null
 }: ShogunConnectorOptions) {
   // Configurazione dell'SDK Shogun
   const config = {
@@ -45,6 +47,15 @@ function shogunConnector({
       enabled: showWebauthn,
       rpName: appName || "Shogun App",
       rpId: typeof window !== 'undefined' ? window.location.hostname : ''
+    },
+    
+    // Provider Ethereum per operazioni blockchain
+    providerUrl: providerUrl,
+    
+    // Configurazione DID
+    did: {
+      registryAddress: didRegistryAddress || undefined,
+      network: "main" // Valore predefinito
     }
   };
 

@@ -14,6 +14,7 @@ const defaultContext = {
     userPub: null,
     username: null,
     wallet: null,
+    did: null,
     login: async () => ({}),
     signUp: async () => ({}),
     loginWithMetaMask: async () => ({}),
@@ -21,6 +22,10 @@ const defaultContext = {
     loginWithWebAuthn: async () => ({}),
     signUpWithWebAuthn: async () => ({}),
     logout: () => { },
+    getCurrentDID: async () => null,
+    resolveDID: async () => ({}),
+    authenticateWithDID: async () => ({}),
+    registerDIDOnChain: async () => ({}),
 };
 // Create context
 const ShogunContext = createContext(defaultContext);
@@ -32,6 +37,71 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
     const [userPub, setUserPub] = useState(null);
     const [username, setUsername] = useState(null);
     const [wallet, setWallet] = useState(null);
+    const [did, setDid] = useState(null);
+    // Metodi DID
+    const getCurrentDID = async () => {
+        try {
+            if (!sdk) {
+                throw new Error("SDK not initialized");
+            }
+            return await sdk.did.getCurrentUserDID();
+        }
+        catch (error) {
+            onError === null || onError === void 0 ? void 0 : onError(error.message || "Errore nel recupero del DID");
+            return null;
+        }
+    };
+    const resolveDID = async (did) => {
+        try {
+            if (!sdk) {
+                throw new Error("SDK not initialized");
+            }
+            return await sdk.did.resolveDID(did);
+        }
+        catch (error) {
+            onError === null || onError === void 0 ? void 0 : onError(error.message || "Errore nella risoluzione del DID");
+            return { success: false, error: error.message };
+        }
+    };
+    const authenticateWithDID = async (did, challenge) => {
+        try {
+            if (!sdk) {
+                throw new Error("SDK not initialized");
+            }
+            const result = await sdk.did.authenticateWithDID(did, challenge);
+            if (result.success) {
+                setIsLoggedIn(true);
+                setUserPub(result.userPub || "");
+                setUsername(result.username || null);
+                setDid(did);
+                setWallet(sdk.getMainWallet());
+                onLoginSuccess === null || onLoginSuccess === void 0 ? void 0 : onLoginSuccess({
+                    userPub: result.userPub || "",
+                    username: result.username || "",
+                    did: did,
+                    wallet: sdk.getMainWallet(),
+                    authMethod: "standard"
+                });
+            }
+            return result;
+        }
+        catch (error) {
+            onError === null || onError === void 0 ? void 0 : onError(error.message || "Errore nell'autenticazione con DID");
+            return { success: false, error: error.message };
+        }
+    };
+    const registerDIDOnChain = async (did, signer) => {
+        try {
+            if (!sdk) {
+                throw new Error("SDK not initialized");
+            }
+            return await sdk.did.registerDIDOnChain(did, signer);
+        }
+        catch (error) {
+            onError === null || onError === void 0 ? void 0 : onError(error.message || "Errore nella registrazione del DID sulla blockchain");
+            return { success: false, error: error.message };
+        }
+    };
     // Standard login
     const login = async (username, password) => {
         try {
@@ -41,11 +111,20 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                 setUserPub(result.userPub || '');
                 setUsername(username);
                 setWallet(result.wallet || null);
+                // Recupera il DID dell'utente dopo il login
+                if (result.did) {
+                    setDid(result.did);
+                }
+                else {
+                    const userDid = await sdk.did.getCurrentUserDID();
+                    setDid(userDid);
+                }
                 onLoginSuccess === null || onLoginSuccess === void 0 ? void 0 : onLoginSuccess({
                     userPub: result.userPub || '',
                     username,
                     password,
                     wallet: result.wallet,
+                    did: result.did || did,
                     authMethod: 'standard'
                 });
                 return result;
@@ -74,11 +153,16 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                 setUserPub(publicKey);
                 setUsername(username);
                 setWallet(extResult.wallet || null);
+                // Imposta il DID se presente nel risultato
+                if (extResult.did) {
+                    setDid(extResult.did);
+                }
                 onSignupSuccess === null || onSignupSuccess === void 0 ? void 0 : onSignupSuccess({
                     userPub: publicKey,
                     username,
                     password,
                     wallet: extResult.wallet,
+                    did: extResult.did,
                     authMethod: 'standard_signup'
                 });
                 return result;
@@ -124,10 +208,19 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                 setIsLoggedIn(true);
                 setUserPub(result.userPub || "");
                 setWallet(mainWallet);
+                // Recupera il DID dell'utente
+                if (result.did) {
+                    setDid(result.did);
+                }
+                else {
+                    const userDid = await sdk.did.getCurrentUserDID();
+                    setDid(userDid);
+                }
                 onLoginSuccess && onLoginSuccess({
                     userPub: result.userPub || "",
                     username: address,
                     wallet: mainWallet,
+                    did: result.did || did,
                     authMethod: "metamask_direct"
                 });
                 return result;
@@ -175,10 +268,15 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                 setIsLoggedIn(true);
                 setUserPub(result.userPub || "");
                 setWallet(mainWallet);
+                // Imposta il DID se presente nel risultato
+                if (result.did) {
+                    setDid(result.did);
+                }
                 onSignupSuccess && onSignupSuccess({
                     userPub: result.userPub || "",
                     username: address,
                     wallet: mainWallet,
+                    did: result.did,
                     authMethod: "metamask_signup"
                 });
                 return result;
@@ -209,10 +307,19 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                 setUserPub(result.userPub || "");
                 setUsername(username);
                 setWallet(mainWallet);
+                // Recupera il DID dell'utente
+                if (result.did) {
+                    setDid(result.did);
+                }
+                else {
+                    const userDid = await sdk.did.getCurrentUserDID();
+                    setDid(userDid);
+                }
                 onLoginSuccess && onLoginSuccess({
                     userPub: result.userPub || "",
                     username,
                     wallet: mainWallet,
+                    did: result.did || did,
                     authMethod: "webauthn"
                 });
                 return result;
@@ -242,10 +349,15 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                 setUserPub(result.userPub || "");
                 setUsername(username);
                 setWallet(mainWallet);
+                // Imposta il DID se presente nel risultato
+                if (result.did) {
+                    setDid(result.did);
+                }
                 onSignupSuccess && onSignupSuccess({
                     userPub: result.userPub || "",
                     username,
                     wallet: mainWallet,
+                    did: result.did,
                     authMethod: "webauthn"
                 });
                 return result;
@@ -266,6 +378,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
         setUserPub(null);
         setUsername(null);
         setWallet(null);
+        setDid(null);
     };
     // Context values
     const contextValue = {
@@ -275,20 +388,25 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
         userPub,
         username,
         wallet,
+        did,
         login,
         signUp,
         loginWithMetaMask,
         signUpWithMetaMask,
         loginWithWebAuthn,
         signUpWithWebAuthn,
-        logout
+        logout,
+        getCurrentDID,
+        resolveDID,
+        authenticateWithDID,
+        registerDIDOnChain
     };
     return (React.createElement(ShogunContext.Provider, { value: contextValue }, children));
 }
 // Component for Shogun login button
 export const ShogunButton = (() => {
     const Button = () => {
-        const { isLoggedIn, username, logout, login, signUp, loginWithMetaMask, signUpWithMetaMask, loginWithWebAuthn, signUpWithWebAuthn, sdk, options } = useShogun();
+        const { isLoggedIn, username, did, logout, login, signUp, loginWithMetaMask, signUpWithMetaMask, loginWithWebAuthn, signUpWithWebAuthn, registerDIDOnChain, sdk, options } = useShogun();
         // Form states
         const [showModal, setShowModal] = useState(false);
         const [formUsername, setFormUsername] = useState('');
@@ -297,12 +415,40 @@ export const ShogunButton = (() => {
         const [formMode, setFormMode] = useState('login');
         const [error, setError] = useState('');
         const [loading, setLoading] = useState(false);
+        const [showDid, setShowDid] = useState(false);
+        const handleRegisterDID = async () => {
+            if (!did)
+                return;
+            setLoading(true);
+            setError('');
+            try {
+                const result = await registerDIDOnChain(did);
+                if (result.success) {
+                    alert(`DID registrato con successo! TX: ${result.txHash}`);
+                }
+                else {
+                    setError(result.error || 'Errore nella registrazione del DID');
+                }
+            }
+            catch (err) {
+                setError(err.message || 'Errore nella registrazione del DID');
+            }
+            finally {
+                setLoading(false);
+            }
+        };
         // If already logged in, show only logout button
         if (isLoggedIn && username) {
-            return (React.createElement("button", { onClick: logout, className: "shogun-button shogun-logged-in" },
-                username.substring(0, 6),
-                "...",
-                username.substring(username.length - 4)));
+            return (React.createElement("div", { className: "shogun-logged-in-container" },
+                React.createElement("button", { onClick: () => setShowDid(!showDid), className: "shogun-button shogun-logged-in" },
+                    username.substring(0, 6),
+                    "...",
+                    username.substring(username.length - 4)),
+                showDid && did && (React.createElement("div", { className: "shogun-did-container" },
+                    React.createElement("p", { className: "shogun-did-text" }, did),
+                    React.createElement("button", { onClick: handleRegisterDID, className: "shogun-register-did-button", disabled: loading }, loading ? 'Registrazione...' : 'Registra DID on-chain'),
+                    error && React.createElement("p", { className: "shogun-error-message" }, error))),
+                React.createElement("button", { onClick: logout, className: "shogun-logout-button" }, "Logout")));
         }
         // Event handlers
         const handleStandardAuth = async (e) => {

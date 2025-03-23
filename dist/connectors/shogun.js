@@ -2,7 +2,7 @@ import { ShogunCore } from "shogun-core";
 /**
  * Crea un connettore Shogun per l'autenticazione
  */
-function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask = true, showWebauthn = true, darkMode = true, websocketSecure = false, }) {
+function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask = true, showWebauthn = true, darkMode = true, websocketSecure = false, didRegistryAddress = null, providerUrl = null }) {
     // Configurazione dell'SDK Shogun
     const config = {
         // Configurazione principale per gun 
@@ -28,6 +28,13 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
             enabled: showWebauthn,
             rpName: appName || "Shogun App",
             rpId: typeof window !== 'undefined' ? window.location.hostname : ''
+        },
+        // Provider Ethereum per operazioni blockchain
+        providerUrl: providerUrl,
+        // Configurazione DID
+        did: {
+            registryAddress: didRegistryAddress || undefined,
+            network: "main" // Valore predefinito
         }
     };
     // Inizializza l'SDK Shogun
