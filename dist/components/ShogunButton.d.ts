@@ -30,6 +30,7 @@ type ShogunContextType = {
     resolveDID: (did: string) => Promise<any>;
     authenticateWithDID: (did: string, challenge?: string) => Promise<any>;
     registerDIDOnChain: (did: string, signer?: ethers.Signer) => Promise<any>;
+    setProvider: (provider: any) => boolean;
 };
 export declare const useShogun: () => ShogunContextType;
 type ShogunButtonProviderProps = {

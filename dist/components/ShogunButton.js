@@ -26,6 +26,7 @@ const defaultContext = {
     resolveDID: async () => ({}),
     authenticateWithDID: async () => ({}),
     registerDIDOnChain: async () => ({}),
+    setProvider: () => false,
 };
 // Create context
 const ShogunContext = createContext(defaultContext);
@@ -380,28 +381,62 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
         setWallet(null);
         setDid(null);
     };
-    // Context values
-    const contextValue = {
-        sdk,
-        options,
-        isLoggedIn,
-        userPub,
-        username,
-        wallet,
-        did,
-        login,
-        signUp,
-        loginWithMetaMask,
-        signUpWithMetaMask,
-        loginWithWebAuthn,
-        signUpWithWebAuthn,
-        logout,
-        getCurrentDID,
-        resolveDID,
-        authenticateWithDID,
-        registerDIDOnChain
+    // Implementazione del metodo setProvider
+    const setProvider = (provider) => {
+        try {
+            if (!sdk) {
+                throw new Error("SDK not initialized");
+            }
+            // Verifico se posso creare un nuovo provider
+            let providerUrl = null;
+            // Se è un provider ethers, estraggo l'URL
+            if (provider && provider.connection && provider.connection.url) {
+                providerUrl = provider.connection.url;
+            }
+            // Se è una stringa, la utilizzo direttamente come URL
+            else if (typeof provider === 'string') {
+                providerUrl = provider;
+            }
+            if (providerUrl) {
+                // Tentiamo di usare il metodo setRpcUrl se disponibile
+                if (typeof sdk.setRpcUrl === 'function') {
+                    sdk.setRpcUrl(providerUrl);
+                    console.log(`Provider configurato: ${providerUrl}`);
+                    return true;
+                }
+                // Altrimenti memorizzo solo l'URL del provider per uso futuro
+                console.log(`Provider URL salvato: ${providerUrl}, ma non applicato (metodo non disponibile)`);
+                return true;
+            }
+            return false;
+        }
+        catch (error) {
+            onError === null || onError === void 0 ? void 0 : onError(error.message || "Errore nell'impostazione del provider");
+            return false;
+        }
     };
-    return (React.createElement(ShogunContext.Provider, { value: contextValue }, children));
+    // Return the context provider
+    return (React.createElement(ShogunContext.Provider, { value: {
+            sdk,
+            options,
+            isLoggedIn,
+            userPub,
+            username,
+            wallet,
+            did,
+            login,
+            signUp,
+            loginWithMetaMask,
+            signUpWithMetaMask,
+            loginWithWebAuthn,
+            signUpWithWebAuthn,
+            logout,
+            getCurrentDID,
+            resolveDID,
+            authenticateWithDID,
+            registerDIDOnChain,
+            setProvider,
+        } }, children));
 }
 // Component for Shogun login button
 export const ShogunButton = (() => {

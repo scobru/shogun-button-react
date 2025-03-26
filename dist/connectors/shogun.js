@@ -39,6 +39,8 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
     };
     // Inizializza l'SDK Shogun
     const sdk = new ShogunCore(config);
+    // Memorizziamo l'URL del provider corrente
+    let currentProviderUrl = providerUrl;
     return {
         sdk,
         options: {
@@ -53,6 +55,52 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
             didRegistryAddress,
             providerUrl,
             peers
+        },
+        // Aggiunti metodi helper per funzionalità comuni
+        setProvider: (provider) => {
+            // Metodo di compatibilità per i cambiamenti in shogun-core
+            // Questo metodo è utilizzato quando l'app cambia il provider RPC
+            try {
+                let newProviderUrl = null;
+                // Se è un provider ethers, estraiamo l'URL
+                if (provider && provider.connection && provider.connection.url) {
+                    newProviderUrl = provider.connection.url;
+                }
+                // Se è una stringa, utilizziamola direttamente come URL
+                else if (typeof provider === 'string') {
+                    newProviderUrl = provider;
+                }
+                if (newProviderUrl) {
+                    // Memorizziamo il nuovo URL del provider
+                    currentProviderUrl = newProviderUrl;
+                    // Proviamo a usare il metodo setRpcUrl se disponibile
+                    if (typeof sdk.setRpcUrl === 'function') {
+                        sdk.setRpcUrl(newProviderUrl);
+                        console.log(`Provider impostato tramite setRpcUrl: ${newProviderUrl}`);
+                    }
+                    else {
+                        // Fallback nel caso in cui il metodo non sia disponibile
+                        console.log(`Provider URL salvato: ${newProviderUrl}, ma non applicato (metodo non disponibile)`);
+                    }
+                    return true;
+                }
+                return false;
+            }
+            catch (error) {
+                console.error("Errore nell'impostazione del provider:", error);
+                return false;
+            }
+        },
+        // Metodo per ottenere l'URL del provider corrente
+        getCurrentProviderUrl: () => {
+            // Prima proviamo ad utilizzare il metodo di ShogunCore
+            if (typeof sdk.getRpcUrl === 'function') {
+                const url = sdk.getRpcUrl();
+                if (url)
+                    return url;
+            }
+            // Fallback alla variabile locale
+            return currentProviderUrl;
         }
     };
 }
