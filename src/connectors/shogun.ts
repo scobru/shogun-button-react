@@ -101,13 +101,14 @@ function shogunConnector({
           // Memorizziamo il nuovo URL del provider
           currentProviderUrl = newProviderUrl;
           
-          // Proviamo a usare il metodo setRpcUrl se disponibile
+          // Utilizziamo il metodo setRpcUrl di ShogunCore
           if (typeof sdk.setRpcUrl === 'function') {
-            sdk.setRpcUrl(newProviderUrl);
-            console.log(`Provider impostato tramite setRpcUrl: ${newProviderUrl}`);
+            const result = sdk.setRpcUrl(newProviderUrl);
+            console.log(`Provider RPC aggiornato: ${newProviderUrl}, risultato: ${result}`);
+            return result;
           } else {
             // Fallback nel caso in cui il metodo non sia disponibile
-            console.log(`Provider URL salvato: ${newProviderUrl}, ma non applicato (metodo non disponibile)`);
+            console.log(`Provider URL salvato: ${newProviderUrl}, ma non applicato (metodo setRpcUrl non disponibile)`);
           }
           
           return true;
