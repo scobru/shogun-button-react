@@ -1,6 +1,7 @@
 import { ShogunButton, ShogunButtonProvider, useShogun } from './components/ShogunButton';
 import { shogunConnector } from './connectors/shogun';
-import { ShogunConnectorResult } from './types/connector-options';
-export { ShogunButton, ShogunButtonProvider, useShogun, shogunConnector };
+import { ShogunConnectorOptions, ShogunConnectorResult } from './types/connector-options';
+export { ShogunButton, ShogunButtonProvider, useShogun };
+export { shogunConnector };
 export * from './types';
-export { ShogunConnectorResult };
+export { ShogunConnectorOptions, ShogunConnectorResult };

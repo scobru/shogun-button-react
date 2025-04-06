@@ -1,24 +1,22 @@
 import { ShogunCore } from "shogun-core";
 /**
- * Crea un connettore Shogun per l'autenticazione
+ * Creates a Shogun connector for authentication
  */
-function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask = true, showWebauthn = true, darkMode = true, websocketSecure = false, didRegistryAddress = null, providerUrl = null, peers = ["http://localhost:8765/gun"] }) {
+function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask = true, showWebauthn = true, darkMode = true, websocketSecure = false, didRegistryAddress = null, providerUrl = null, peers = [""], logging, timeouts, authToken }) {
     // Configurazione dell'SDK Shogun
     const config = {
-        // Configurazione principale per gun 
-        peers: peers,
-        // Configurazione WebSocket
-        websocket: websocketSecure, // Convertito in booleano
-        // Sottoconfigurazioni opzionali per Gun
+        // GunDB configuration
         gundb: {
             peers: peers,
+            websocket: websocketSecure,
             localStorage: false,
-            radisk: false
+            radisk: false,
+            multicast: false,
+            axe: false,
+            authToken: authToken
         },
-        // Configurazione dello storage
-        storage: {
-            prefix: appName || "shogun",
-        },
+        // Provider Ethereum per operazioni blockchain
+        providerUrl: providerUrl,
         // Configurazione di MetaMask
         metamask: {
             enabled: showMetamask
@@ -29,12 +27,31 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
             rpName: appName || "Shogun App",
             rpId: typeof window !== 'undefined' ? window.location.hostname : ''
         },
-        // Provider Ethereum per operazioni blockchain
-        providerUrl: providerUrl,
         // Configurazione DID
         did: {
+            enabled: true,
             registryAddress: didRegistryAddress || undefined,
             network: "main" // Valore predefinito
+        },
+        // Wallet manager configuration
+        walletManager: {
+            enabled: true,
+            balanceCacheTTL: 30000 // Default 30 seconds
+        },
+        // Enable stealth mode if available
+        stealth: {
+            enabled: true
+        },
+        // Logging configuration
+        logging: logging || {
+            enabled: true,
+            level: "info"
+        },
+        // Timeouts configuration
+        timeouts: timeouts || {
+            login: 15000,
+            signup: 20000,
+            operation: 30000
         }
     };
     // Inizializza l'SDK Shogun
@@ -54,7 +71,10 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
             websocketSecure,
             didRegistryAddress,
             providerUrl,
-            peers
+            peers,
+            logging,
+            timeouts,
+            authToken
         },
         // Aggiunti metodi helper per funzionalità comuni
         setProvider: (provider) => {
@@ -73,14 +93,15 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
                 if (newProviderUrl) {
                     // Memorizziamo il nuovo URL del provider
                     currentProviderUrl = newProviderUrl;
-                    // Proviamo a usare il metodo setRpcUrl se disponibile
+                    // Utilizziamo il metodo setRpcUrl di ShogunCore
                     if (typeof sdk.setRpcUrl === 'function') {
-                        sdk.setRpcUrl(newProviderUrl);
-                        console.log(`Provider impostato tramite setRpcUrl: ${newProviderUrl}`);
+                        const result = sdk.setRpcUrl(newProviderUrl);
+                        console.log(`Provider RPC aggiornato: ${newProviderUrl}, risultato: ${result}`);
+                        return result;
                     }
                     else {
                         // Fallback nel caso in cui il metodo non sia disponibile
-                        console.log(`Provider URL salvato: ${newProviderUrl}, ma non applicato (metodo non disponibile)`);
+                        console.log(`Provider URL salvato: ${newProviderUrl}, ma non applicato (metodo setRpcUrl non disponibile)`);
                     }
                     return true;
                 }

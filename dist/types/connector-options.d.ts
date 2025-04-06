@@ -11,6 +11,16 @@ export interface ShogunConnectorOptions {
     didRegistryAddress?: string | null;
     providerUrl?: string | null;
     peers?: string[];
+    authToken?: string;
+    logging?: {
+        enabled?: boolean;
+        level?: "error" | "warning" | "info" | "debug";
+    };
+    timeouts?: {
+        login?: number;
+        signup?: number;
+        operation?: number;
+    };
 }
 export interface ShogunConnectorResult {
     sdk: ShogunCore;

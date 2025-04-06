@@ -2,7 +2,7 @@ import { ShogunCore } from "shogun-core";
 import { ShogunConnectorOptions, ShogunConnectorResult } from "../types/connector-options";
 
 /**
- * Crea un connettore Shogun per l'autenticazione
+ * Creates a Shogun connector for authentication
  */
 function shogunConnector({
   appName,
@@ -15,28 +15,26 @@ function shogunConnector({
   websocketSecure = false,
   didRegistryAddress = null,
   providerUrl = null,
-  peers = ["http://localhost:8765/gun"]
+  peers = [""],
+  logging,
+  timeouts,
+  authToken
 }: ShogunConnectorOptions): ShogunConnectorResult {
   // Configurazione dell'SDK Shogun
   const config = {
-    // Configurazione principale per gun 
-    peers: peers,
-
-    // Configurazione WebSocket
-    websocket: websocketSecure, // Convertito in booleano
-    
-    // Sottoconfigurazioni opzionali per Gun
+    // GunDB configuration
     gundb: {
       peers: peers,
+      websocket: websocketSecure,
       localStorage: false,
-      radisk: false
+      radisk: false,
+      multicast: false,
+      axe: false,
+      authToken: authToken
     },
     
-    // Configurazione dello storage
-    storage: {
-      prefix: appName || "shogun",
-    },
-    
+    // Provider Ethereum per operazioni blockchain
+    providerUrl: providerUrl,
     
     // Configurazione di MetaMask
     metamask: {
@@ -50,13 +48,35 @@ function shogunConnector({
       rpId: typeof window !== 'undefined' ? window.location.hostname : ''
     },
     
-    // Provider Ethereum per operazioni blockchain
-    providerUrl: providerUrl,
-    
     // Configurazione DID
     did: {
+      enabled: true,
       registryAddress: didRegistryAddress || undefined,
       network: "main" // Valore predefinito
+    },
+
+    // Wallet manager configuration
+    walletManager: {
+      enabled: true,
+      balanceCacheTTL: 30000 // Default 30 seconds
+    },
+
+    // Enable stealth mode if available
+    stealth: {
+      enabled: true
+    },
+
+    // Logging configuration
+    logging: logging || {
+      enabled: true,
+      level: "info"
+    },
+
+    // Timeouts configuration
+    timeouts: timeouts || {
+      login: 15000,
+      signup: 20000,
+      operation: 30000
     }
   };
 
@@ -79,7 +99,10 @@ function shogunConnector({
       websocketSecure,
       didRegistryAddress,
       providerUrl,
-      peers
+      peers,
+      logging,
+      timeouts,
+      authToken
     },
     // Aggiunti metodi helper per funzionalità comuni
     setProvider: (provider: any) => {

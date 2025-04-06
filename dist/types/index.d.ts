@@ -1,13 +1,4 @@
-export interface ShogunConnectorOptions {
-    appName: string;
-    appDescription?: string;
-    appUrl?: string;
-    appIcon?: string;
-    showMetamask?: boolean;
-    showWebauthn?: boolean;
-    darkMode?: boolean;
-    websocketSecure?: boolean;
-    didRegistryAddress?: string | null;
-    providerUrl?: string | null;
-    peers?: string[];
-}
+export * from './connector-options';
+import { AuthResult, SignUpResult, WalletInfo } from 'shogun-core';
+export { AuthResult, SignUpResult, WalletInfo };
+export * from './shogun-core.d';
