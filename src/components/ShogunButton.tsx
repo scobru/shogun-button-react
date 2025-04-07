@@ -1,7 +1,7 @@
 import React, { useContext, useState, createContext } from 'react';
 import { ethers } from 'ethers';
 import { ShogunCore } from 'shogun-core';
-import '../types'; // Import type file to extend definitions
+import '../types.js'; // Import type file to extend definitions
 
 import '../styles/index.css';
 
