@@ -586,7 +586,7 @@ interface CustomButtonProps {
 }
 
 // Definition of ShogunButton component type with Custom properties
-interface ShogunButtonComponent extends React.FC {
+interface ShogunButtonComponent extends React.FC<{}> {
   Custom: React.FC<CustomButtonProps>;
 }
 
