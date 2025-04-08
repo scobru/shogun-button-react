@@ -6,7 +6,7 @@
     "declarationDir": "dist",
     "jsx": "react",
     "outDir": "dist",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -17,7 +17,9 @@
     "paths": {
       "shogun-core": ["./node_modules/shogun-core", "./src/types/shogun-sdk.d.ts"]
     },
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": false
   },
   "exclude": ["node_modules"],
   "include": ["src"]

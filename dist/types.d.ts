@@ -1,4 +1,4 @@
-export * from './types/connector-options';
+export * from './types/connector-options.js';
 export type ShogunConnectorOptions = {
     appName: string;
     appDescription?: string;
