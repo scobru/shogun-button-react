@@ -18,7 +18,6 @@
       "shogun-core": ["./node_modules/shogun-core", "./src/types/shogun-sdk.d.ts"]
     },
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
     "noEmit": false
   },
   "exclude": ["node_modules"],
