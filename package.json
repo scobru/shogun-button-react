@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "files": [
     "dist",
-    "styles.css"
+    "src/styles/index.css"
   ],
   "keywords": [
     "shogun",
@@ -20,14 +20,15 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
-    "./styles.css": "./dist/index.css"
+    "./styles.css": "./src/styles/index.css"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/styles/index.css dist/styles/",
     "dev": "tsc --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "ethers": "^6.13.5",
