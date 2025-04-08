@@ -20,12 +20,12 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
-    "./styles.css": "./src/styles/index.css"
+    "./styles.css": "./dist/index.css"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc && copyfiles -u 1 \"src/styles/index.css\" dist/styles",
+    "build": "tsc && copyfiles -u 1 \"src/styles/index.css\" dist",
     "dev": "tsc --watch",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "npm run build"

@@ -2,7 +2,7 @@ import React from 'react';
 import { ethers } from 'ethers';
 import { ShogunCore } from 'shogun-core';
 import '../types.js';
-import '../styles/index.css';
+import '../index.css';
 export declare const useShogun: () => any;
 type ShogunButtonProviderProps = {
     children: React.ReactNode;
