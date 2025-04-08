@@ -1,6 +1,6 @@
 import React, { useContext, useState, createContext } from 'react';
 import '../types.js'; // Import type file to extend definitions
-import '../index.css';
+import '../styles/index.css';
 // Default context
 const defaultContext = {
     sdk: null,
