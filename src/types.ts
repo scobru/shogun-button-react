@@ -1,5 +1,5 @@
 // Re-export connector options from the connector-options.ts file
-export * from './types/connector-options';
+export * from './types/connector-options.js';
 
 // Tipo per le opzioni di configurazione del connettore Shogun
 // Deprecated - use ShogunConnectorOptions from connector-options.ts
