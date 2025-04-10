@@ -13,9 +13,11 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     "strict": false,
+    "preserveSymlinks": true,
     "typeRoots": ["./node_modules/@types", "./src/types"],
     "paths": {
-      "shogun-core": ["./node_modules/shogun-core", "./src/types/shogun-sdk.d.ts"]
+      "shogun-core": ["./node_modules/shogun-core", "./src/types/shogun-sdk.d.ts"],
+      "react": ["./node_modules/react", "../shogun-music-app/node_modules/react"]
     },
     "resolveJsonModule": true,
     "noEmit": false

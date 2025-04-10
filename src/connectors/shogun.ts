@@ -69,7 +69,7 @@ function shogunConnector({
     // Logging configuration
     logging: logging || {
       enabled: true,
-      level: "info"
+      level: "warning"
     },
 
     // Timeouts configuration
@@ -77,6 +77,11 @@ function shogunConnector({
       login: 15000,
       signup: 20000,
       operation: 30000
+    },
+    
+    // Plugin configuration
+    plugins: {
+      autoRegister: [] // Array vuoto di ShogunPlugin per la registrazione automatica
     }
   };
 
@@ -104,7 +109,7 @@ function shogunConnector({
       timeouts,
       authToken
     },
-    // Aggiunti metodi helper per funzionalità comuni
+    // Metodi helper per funzionalità comuni
     setProvider: (provider: any) => {
       // Metodo di compatibilità per i cambiamenti in shogun-core
       // Questo metodo è utilizzato quando l'app cambia il provider RPC
@@ -152,6 +157,31 @@ function shogunConnector({
       }
       // Fallback alla variabile locale
       return currentProviderUrl;
+    },
+    // Aggiunti metodi per gestire i plugin
+    registerPlugin: (plugin: any) => {
+      try {
+        if (typeof sdk.register === 'function') {
+          sdk.register(plugin);
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error("Errore nella registrazione del plugin:", error);
+        return false;
+      }
+    },
+    hasPlugin: (name: string) => {
+      try {
+        if (typeof sdk.hasPlugin === 'function') {
+          return sdk.hasPlugin(name);
+        }
+        // Fallback per compatibilità con versioni precedenti
+        return false;
+      } catch (error) {
+        console.error("Errore nella verifica del plugin:", error);
+        return false;
+      }
     }
   };
 }

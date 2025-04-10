@@ -1,4 +1,4 @@
-import { ShogunCore, ShogunSDKConfig } from "shogun-core";
+import { ShogunCore } from "shogun-core";
 
 export interface ShogunConnectorOptions {
   // App information
@@ -21,8 +21,8 @@ export interface ShogunConnectorOptions {
   
   // Advanced options (directly mapped to ShogunSDKConfig)
   logging?: {
-    enabled?: boolean;
-    level?: "error" | "warning" | "info" | "debug";
+    enabled: boolean;
+    level: "error" | "warning" | "info" | "debug";
   };
   timeouts?: {
     login?: number;
@@ -39,4 +39,8 @@ export interface ShogunConnectorResult {
   // Helper methods
   setProvider: (provider: any) => boolean;
   getCurrentProviderUrl: () => string | null;
+  
+  // Nuovi metodi per la gestione dei plugin
+  registerPlugin: (plugin: any) => boolean;
+  hasPlugin: (name: string) => boolean;
 } 

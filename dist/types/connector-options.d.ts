@@ -13,8 +13,8 @@ export interface ShogunConnectorOptions {
     peers?: string[];
     authToken?: string;
     logging?: {
-        enabled?: boolean;
-        level?: "error" | "warning" | "info" | "debug";
+        enabled: boolean;
+        level: "error" | "warning" | "info" | "debug";
     };
     timeouts?: {
         login?: number;
@@ -27,4 +27,6 @@ export interface ShogunConnectorResult {
     options: ShogunConnectorOptions;
     setProvider: (provider: any) => boolean;
     getCurrentProviderUrl: () => string | null;
+    registerPlugin: (plugin: any) => boolean;
+    hasPlugin: (name: string) => boolean;
 }
