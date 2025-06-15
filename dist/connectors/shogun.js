@@ -2,7 +2,7 @@ import { ShogunCore } from "shogun-core";
 /**
  * Creates a Shogun connector for authentication
  */
-function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask = true, showWebauthn = true, darkMode = true, websocketSecure = false, didRegistryAddress = null, providerUrl = null, peers = [""], logging, timeouts, authToken }) {
+function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask = true, showWebauthn = true, showNostr = true, showOauth = true, darkMode = true, websocketSecure = false, providerUrl = null, peers = [""], logging, timeouts, authToken, oauth, gunInstance }) {
     // Configurazione dell'SDK Shogun
     const config = {
         // GunDB configuration
@@ -21,26 +21,21 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
         metamask: {
             enabled: showMetamask
         },
+        web3: {
+            enabled: showMetamask
+        },
         // Configurazione di WebAuthn
         webauthn: {
             enabled: showWebauthn,
             rpName: appName || "Shogun App",
             rpId: typeof window !== 'undefined' ? window.location.hostname : ''
         },
-        // Configurazione DID
-        did: {
-            enabled: true,
-            registryAddress: didRegistryAddress || undefined,
-            network: "main" // Valore predefinito
+        nostr: {
+            enabled: showNostr
         },
-        // Wallet manager configuration
-        walletManager: {
-            enabled: true,
-            balanceCacheTTL: 30000 // Default 30 seconds
-        },
-        // Enable stealth mode if available
-        stealth: {
-            enabled: true
+        oauth: {
+            enabled: showOauth,
+            providers: oauth === null || oauth === void 0 ? void 0 : oauth.providers
         },
         // Logging configuration
         logging: logging || {
@@ -56,7 +51,8 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
         // Plugin configuration
         plugins: {
             autoRegister: [] // Array vuoto di ShogunPlugin per la registrazione automatica
-        }
+        },
+        gunInstance: gunInstance
     };
     // Inizializza l'SDK Shogun
     const sdk = new ShogunCore(config);
@@ -71,14 +67,17 @@ function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamas
             appIcon,
             showMetamask,
             showWebauthn,
+            showNostr,
+            showOauth,
             darkMode,
             websocketSecure,
-            didRegistryAddress,
             providerUrl,
             peers,
             logging,
             timeouts,
-            authToken
+            authToken,
+            oauth,
+            gunInstance
         },
         // Metodi helper per funzionalità comuni
         setProvider: (provider) => {

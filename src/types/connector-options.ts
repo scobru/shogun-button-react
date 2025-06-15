@@ -1,4 +1,4 @@
-import { ShogunCore } from "shogun-core";
+import { ShogunCore, IGunInstance } from "shogun-core";
 
 export interface ShogunConnectorOptions {
   // App information
@@ -10,14 +10,16 @@ export interface ShogunConnectorOptions {
   // Feature toggles
   showMetamask?: boolean;
   showWebauthn?: boolean;
+  showNostr?: boolean;
+  showOauth?: boolean;
   darkMode?: boolean;
   
   // Network configuration
   websocketSecure?: boolean;
-  didRegistryAddress?: string | null;
   providerUrl?: string | null;
   peers?: string[];
   authToken?: string;
+  gunInstance?: IGunInstance<any>;
   
   // Advanced options (directly mapped to ShogunSDKConfig)
   logging?: {
@@ -29,6 +31,13 @@ export interface ShogunConnectorOptions {
     signup?: number;
     operation?: number;
   };
+  oauth?: {
+    providers: Record<string, {
+      clientId: string;
+      clientSecret?: string;
+      redirectUri?: string;
+    }>
+  }
 }
 
 // Definisco un nuovo tipo per l'oggetto ritornato dal connettore

@@ -1,4 +1,4 @@
 export * from './connector-options';
-import { AuthResult, SignUpResult, WalletInfo } from 'shogun-core';
-export { AuthResult, SignUpResult, WalletInfo };
+import { AuthResult, SignUpResult } from 'shogun-core';
+export { AuthResult, SignUpResult };
 export * from './shogun-core.d';

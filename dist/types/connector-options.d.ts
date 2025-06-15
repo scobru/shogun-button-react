@@ -1,4 +1,4 @@
-import { ShogunCore } from "shogun-core";
+import { ShogunCore, IGunInstance } from "shogun-core";
 export interface ShogunConnectorOptions {
     appName: string;
     appDescription?: string;
@@ -6,12 +6,14 @@ export interface ShogunConnectorOptions {
     appIcon?: string;
     showMetamask?: boolean;
     showWebauthn?: boolean;
+    showNostr?: boolean;
+    showOauth?: boolean;
     darkMode?: boolean;
     websocketSecure?: boolean;
-    didRegistryAddress?: string | null;
     providerUrl?: string | null;
     peers?: string[];
     authToken?: string;
+    gunInstance?: IGunInstance<any>;
     logging?: {
         enabled: boolean;
         level: "error" | "warning" | "info" | "debug";
@@ -20,6 +22,13 @@ export interface ShogunConnectorOptions {
         login?: number;
         signup?: number;
         operation?: number;
+    };
+    oauth?: {
+        providers: Record<string, {
+            clientId: string;
+            clientSecret?: string;
+            redirectUri?: string;
+        }>;
     };
 }
 export interface ShogunConnectorResult {

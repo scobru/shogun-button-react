@@ -2,5 +2,5 @@ import { ShogunConnectorOptions, ShogunConnectorResult } from "../types/connecto
 /**
  * Creates a Shogun connector for authentication
  */
-declare function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask, showWebauthn, darkMode, websocketSecure, didRegistryAddress, providerUrl, peers, logging, timeouts, authToken }: ShogunConnectorOptions): ShogunConnectorResult;
+declare function shogunConnector({ appName, appDescription, appUrl, appIcon, showMetamask, showWebauthn, showNostr, showOauth, darkMode, websocketSecure, providerUrl, peers, logging, timeouts, authToken, oauth, gunInstance }: ShogunConnectorOptions): ShogunConnectorResult;
 export { shogunConnector };
