@@ -422,10 +422,17 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [formUsername, setFormUsername] = useState("");
     const [formPassword, setFormPassword] = useState("");
     const [formPasswordConfirm, setFormPasswordConfirm] = useState("");
+    const [formHint, setFormHint] = useState("");
+    const [formSecurityQuestion] = useState("What is your favorite color?"); // Hardcoded for now
+    const [formSecurityAnswer, setFormSecurityAnswer] = useState("");
     const [formMode, setFormMode] = useState<"login" | "signup">("login");
+    const [authView, setAuthView] = useState<
+      "options" | "password" | "recover" | "showHint"
+    >("options");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [recoveredHint, setRecoveredHint] = useState("");
 
     // If already logged in, show only logout button
     if (isLoggedIn && username) {
@@ -445,8 +452,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                   : username
                 }
               </span>
-            </button>
-            
+          </button>
+
             {dropdownOpen && (
               <div className="shogun-dropdown-menu">
                 <div className="shogun-dropdown-header">
@@ -479,6 +486,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setLoading(true);
 
       try {
+        // Use formMode to determine whether to call login or signUp
         const action = formMode === "login" ? login : signUp;
         const result = await action(method, ...args);
 
@@ -496,9 +504,41 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      handleAuth("password", formUsername, formPassword, formPasswordConfirm);
+      setError("");
+      setLoading(true);
+
+      try {
+        if (formMode === "signup") {
+          const result = await signUp(
+            "password",
+            formUsername,
+            formPassword,
+            formPasswordConfirm,
+          );
+          if (result && result.success) {
+            if (sdk?.gundb) {
+              await sdk.gundb.setPasswordHint(
+                formUsername,
+                formPassword,
+                formHint,
+                [formSecurityQuestion],
+                [formSecurityAnswer],
+              );
+            }
+            setModalIsOpen(false);
+          } else if (result && result.error) {
+            setError(result.error);
+          }
+        } else {
+          await handleAuth("password", formUsername, formPassword);
+        }
+      } catch (e: any) {
+        setError(e.message || "An unexpected error occurred.");
+      } finally {
+        setLoading(false);
+      }
     };
 
     const handleWeb3Auth = () => handleAuth("web3");
@@ -519,16 +559,43 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     const handleOAuth = (provider: string) => handleAuth("oauth", provider);
 
+    const handleRecover = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        if (!sdk?.gundb) {
+          throw new Error("SDK not ready");
+        }
+        const result = await sdk.gundb.forgotPassword(formUsername, [
+          formSecurityAnswer,
+        ]);
+        if (result.success && result.hint) {
+          setRecoveredHint(result.hint);
+          setAuthView("showHint");
+        } else {
+          setError(result.error || "Could not recover hint.");
+        }
+      } catch (e: any) {
+        setError(e.message || "An unexpected error occurred.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const resetForm = () => {
       setFormUsername("");
       setFormPassword("");
       setFormPasswordConfirm("");
+      setFormHint("");
+      setFormSecurityAnswer("");
       setError("");
       setLoading(false);
+      setAuthView("options");
     };
 
     const openModal = () => {
       resetForm();
+      setAuthView("options");
       setModalIsOpen(true);
     };
 
@@ -538,152 +605,357 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     const toggleMode = () => {
       resetForm();
+      setAuthView("password");
       setFormMode((prev) => (prev === "login" ? "signup" : "login"));
     };
+
+    // Add buttons for both login and signup for alternative auth methods
+    const renderAuthOptions = () => (
+      <div className="shogun-auth-options">
+        {options.showMetamask !== false && sdk?.hasPlugin("web3") && (
+          <div className="shogun-auth-option-group">
+            <button
+              type="button"
+              className="shogun-auth-option-button"
+              onClick={() => handleAuth("web3")}
+              disabled={loading}
+            >
+              <WalletIcon />
+              {formMode === "login" ? "Login with MetaMask" : "Signup with MetaMask"}
+            </button>
+          </div>
+        )}
+
+        {options.showWebauthn !== false && sdk?.hasPlugin("webauthn") && (
+          <div className="shogun-auth-option-group">
+            <button
+              type="button"
+              className="shogun-auth-option-button"
+              onClick={() => {
+                if (!formUsername) {
+                  setError("Username required for WebAuthn");
+                  return;
+                }
+                handleAuth("webauthn", formUsername);
+              }}
+              disabled={loading}
+            >
+              <WebAuthnIcon />
+              {formMode === "login" ? "Login with WebAuthn" : "Signup with WebAuthn"}
+            </button>
+          </div>
+        )}
+
+        {options.showNostr !== false && sdk?.hasPlugin("nostr") && (
+          <div className="shogun-auth-option-group">
+            <button
+              type="button"
+              className="shogun-auth-option-button"
+              onClick={() => handleAuth("nostr")}
+              disabled={loading}
+            >
+              <NostrIcon />
+              {formMode === "login" ? "Login with Nostr" : "Signup with Nostr"}
+            </button>
+          </div>
+        )}
+
+        {options.showOauth !== false && sdk?.hasPlugin("oauth") && (
+          <div className="shogun-auth-option-group">
+            <button
+              type="button"
+              className="shogun-auth-option-button shogun-google-button"
+              onClick={() => handleAuth("oauth", "google")}
+              disabled={loading}
+            >
+              <GoogleIcon />
+              {formMode === "login" ? "Login with Google" : "Signup with Google"}
+            </button>
+          </div>
+        )}
+
+        <div className="shogun-divider">
+          <span>or</span>
+        </div>
+
+        <button
+          type="button"
+          className="shogun-auth-option-button"
+          onClick={() => setAuthView("password")}
+          disabled={loading}
+        >
+          <LockIcon />
+          {formMode === "login" ? "Login with Password" : "Signup with Password"}
+        </button>
+      </div>
+    );
+
+    const renderPasswordForm = () => (
+      <form onSubmit={handleSubmit} className="shogun-auth-form">
+        <div className="shogun-form-group">
+          <label htmlFor="username">
+            <UserIcon />
+            <span>Username</span>
+          </label>
+          <input
+            type="text"
+            id="username"
+            value={formUsername}
+            onChange={(e) => setFormUsername(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your username"
+          />
+        </div>
+        <div className="shogun-form-group">
+          <label htmlFor="password">
+            <LockIcon />
+            <span>Password</span>
+          </label>
+          <input
+            type="password"
+            id="password"
+            value={formPassword}
+            onChange={(e) => setFormPassword(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your password"
+          />
+        </div>
+        {formMode === "signup" && (
+          <>
+            <div className="shogun-form-group">
+              <label htmlFor="passwordConfirm">
+                <KeyIcon />
+                <span>Confirm Password</span>
+              </label>
+              <input
+                type="password"
+                id="passwordConfirm"
+                value={formPasswordConfirm}
+                onChange={(e) => setFormPasswordConfirm(e.target.value)}
+                disabled={loading}
+                required
+                placeholder="Confirm your password"
+              />
+            </div>
+            <div className="shogun-form-group">
+              <label htmlFor="hint">
+                <UserIcon />
+                <span>Password Hint</span>
+              </label>
+              <input
+                type="text"
+                id="hint"
+                value={formHint}
+                onChange={(e) => setFormHint(e.target.value)}
+                disabled={loading}
+                required
+                placeholder="Enter your password hint"
+              />
+            </div>
+            <div className="shogun-form-group">
+              <label htmlFor="securityQuestion">
+                <UserIcon />
+                <span>Security Question</span>
+              </label>
+              <input
+                type="text"
+                id="securityQuestion"
+                value={formSecurityQuestion}
+                disabled={true}
+              />
+            </div>
+            <div className="shogun-form-group">
+              <label htmlFor="securityAnswer">
+                <UserIcon />
+                <span>Security Answer</span>
+              </label>
+              <input
+                type="text"
+                id="securityAnswer"
+                value={formSecurityAnswer}
+                onChange={(e) => setFormSecurityAnswer(e.target.value)}
+                disabled={loading}
+                required
+                placeholder="Enter your security answer"
+              />
+            </div>
+          </>
+        )}
+        <button
+          type="submit"
+          className="shogun-submit-button"
+          disabled={loading}
+        >
+          {loading
+            ? "Processing..."
+            : formMode === "login"
+              ? "Sign In"
+              : "Create Account"}
+        </button>
+        <div className="shogun-form-footer">
+          <button
+            type="button"
+            className="shogun-toggle-mode shogun-prominent-toggle"
+            onClick={toggleMode}
+            disabled={loading}
+          >
+            {formMode === "login"
+              ? "Don't have an account? Sign up"
+              : "Already have an account? Log in"}
+          </button>
+          {formMode === "login" && (
+            <button
+              type="button"
+              className="shogun-toggle-mode"
+              onClick={() => setAuthView("recover")}
+              disabled={loading}
+            >
+              Forgot password?
+            </button>
+          )}
+        </div>
+      </form>
+    );
+
+    const renderRecoveryForm = () => (
+      <div className="shogun-auth-form">
+        <div className="shogun-form-group">
+          <label htmlFor="username">
+            <UserIcon />
+            <span>Username</span>
+          </label>
+          <input
+            type="text"
+            id="username"
+            value={formUsername}
+            onChange={(e) => setFormUsername(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your username"
+          />
+        </div>
+        <div className="shogun-form-group">
+          <label>Security Question</label>
+          <p>{formSecurityQuestion}</p>
+        </div>
+        <div className="shogun-form-group">
+          <label htmlFor="securityAnswer">
+            <KeyIcon />
+            <span>Answer</span>
+          </label>
+          <input
+            type="text"
+            id="securityAnswer"
+            value={formSecurityAnswer}
+            onChange={(e) => setFormSecurityAnswer(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your answer"
+          />
+        </div>
+        <button
+          type="button"
+          className="shogun-submit-button"
+          onClick={handleRecover}
+          disabled={loading}
+        >
+          {loading ? "Recovering..." : "Get Hint"}
+        </button>
+        <div className="shogun-form-footer">
+          <button
+            className="shogun-toggle-mode"
+            onClick={() => setAuthView("password")}
+            disabled={loading}
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+
+    const renderHint = () => (
+      <div className="shogun-auth-form">
+        <h3>Your Password Hint</h3>
+        <p className="shogun-hint">{recoveredHint}</p>
+        <button
+          className="shogun-submit-button"
+          onClick={() => {
+            setAuthView("password");
+            resetForm();
+            setFormMode("login");
+          }}
+        >
+          Back to Login
+        </button>
+      </div>
+    );
 
     // Render logic
     return (
       <>
         <button className="shogun-connect-button" onClick={openModal}>
           <WalletIcon />
-          <span>Connect</span>
+          <span>Login / Sign Up</span>
         </button>
 
         {modalIsOpen && (
           <div className="shogun-modal-overlay" onClick={closeModal}>
             <div className="shogun-modal" onClick={(e) => e.stopPropagation()}>
               <div className="shogun-modal-header">
-                <h2>{formMode === "login" ? "Sign In" : "Create Account"}</h2>
-                <button className="shogun-close-button" onClick={closeModal}>
+                <h2>
+                  {authView === "recover"
+                    ? "Recover Password"
+                    : authView === "showHint"
+                      ? "Password Hint"
+                      : formMode === "login"
+                        ? "Login"
+                        : "Sign Up"}
+                </h2>
+                <button
+                  className="shogun-close-button"
+                  onClick={closeModal}
+                  aria-label="Close"
+                >
                   <CloseIcon />
                 </button>
               </div>
               <div className="shogun-modal-content">
                 {error && <div className="shogun-error-message">{error}</div>}
 
-                <div className="shogun-auth-options">
-                  {options?.showMetamask && sdk?.hasPlugin("web3") && (
-                    <button
-                      className="shogun-auth-option-button"
-                      onClick={handleWeb3Auth}
-                      disabled={loading}
-                    >
-                      <WalletIcon />
-                      <span>Continue with Wallet</span>
-                    </button>
-                  )}
-
-                  {options?.showWebauthn && sdk?.hasPlugin("webauthn") && (
-                    <button
-                      className="shogun-auth-option-button"
-                      onClick={handleWebAuthnAuth}
-                      disabled={loading}
-                    >
-                      <WebAuthnIcon />
-                      <span>Continue with Passkey</span>
-                    </button>
-                  )}
-
-                  {options?.showNostr && sdk?.hasPlugin("nostr") && (
-                    <button
-                      className="shogun-auth-option-button"
-                      onClick={handleNostrAuth}
-                      disabled={loading}
-                    >
-                      <NostrIcon />
-                      <span>Continue with Nostr</span>
-                    </button>
-                  )}
-
-                  {options?.showOauth && sdk?.hasPlugin("oauth") && (
-                    <button
-                      className="shogun-auth-option-button shogun-google-button"
-                      onClick={() => handleOAuth("google")}
-                      disabled={loading}
-                    >
-                      <GoogleIcon />
-                      <span>Continue with Google</span>
-                    </button>
-                  )}
-                </div>
-
-                <div className="shogun-divider">
-                  <span>or continue with password</span>
-                </div>
-
-                <form onSubmit={handleSubmit} className="shogun-auth-form">
-                  <div className="shogun-form-group">
-                    <label htmlFor="username">
-                      <UserIcon />
-                      <span>Username</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="username"
-                      value={formUsername}
-                      onChange={(e) => setFormUsername(e.target.value)}
-                      disabled={loading}
-                      required
-                      placeholder="Enter your username"
-                    />
-                  </div>
-                  <div className="shogun-form-group">
-                    <label htmlFor="password">
-                      <LockIcon />
-                      <span>Password</span>
-                    </label>
-                    <input
-                      type="password"
-                      id="password"
-                      value={formPassword}
-                      onChange={(e) => setFormPassword(e.target.value)}
-                      disabled={loading}
-                      required
-                      placeholder="Enter your password"
-                    />
-                  </div>
-                  {formMode === "signup" && (
-                    <div className="shogun-form-group">
-                      <label htmlFor="passwordConfirm">
-                        <KeyIcon />
-                        <span>Confirm Password</span>
-                      </label>
-                      <input
-                        type="password"
-                        id="passwordConfirm"
-                        value={formPasswordConfirm}
-                        onChange={(e) => setFormPasswordConfirm(e.target.value)}
+                {authView === "options" && (
+                  <>
+                    {renderAuthOptions()}
+                    <div className="shogun-form-footer">
+                      <button
+                        type="button"
+                        className="shogun-toggle-mode shogun-prominent-toggle"
+                        onClick={toggleMode}
                         disabled={loading}
-                        required
-                        placeholder="Confirm your password"
-                      />
+                      >
+                        {formMode === "login"
+                          ? "Don't have an account? Sign up"
+                          : "Already have an account? Log in"}
+                      </button>
                     </div>
-                  )}
-                  <button
-                    type="submit"
-                    className="shogun-submit-button"
-                    disabled={loading}
-                  >
-                    {loading
-                      ? "Processing..."
-                      : formMode === "login"
-                        ? "Sign In"
-                        : "Create Account"}
-                  </button>
-                </form>
+                  </>
+                )}
 
-                <div className="shogun-form-footer">
-                  {formMode === "login"
-                    ? "Don't have an account?"
-                    : "Already have an account?"}
-                  <button
-                    className="shogun-toggle-mode"
-                    onClick={toggleMode}
-                    disabled={loading}
-                  >
-                    {formMode === "login" ? "Sign Up" : "Sign In"}
-                  </button>
-                </div>
+                {authView === "password" && (
+                  <>
+                    <button
+                      className="shogun-back-button"
+                      onClick={() => setAuthView("options")}
+                    >
+                      &larr; Back
+                    </button>
+                    {renderPasswordForm()}
+                  </>
+                )}
+
+                {authView === "recover" && renderRecoveryForm()}
+                {authView === "showHint" && renderHint()}
               </div>
             </div>
           </div>

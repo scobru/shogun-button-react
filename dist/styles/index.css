@@ -229,9 +229,11 @@
 
 .shogun-modal-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.5rem;
   font-weight: 600;
-  color: var(--shogun-text);
+  color: #111827;
+  text-align: center;
+  width: 100%;
 }
 
 .shogun-close-button {
@@ -720,4 +722,35 @@
 
 .shogun-logout-button:hover {
   background-color: #c0392b;
+}
+
+.shogun-prominent-toggle {
+  font-weight: 600;
+  color: #3b82f6;
+  padding: 8px 16px;
+  margin-top: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #f9fafb;
+  transition: all 0.2s ease;
+}
+
+.shogun-prominent-toggle:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+[data-shogun-theme="dark"] .shogun-prominent-toggle {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #60a5fa;
+}
+
+[data-shogun-theme="dark"] .shogun-prominent-toggle:hover {
+  background-color: #111827;
+  border-color: #4b5563;
+}
+
+[data-shogun-theme="dark"] .shogun-modal-header h2 {
+  color: #f9fafb;
 } 

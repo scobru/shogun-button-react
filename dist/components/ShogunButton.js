@@ -304,10 +304,15 @@ export const ShogunButton = (() => {
         const [formUsername, setFormUsername] = useState("");
         const [formPassword, setFormPassword] = useState("");
         const [formPasswordConfirm, setFormPasswordConfirm] = useState("");
+        const [formHint, setFormHint] = useState("");
+        const [formSecurityQuestion] = useState("What is your favorite color?"); // Hardcoded for now
+        const [formSecurityAnswer, setFormSecurityAnswer] = useState("");
         const [formMode, setFormMode] = useState("login");
+        const [authView, setAuthView] = useState("options");
         const [error, setError] = useState("");
         const [loading, setLoading] = useState(false);
         const [dropdownOpen, setDropdownOpen] = useState(false);
+        const [recoveredHint, setRecoveredHint] = useState("");
         // If already logged in, show only logout button
         if (isLoggedIn && username) {
             return (React.createElement("div", { className: "shogun-logged-in-container" },
@@ -333,6 +338,7 @@ export const ShogunButton = (() => {
             setError("");
             setLoading(true);
             try {
+                // Use formMode to determine whether to call login or signUp
                 const action = formMode === "login" ? login : signUp;
                 const result = await action(method, ...args);
                 if (result && !result.success && result.error) {
@@ -352,9 +358,33 @@ export const ShogunButton = (() => {
                 setLoading(false);
             }
         };
-        const handleSubmit = (e) => {
+        const handleSubmit = async (e) => {
             e.preventDefault();
-            handleAuth("password", formUsername, formPassword, formPasswordConfirm);
+            setError("");
+            setLoading(true);
+            try {
+                if (formMode === "signup") {
+                    const result = await signUp("password", formUsername, formPassword, formPasswordConfirm);
+                    if (result && result.success) {
+                        if (sdk === null || sdk === void 0 ? void 0 : sdk.gundb) {
+                            await sdk.gundb.setPasswordHint(formUsername, formPassword, formHint, [formSecurityQuestion], [formSecurityAnswer]);
+                        }
+                        setModalIsOpen(false);
+                    }
+                    else if (result && result.error) {
+                        setError(result.error);
+                    }
+                }
+                else {
+                    await handleAuth("password", formUsername, formPassword);
+                }
+            }
+            catch (e) {
+                setError(e.message || "An unexpected error occurred.");
+            }
+            finally {
+                setLoading(false);
+            }
         };
         const handleWeb3Auth = () => handleAuth("web3");
         const handleWebAuthnAuth = () => {
@@ -370,15 +400,44 @@ export const ShogunButton = (() => {
         };
         const handleNostrAuth = () => handleAuth("nostr");
         const handleOAuth = (provider) => handleAuth("oauth", provider);
+        const handleRecover = async () => {
+            setError("");
+            setLoading(true);
+            try {
+                if (!(sdk === null || sdk === void 0 ? void 0 : sdk.gundb)) {
+                    throw new Error("SDK not ready");
+                }
+                const result = await sdk.gundb.forgotPassword(formUsername, [
+                    formSecurityAnswer,
+                ]);
+                if (result.success && result.hint) {
+                    setRecoveredHint(result.hint);
+                    setAuthView("showHint");
+                }
+                else {
+                    setError(result.error || "Could not recover hint.");
+                }
+            }
+            catch (e) {
+                setError(e.message || "An unexpected error occurred.");
+            }
+            finally {
+                setLoading(false);
+            }
+        };
         const resetForm = () => {
             setFormUsername("");
             setFormPassword("");
             setFormPasswordConfirm("");
+            setFormHint("");
+            setFormSecurityAnswer("");
             setError("");
             setLoading(false);
+            setAuthView("options");
         };
         const openModal = () => {
             resetForm();
+            setAuthView("options");
             setModalIsOpen(true);
         };
         const closeModal = () => {
@@ -386,62 +445,135 @@ export const ShogunButton = (() => {
         };
         const toggleMode = () => {
             resetForm();
+            setAuthView("password");
             setFormMode((prev) => (prev === "login" ? "signup" : "login"));
         };
+        // Add buttons for both login and signup for alternative auth methods
+        const renderAuthOptions = () => (React.createElement("div", { className: "shogun-auth-options" },
+            options.showMetamask !== false && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("web3")) && (React.createElement("div", { className: "shogun-auth-option-group" },
+                React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => handleAuth("web3"), disabled: loading },
+                    React.createElement(WalletIcon, null),
+                    formMode === "login" ? "Login with MetaMask" : "Signup with MetaMask"))),
+            options.showWebauthn !== false && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("webauthn")) && (React.createElement("div", { className: "shogun-auth-option-group" },
+                React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => {
+                        if (!formUsername) {
+                            setError("Username required for WebAuthn");
+                            return;
+                        }
+                        handleAuth("webauthn", formUsername);
+                    }, disabled: loading },
+                    React.createElement(WebAuthnIcon, null),
+                    formMode === "login" ? "Login with WebAuthn" : "Signup with WebAuthn"))),
+            options.showNostr !== false && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("nostr")) && (React.createElement("div", { className: "shogun-auth-option-group" },
+                React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => handleAuth("nostr"), disabled: loading },
+                    React.createElement(NostrIcon, null),
+                    formMode === "login" ? "Login with Nostr" : "Signup with Nostr"))),
+            options.showOauth !== false && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("oauth")) && (React.createElement("div", { className: "shogun-auth-option-group" },
+                React.createElement("button", { type: "button", className: "shogun-auth-option-button shogun-google-button", onClick: () => handleAuth("oauth", "google"), disabled: loading },
+                    React.createElement(GoogleIcon, null),
+                    formMode === "login" ? "Login with Google" : "Signup with Google"))),
+            React.createElement("div", { className: "shogun-divider" },
+                React.createElement("span", null, "or")),
+            React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => setAuthView("password"), disabled: loading },
+                React.createElement(LockIcon, null),
+                formMode === "login" ? "Login with Password" : "Signup with Password")));
+        const renderPasswordForm = () => (React.createElement("form", { onSubmit: handleSubmit, className: "shogun-auth-form" },
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", { htmlFor: "username" },
+                    React.createElement(UserIcon, null),
+                    React.createElement("span", null, "Username")),
+                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username" })),
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", { htmlFor: "password" },
+                    React.createElement(LockIcon, null),
+                    React.createElement("span", null, "Password")),
+                React.createElement("input", { type: "password", id: "password", value: formPassword, onChange: (e) => setFormPassword(e.target.value), disabled: loading, required: true, placeholder: "Enter your password" })),
+            formMode === "signup" && (React.createElement(React.Fragment, null,
+                React.createElement("div", { className: "shogun-form-group" },
+                    React.createElement("label", { htmlFor: "passwordConfirm" },
+                        React.createElement(KeyIcon, null),
+                        React.createElement("span", null, "Confirm Password")),
+                    React.createElement("input", { type: "password", id: "passwordConfirm", value: formPasswordConfirm, onChange: (e) => setFormPasswordConfirm(e.target.value), disabled: loading, required: true, placeholder: "Confirm your password" })),
+                React.createElement("div", { className: "shogun-form-group" },
+                    React.createElement("label", { htmlFor: "hint" },
+                        React.createElement(UserIcon, null),
+                        React.createElement("span", null, "Password Hint")),
+                    React.createElement("input", { type: "text", id: "hint", value: formHint, onChange: (e) => setFormHint(e.target.value), disabled: loading, required: true, placeholder: "Enter your password hint" })),
+                React.createElement("div", { className: "shogun-form-group" },
+                    React.createElement("label", { htmlFor: "securityQuestion" },
+                        React.createElement(UserIcon, null),
+                        React.createElement("span", null, "Security Question")),
+                    React.createElement("input", { type: "text", id: "securityQuestion", value: formSecurityQuestion, disabled: true })),
+                React.createElement("div", { className: "shogun-form-group" },
+                    React.createElement("label", { htmlFor: "securityAnswer" },
+                        React.createElement(UserIcon, null),
+                        React.createElement("span", null, "Security Answer")),
+                    React.createElement("input", { type: "text", id: "securityAnswer", value: formSecurityAnswer, onChange: (e) => setFormSecurityAnswer(e.target.value), disabled: loading, required: true, placeholder: "Enter your security answer" })))),
+            React.createElement("button", { type: "submit", className: "shogun-submit-button", disabled: loading }, loading
+                ? "Processing..."
+                : formMode === "login"
+                    ? "Sign In"
+                    : "Create Account"),
+            React.createElement("div", { className: "shogun-form-footer" },
+                React.createElement("button", { type: "button", className: "shogun-toggle-mode shogun-prominent-toggle", onClick: toggleMode, disabled: loading }, formMode === "login"
+                    ? "Don't have an account? Sign up"
+                    : "Already have an account? Log in"),
+                formMode === "login" && (React.createElement("button", { type: "button", className: "shogun-toggle-mode", onClick: () => setAuthView("recover"), disabled: loading }, "Forgot password?")))));
+        const renderRecoveryForm = () => (React.createElement("div", { className: "shogun-auth-form" },
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", { htmlFor: "username" },
+                    React.createElement(UserIcon, null),
+                    React.createElement("span", null, "Username")),
+                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username" })),
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", null, "Security Question"),
+                React.createElement("p", null, formSecurityQuestion)),
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", { htmlFor: "securityAnswer" },
+                    React.createElement(KeyIcon, null),
+                    React.createElement("span", null, "Answer")),
+                React.createElement("input", { type: "text", id: "securityAnswer", value: formSecurityAnswer, onChange: (e) => setFormSecurityAnswer(e.target.value), disabled: loading, required: true, placeholder: "Enter your answer" })),
+            React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleRecover, disabled: loading }, loading ? "Recovering..." : "Get Hint"),
+            React.createElement("div", { className: "shogun-form-footer" },
+                React.createElement("button", { className: "shogun-toggle-mode", onClick: () => setAuthView("password"), disabled: loading }, "Back to Login"))));
+        const renderHint = () => (React.createElement("div", { className: "shogun-auth-form" },
+            React.createElement("h3", null, "Your Password Hint"),
+            React.createElement("p", { className: "shogun-hint" }, recoveredHint),
+            React.createElement("button", { className: "shogun-submit-button", onClick: () => {
+                    setAuthView("password");
+                    resetForm();
+                    setFormMode("login");
+                } }, "Back to Login")));
         // Render logic
         return (React.createElement(React.Fragment, null,
             React.createElement("button", { className: "shogun-connect-button", onClick: openModal },
                 React.createElement(WalletIcon, null),
-                React.createElement("span", null, "Connect")),
+                React.createElement("span", null, "Login / Sign Up")),
             modalIsOpen && (React.createElement("div", { className: "shogun-modal-overlay", onClick: closeModal },
                 React.createElement("div", { className: "shogun-modal", onClick: (e) => e.stopPropagation() },
                     React.createElement("div", { className: "shogun-modal-header" },
-                        React.createElement("h2", null, formMode === "login" ? "Sign In" : "Create Account"),
-                        React.createElement("button", { className: "shogun-close-button", onClick: closeModal },
+                        React.createElement("h2", null, authView === "recover"
+                            ? "Recover Password"
+                            : authView === "showHint"
+                                ? "Password Hint"
+                                : formMode === "login"
+                                    ? "Login"
+                                    : "Sign Up"),
+                        React.createElement("button", { className: "shogun-close-button", onClick: closeModal, "aria-label": "Close" },
                             React.createElement(CloseIcon, null))),
                     React.createElement("div", { className: "shogun-modal-content" },
                         error && React.createElement("div", { className: "shogun-error-message" }, error),
-                        React.createElement("div", { className: "shogun-auth-options" },
-                            (options === null || options === void 0 ? void 0 : options.showMetamask) && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("web3")) && (React.createElement("button", { className: "shogun-auth-option-button", onClick: handleWeb3Auth, disabled: loading },
-                                React.createElement(WalletIcon, null),
-                                React.createElement("span", null, "Continue with Wallet"))),
-                            (options === null || options === void 0 ? void 0 : options.showWebauthn) && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("webauthn")) && (React.createElement("button", { className: "shogun-auth-option-button", onClick: handleWebAuthnAuth, disabled: loading },
-                                React.createElement(WebAuthnIcon, null),
-                                React.createElement("span", null, "Continue with Passkey"))),
-                            (options === null || options === void 0 ? void 0 : options.showNostr) && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("nostr")) && (React.createElement("button", { className: "shogun-auth-option-button", onClick: handleNostrAuth, disabled: loading },
-                                React.createElement(NostrIcon, null),
-                                React.createElement("span", null, "Continue with Nostr"))),
-                            (options === null || options === void 0 ? void 0 : options.showOauth) && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("oauth")) && (React.createElement("button", { className: "shogun-auth-option-button shogun-google-button", onClick: () => handleOAuth("google"), disabled: loading },
-                                React.createElement(GoogleIcon, null),
-                                React.createElement("span", null, "Continue with Google")))),
-                        React.createElement("div", { className: "shogun-divider" },
-                            React.createElement("span", null, "or continue with password")),
-                        React.createElement("form", { onSubmit: handleSubmit, className: "shogun-auth-form" },
-                            React.createElement("div", { className: "shogun-form-group" },
-                                React.createElement("label", { htmlFor: "username" },
-                                    React.createElement(UserIcon, null),
-                                    React.createElement("span", null, "Username")),
-                                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username" })),
-                            React.createElement("div", { className: "shogun-form-group" },
-                                React.createElement("label", { htmlFor: "password" },
-                                    React.createElement(LockIcon, null),
-                                    React.createElement("span", null, "Password")),
-                                React.createElement("input", { type: "password", id: "password", value: formPassword, onChange: (e) => setFormPassword(e.target.value), disabled: loading, required: true, placeholder: "Enter your password" })),
-                            formMode === "signup" && (React.createElement("div", { className: "shogun-form-group" },
-                                React.createElement("label", { htmlFor: "passwordConfirm" },
-                                    React.createElement(KeyIcon, null),
-                                    React.createElement("span", null, "Confirm Password")),
-                                React.createElement("input", { type: "password", id: "passwordConfirm", value: formPasswordConfirm, onChange: (e) => setFormPasswordConfirm(e.target.value), disabled: loading, required: true, placeholder: "Confirm your password" }))),
-                            React.createElement("button", { type: "submit", className: "shogun-submit-button", disabled: loading }, loading
-                                ? "Processing..."
-                                : formMode === "login"
-                                    ? "Sign In"
-                                    : "Create Account")),
-                        React.createElement("div", { className: "shogun-form-footer" },
-                            formMode === "login"
-                                ? "Don't have an account?"
-                                : "Already have an account?",
-                            React.createElement("button", { className: "shogun-toggle-mode", onClick: toggleMode, disabled: loading }, formMode === "login" ? "Sign Up" : "Sign In"))))))));
+                        authView === "options" && (React.createElement(React.Fragment, null,
+                            renderAuthOptions(),
+                            React.createElement("div", { className: "shogun-form-footer" },
+                                React.createElement("button", { type: "button", className: "shogun-toggle-mode shogun-prominent-toggle", onClick: toggleMode, disabled: loading }, formMode === "login"
+                                    ? "Don't have an account? Sign up"
+                                    : "Already have an account? Log in")))),
+                        authView === "password" && (React.createElement(React.Fragment, null,
+                            React.createElement("button", { className: "shogun-back-button", onClick: () => setAuthView("options") }, "\u2190 Back"),
+                            renderPasswordForm())),
+                        authView === "recover" && renderRecoveryForm(),
+                        authView === "showHint" && renderHint()))))));
     };
     Button.displayName = "ShogunButton";
     return Object.assign(Button, {
