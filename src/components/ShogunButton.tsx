@@ -77,23 +77,51 @@ export function ShogunButtonProvider({
   onError,
 }: ShogunButtonProviderProps) {
   // Use React's useState directly
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(
-    sdk?.isLoggedIn() || false
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userPub, setUserPub] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
 
   // Effetto per gestire l'inizializzazione e pulizia
   useEffect(() => {
-    // Controlla se l'utente è già autenticato all'avvio
-    if (sdk?.isLoggedIn()) {
-      setIsLoggedIn(true);
+    if (!sdk) return;
+
+    const handleLogin = (authResult: any) => {
+      const pub = authResult.pub || sdk.gun.user()?.is?.pub;
+      if (pub) {
+        setIsLoggedIn(true);
+        setUserPub(pub);
+        setUsername(authResult.alias || pub.slice(0, 8) + '...');
+        if (onLoginSuccess && authResult.method !== 'recall') {
+          onLoginSuccess({
+            userPub: pub,
+            username: authResult.alias || pub.slice(0, 8) + '...',
+            authMethod: authResult.method,
+          });
+        }
+      }
+    };
+
+    const handleLogout = () => {
+      setIsLoggedIn(false);
+      setUserPub(null);
+      setUsername(null);
+    };
+
+    if (sdk.isLoggedIn()) {
+      const pub = sdk.gun.user()?.is?.pub;
+      if (pub) {
+        handleLogin({ pub, method: 'recall' });
+      }
     }
 
+    sdk.on('auth:login', handleLogin);
+    sdk.on('auth:logout', handleLogout);
+
     return () => {
-      // Pulizia quando il componente si smonta
+      sdk.off('auth:login', handleLogin);
+      sdk.off('auth:logout', handleLogout);
     };
-  }, [sdk]);
+  }, [sdk, onLoginSuccess]);
 
   // RxJS observe method
   const observe = <T,>(path: string): Observable<T> => {
