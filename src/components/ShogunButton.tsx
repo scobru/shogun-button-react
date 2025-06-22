@@ -23,6 +23,9 @@ type ShogunContextType = {
   // Plugin methods
   hasPlugin: (name: string) => boolean;
   getPlugin: <T>(name: string) => T | undefined;
+  // Pair export/import methods
+  exportGunPair: (password?: string) => Promise<string>;
+  importGunPair: (pairData: string, password?: string) => Promise<boolean>;
 };
 
 // Default context
@@ -39,6 +42,8 @@ const defaultShogunContext: ShogunContextType = {
   setProvider: () => false,
   hasPlugin: () => false,
   getPlugin: () => undefined,
+  exportGunPair: async () => "",
+  importGunPair: async () => false,
 };
 
 // Create context using React's createContext directly
@@ -146,6 +151,35 @@ export function ShogunButtonProvider({
         case "password":
           username = args[0];
           result = await sdk.login(args[0], args[1]);
+          break;
+        case "pair":
+          // New pair authentication method
+          const pair = args[0];
+          if (!pair || typeof pair !== 'object') {
+            throw new Error("Invalid pair data provided");
+          }
+          
+          result = await new Promise((resolve, reject) => {
+            sdk.gun.user().auth(pair, (ack: any) => {
+              if (ack.err) {
+                reject(new Error(`Pair authentication failed: ${ack.err}`));
+                return;
+              }
+              
+              const pub = ack.pub || pair.pub;
+              const alias = ack.alias || `user_${pub?.substring(0, 8)}`;
+              
+              resolve({
+                success: true,
+                userPub: pub,
+                alias: alias,
+                method: 'pair'
+              } as AuthResult);
+            });
+          });
+          
+          username = (result as any).alias;
+          authMethod = "pair";
           break;
         case "webauthn":
           username = args[0];
@@ -341,6 +375,79 @@ export function ShogunButtonProvider({
     return sdk ? sdk.getPlugin<T>(name) : undefined;
   };
 
+  // Export Gun pair functionality
+  const exportGunPair = async (password?: string): Promise<string> => {
+    if (!sdk) {
+      throw new Error("SDK not initialized");
+    }
+
+    if (!isLoggedIn) {
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      const user = sdk.gun.user();
+      const pair = (user as any)?._?.sea;
+      
+      if (!pair) {
+        throw new Error("No Gun pair available for current user");
+      }
+
+      let pairData = JSON.stringify(pair);
+
+      // If password provided, encrypt the pair
+      if (password && password.trim()) {
+        // Use Gun's SEA for encryption if available
+        if ((window as any).SEA && (window as any).SEA.encrypt) {
+          pairData = await (window as any).SEA.encrypt(pairData, password);
+        } else {
+          console.warn("SEA encryption not available, exporting unencrypted");
+        }
+      }
+
+      return pairData;
+    } catch (error: any) {
+      throw new Error(`Failed to export Gun pair: ${error.message}`);
+    }
+  };
+
+  // Import Gun pair functionality
+  const importGunPair = async (pairData: string, password?: string): Promise<boolean> => {
+    if (!sdk) {
+      throw new Error("SDK not initialized");
+    }
+
+    try {
+      let dataString = pairData;
+
+      // If password provided, decrypt the pair
+      if (password && password.trim()) {
+        if ((window as any).SEA && (window as any).SEA.decrypt) {
+          dataString = await (window as any).SEA.decrypt(pairData, password);
+          if (!dataString) {
+            throw new Error("Failed to decrypt pair data - wrong password?");
+          }
+        } else {
+          console.warn("SEA decryption not available, assuming unencrypted data");
+        }
+      }
+
+      const pair = JSON.parse(dataString);
+      
+      // Validate pair structure
+      if (!pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
+        throw new Error("Invalid pair structure - missing required keys");
+      }
+
+      // Authenticate with the imported pair
+      const result = await login("pair", pair);
+      
+      return result.success;
+    } catch (error: any) {
+      throw new Error(`Failed to import Gun pair: ${error.message}`);
+    }
+  };
+
   // Provide the context value to children
   return (
     <ShogunContext.Provider
@@ -357,6 +464,8 @@ export function ShogunButtonProvider({
         setProvider,
         hasPlugin,
         getPlugin,
+        exportGunPair,
+        importGunPair,
       }}
     >
       {children}
@@ -442,7 +551,7 @@ const CloseIcon = () => (
 // Component for Shogun login button
 export const ShogunButton: ShogunButtonComponent = (() => {
   const Button: React.FC = () => {
-    const { isLoggedIn, username, logout, login, signUp, sdk, options } =
+    const { isLoggedIn, username, logout, login, signUp, sdk, options, exportGunPair, importGunPair } =
       useShogun();
 
     // Form states
@@ -455,12 +564,16 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [formSecurityAnswer, setFormSecurityAnswer] = useState("");
     const [formMode, setFormMode] = useState<"login" | "signup">("login");
     const [authView, setAuthView] = useState<
-      "options" | "password" | "recover" | "showHint"
+      "options" | "password" | "recover" | "showHint" | "export" | "import"
     >("options");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [recoveredHint, setRecoveredHint] = useState("");
+    const [exportPassword, setExportPassword] = useState("");
+    const [importPassword, setImportPassword] = useState("");
+    const [importPairData, setImportPairData] = useState("");
+    const [exportedPair, setExportedPair] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Handle click outside to close dropdown
@@ -517,6 +630,14 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 <div className="shogun-dropdown-item" onClick={logout}>
                   <LogoutIcon />
                   <span>Disconnect</span>
+                </div>
+                <div className="shogun-dropdown-item" onClick={() => {
+                  setDropdownOpen(false);
+                  setAuthView("export");
+                  setModalIsOpen(true);
+                }}>
+                  <span>📤</span>
+                  <span>Export Pair</span>
                 </div>
               </div>
             )}
@@ -627,6 +748,49 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       }
     };
 
+    const handleExportPair = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        const pairData = await exportGunPair(exportPassword || undefined);
+        setExportedPair(pairData);
+        
+        // Copy to clipboard
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(pairData);
+          alert("Pair exported and copied to clipboard!");
+        } else {
+          alert("Pair exported! Please copy it manually from the text area.");
+        }
+      } catch (e: any) {
+        setError(e.message || "Failed to export pair");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleImportPair = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        if (!importPairData.trim()) {
+          throw new Error("Please enter pair data");
+        }
+        
+        const success = await importGunPair(importPairData, importPassword || undefined);
+        if (success) {
+          setModalIsOpen(false);
+          alert("Pair imported successfully! You are now logged in.");
+        } else {
+          throw new Error("Failed to import pair");
+        }
+      } catch (e: any) {
+        setError(e.message || "Failed to import pair");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const resetForm = () => {
       setFormUsername("");
       setFormPassword("");
@@ -732,6 +896,18 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           <LockIcon />
           {formMode === "login" ? "Login with Password" : "Signup with Password"}
         </button>
+        
+        {formMode === "login" && (
+          <button
+            type="button"
+            className="shogun-auth-option-button"
+            onClick={() => setAuthView("import")}
+            disabled={loading}
+          >
+            <span>📥</span>
+            Import Gun Pair
+          </button>
+        )}
       </div>
     );
 
@@ -937,6 +1113,134 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       </div>
     );
 
+    const renderExportForm = () => (
+      <div className="shogun-auth-form">
+        <h3>Export Gun Pair</h3>
+        <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
+          Export your Gun pair to backup your account. You can use this to login from another device.
+        </p>
+        <div className="shogun-form-group">
+          <label htmlFor="exportPassword">
+            <LockIcon />
+            <span>Encryption Password (optional but recommended)</span>
+          </label>
+          <input
+            type="password"
+            id="exportPassword"
+            value={exportPassword}
+            onChange={(e) => setExportPassword(e.target.value)}
+            disabled={loading}
+            placeholder="Leave empty to export unencrypted"
+          />
+        </div>
+        {exportedPair && (
+          <div className="shogun-form-group">
+            <label>Your Gun Pair (copy this safely):</label>
+            <textarea
+              value={exportedPair}
+              readOnly
+              rows={6}
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #ccc',
+                borderRadius: '4px'
+              }}
+            />
+          </div>
+        )}
+        <button
+          type="button"
+          className="shogun-submit-button"
+          onClick={handleExportPair}
+          disabled={loading}
+        >
+          {loading ? "Exporting..." : "Export Pair"}
+        </button>
+        <div className="shogun-form-footer">
+          <button
+            className="shogun-toggle-mode"
+            onClick={() => {
+              setAuthView("options");
+              setExportPassword("");
+              setExportedPair("");
+            }}
+            disabled={loading}
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    );
+
+    const renderImportForm = () => (
+      <div className="shogun-auth-form">
+        <h3>Import Gun Pair</h3>
+        <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
+          Import a Gun pair to login with your existing account from another device.
+        </p>
+        <div className="shogun-form-group">
+          <label htmlFor="importPairData">
+            <span>📄</span>
+            <span>Gun Pair Data</span>
+          </label>
+          <textarea
+            id="importPairData"
+            value={importPairData}
+            onChange={(e) => setImportPairData(e.target.value)}
+            disabled={loading}
+            placeholder="Paste your Gun pair JSON here..."
+            rows={6}
+            style={{
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #ccc',
+              borderRadius: '4px'
+            }}
+          />
+        </div>
+        <div className="shogun-form-group">
+          <label htmlFor="importPassword">
+            <LockIcon />
+            <span>Decryption Password (if encrypted)</span>
+          </label>
+          <input
+            type="password"
+            id="importPassword"
+            value={importPassword}
+            onChange={(e) => setImportPassword(e.target.value)}
+            disabled={loading}
+            placeholder="Enter password if pair was encrypted"
+          />
+        </div>
+        <button
+          type="button"
+          className="shogun-submit-button"
+          onClick={handleImportPair}
+          disabled={loading}
+        >
+          {loading ? "Importing..." : "Import and Login"}
+        </button>
+        <div className="shogun-form-footer">
+          <button
+            className="shogun-toggle-mode"
+            onClick={() => {
+              setAuthView("options");
+              setImportPassword("");
+              setImportPairData("");
+            }}
+            disabled={loading}
+          >
+            Back to Login Options
+          </button>
+        </div>
+      </div>
+    );
+
     // Render logic
     return (
       <>
@@ -954,9 +1258,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                     ? "Recover Password"
                     : authView === "showHint"
                       ? "Password Hint"
-                      : formMode === "login"
-                        ? "Login"
-                        : "Sign Up"}
+                      : authView === "export"
+                        ? "Export Gun Pair"
+                        : authView === "import"
+                          ? "Import Gun Pair"
+                          : formMode === "login"
+                            ? "Login"
+                            : "Sign Up"}
                 </h2>
                 <button
                   className="shogun-close-button"
@@ -1001,6 +1309,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
                 {authView === "recover" && renderRecoveryForm()}
                 {authView === "showHint" && renderHint()}
+                {authView === "export" && renderExportForm()}
+                {authView === "import" && renderImportForm()}
               </div>
             </div>
           </div>

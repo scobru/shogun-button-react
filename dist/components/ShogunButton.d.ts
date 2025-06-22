@@ -16,6 +16,8 @@ type ShogunContextType = {
     setProvider: (provider: any) => boolean;
     hasPlugin: (name: string) => boolean;
     getPlugin: <T>(name: string) => T | undefined;
+    exportGunPair: (password?: string) => Promise<string>;
+    importGunPair: (pairData: string, password?: string) => Promise<boolean>;
 };
 export declare const useShogun: () => ShogunContextType;
 type ShogunButtonProviderProps = {
