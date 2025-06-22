@@ -36,15 +36,19 @@
     "rxjs": "^7.8.1",
     "shogun-core": "file:../shogun-core"
   },
-  "devDependencies": {
-    "copyfiles": "^2.4.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "typescript": "^5.8.2"
-  },
   "peerDependencies": {
-    "react": ">=18.2.0",
-    "react-dom": ">=18.2.0"
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.23",
+    "copyfiles": "^2.4.1",
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.2",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
   },
   "repository": {
     "type": "git",

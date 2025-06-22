@@ -1,7 +1,7 @@
-import React, { useContext, useState, createContext, useEffect } from "react";
+import React, { useContext, useState, createContext, useEffect, useRef } from "react";
 import { ShogunCore, AuthResult } from "shogun-core";
 import { Observable } from "rxjs";
-import "../types.js"; // Import type file to extend definitions
+import "../types/index.js"; // Import type file to extend definitions
 
 import "../styles/index.css";
 
@@ -461,12 +461,29 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [loading, setLoading] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [recoveredHint, setRecoveredHint] = useState("");
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Handle click outside to close dropdown
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+          setDropdownOpen(false);
+        }
+      };
+
+      if (dropdownOpen) {
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+          document.removeEventListener('mousedown', handleClickOutside);
+        };
+      }
+    }, [dropdownOpen]);
 
     // If already logged in, show only logout button
     if (isLoggedIn && username) {
       return (
         <div className="shogun-logged-in-container">
-          <div className="shogun-dropdown">
+          <div className="shogun-dropdown" ref={dropdownRef}>
             <button 
               className="shogun-button shogun-logged-in" 
               onClick={() => setDropdownOpen(!dropdownOpen)}

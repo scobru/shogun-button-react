@@ -1,4 +1,4 @@
 // Export the connector options
-export * from './connector-options';
+export * from './connector-options.js';
 // Export any type extensions/declarations
-export * from './shogun-core.d';
+// Note: .d.ts files don't need .js extension in imports 

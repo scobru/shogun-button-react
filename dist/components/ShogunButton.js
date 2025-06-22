@@ -1,6 +1,6 @@
-import React, { useContext, useState, createContext, useEffect } from "react";
+import React, { useContext, useState, createContext, useEffect, useRef } from "react";
 import { Observable } from "rxjs";
-import "../types.js"; // Import type file to extend definitions
+import "../types/index.js"; // Import type file to extend definitions
 import "../styles/index.css";
 // Default context
 const defaultShogunContext = {
@@ -24,19 +24,48 @@ export const useShogun = () => useContext(ShogunContext);
 // Provider component
 export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, onSignupSuccess, onError, }) {
     // Use React's useState directly
-    const [isLoggedIn, setIsLoggedIn] = useState((sdk === null || sdk === void 0 ? void 0 : sdk.isLoggedIn()) || false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userPub, setUserPub] = useState(null);
     const [username, setUsername] = useState(null);
     // Effetto per gestire l'inizializzazione e pulizia
     useEffect(() => {
-        // Controlla se l'utente è già autenticato all'avvio
-        if (sdk === null || sdk === void 0 ? void 0 : sdk.isLoggedIn()) {
-            setIsLoggedIn(true);
-        }
-        return () => {
-            // Pulizia quando il componente si smonta
+        var _a, _b;
+        if (!sdk)
+            return;
+        const handleLogin = (authResult) => {
+            var _a, _b;
+            const pub = authResult.pub || ((_b = (_a = sdk.gun.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub);
+            if (pub) {
+                setIsLoggedIn(true);
+                setUserPub(pub);
+                setUsername(authResult.alias || pub.slice(0, 8) + '...');
+                if (onLoginSuccess && authResult.method !== 'recall') {
+                    onLoginSuccess({
+                        userPub: pub,
+                        username: authResult.alias || pub.slice(0, 8) + '...',
+                        authMethod: authResult.method,
+                    });
+                }
+            }
         };
-    }, [sdk]);
+        const handleLogout = () => {
+            setIsLoggedIn(false);
+            setUserPub(null);
+            setUsername(null);
+        };
+        if (sdk.isLoggedIn()) {
+            const pub = (_b = (_a = sdk.gun.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub;
+            if (pub) {
+                handleLogin({ pub, method: 'recall' });
+            }
+        }
+        sdk.on('auth:login', handleLogin);
+        sdk.on('auth:logout', handleLogout);
+        return () => {
+            sdk.off('auth:login', handleLogin);
+            sdk.off('auth:logout', handleLogout);
+        };
+    }, [sdk, onLoginSuccess]);
     // RxJS observe method
     const observe = (path) => {
         if (!sdk) {
@@ -313,10 +342,25 @@ export const ShogunButton = (() => {
         const [loading, setLoading] = useState(false);
         const [dropdownOpen, setDropdownOpen] = useState(false);
         const [recoveredHint, setRecoveredHint] = useState("");
+        const dropdownRef = useRef(null);
+        // Handle click outside to close dropdown
+        useEffect(() => {
+            const handleClickOutside = (event) => {
+                if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                    setDropdownOpen(false);
+                }
+            };
+            if (dropdownOpen) {
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => {
+                    document.removeEventListener('mousedown', handleClickOutside);
+                };
+            }
+        }, [dropdownOpen]);
         // If already logged in, show only logout button
         if (isLoggedIn && username) {
             return (React.createElement("div", { className: "shogun-logged-in-container" },
-                React.createElement("div", { className: "shogun-dropdown" },
+                React.createElement("div", { className: "shogun-dropdown", ref: dropdownRef },
                     React.createElement("button", { className: "shogun-button shogun-logged-in", onClick: () => setDropdownOpen(!dropdownOpen) },
                         React.createElement("div", { className: "shogun-avatar" }, username.substring(0, 2).toUpperCase()),
                         React.createElement("span", { className: "shogun-username" }, username.length > 12

@@ -110,7 +110,7 @@
   border-radius: var(--shogun-border-radius);
   box-shadow: var(--shogun-shadow);
   width: 240px;
-  z-index: 100;
+  z-index: 9999;
   overflow: hidden;
   animation: shogun-dropdown-fade 0.2s ease;
 }

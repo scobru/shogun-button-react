@@ -1,4 +1,3 @@
-export * from './connector-options';
+export * from './connector-options.js';
 import { AuthResult, SignUpResult } from 'shogun-core';
 export { AuthResult, SignUpResult };
-export * from './shogun-core.d';

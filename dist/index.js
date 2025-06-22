@@ -2,4 +2,4 @@ import { ShogunButton, ShogunButtonProvider, useShogun } from './components/Shog
 // Export components
 export { ShogunButton, ShogunButtonProvider, useShogun };
 // Export all types
-export * from './types.js';
+export * from './types/index.js';
