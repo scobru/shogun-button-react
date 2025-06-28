@@ -1,9 +1,19 @@
 import React, { useContext, useState, createContext, useEffect, useRef } from "react";
-import { ShogunCore, AuthResult } from "shogun-core";
+import { ShogunCore } from "shogun-core";
 import { Observable } from "rxjs";
 import "../types/index.js"; // Import type file to extend definitions
 
 import "../styles/index.css";
+
+// Definiamo i tipi localmente se non sono disponibili da shogun-core
+interface AuthResult {
+  success: boolean;
+  userPub?: string;
+  alias?: string;
+  method?: string;
+  error?: string;
+  redirectUrl?: string;
+}
 
 // Context type for ShogunProvider
 type ShogunContextType = {
@@ -90,42 +100,18 @@ export function ShogunButtonProvider({
   useEffect(() => {
     if (!sdk) return;
 
-    const handleLogin = (authResult: any) => {
-      const pub = authResult.pub || sdk.gun.user()?.is?.pub;
-      if (pub) {
-        setIsLoggedIn(true);
-        setUserPub(pub);
-        setUsername(authResult.alias || pub.slice(0, 8) + '...');
-        if (onLoginSuccess && authResult.method !== 'recall') {
-          onLoginSuccess({
-            userPub: pub,
-            username: authResult.alias || pub.slice(0, 8) + '...',
-            authMethod: authResult.method,
-          });
-        }
-      }
-    };
-
-    const handleLogout = () => {
-      setIsLoggedIn(false);
-      setUserPub(null);
-      setUsername(null);
-    };
-
+    // Verifichiamo se l'utente è già loggato all'inizializzazione
     if (sdk.isLoggedIn()) {
       const pub = sdk.gun.user()?.is?.pub;
       if (pub) {
-        handleLogin({ pub, method: 'recall' });
+        setIsLoggedIn(true);
+        setUserPub(pub);
+        setUsername(pub.slice(0, 8) + '...');
       }
     }
 
-    sdk.on('auth:login', handleLogin);
-    sdk.on('auth:logout', handleLogout);
-
-    return () => {
-      sdk.off('auth:login', handleLogin);
-      sdk.off('auth:logout', handleLogout);
-    };
+    // Poiché il metodo 'on' non esiste su ShogunCore, 
+    // gestiamo gli stati direttamente nei metodi di login/logout
   }, [sdk, onLoginSuccess]);
 
   // RxJS observe method
@@ -227,13 +213,16 @@ export function ShogunButtonProvider({
       }
 
       if (result.success) {
+        const userPub = result.userPub || sdk.gun.user()?.is?.pub || "";
+        const displayName = result.alias || username || userPub.slice(0, 8) + '...';
+        
         setIsLoggedIn(true);
-        setUserPub(result.userPub || "");
-        setUsername(username || "");
+        setUserPub(userPub);
+        setUsername(displayName);
 
         onLoginSuccess?.({
-          userPub: result.userPub || "",
-          username: username || "",
+          userPub: userPub,
+          username: displayName,
           authMethod: authMethod as any,
         });
       } else {
@@ -311,14 +300,16 @@ export function ShogunButtonProvider({
       }
 
       if (result.success) {
+        const userPub = result.userPub || sdk.gun.user()?.is?.pub || "";
+        const displayName = result.alias || username || userPub.slice(0, 8) + '...';
+        
         setIsLoggedIn(true);
-        const userPub = result.userPub || "";
         setUserPub(userPub);
-        setUsername(username || "");
+        setUsername(displayName);
 
         onSignupSuccess?.({
           userPub: userPub,
-          username: username || "",
+          username: displayName,
           authMethod: authMethod as any,
         });
       } else {
@@ -337,6 +328,9 @@ export function ShogunButtonProvider({
     setIsLoggedIn(false);
     setUserPub(null);
     setUsername(null);
+    sessionStorage.removeItem("gun/pair");
+    sessionStorage.removeItem("gun/session");
+    sessionStorage.removeItem("pair");
   };
 
   // Implementazione del metodo setProvider
@@ -386,8 +380,7 @@ export function ShogunButtonProvider({
     }
 
     try {
-      const user = sdk.gun.user();
-      const pair = (user as any)?._?.sea;
+      const pair = sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair") ;
       
       if (!pair) {
         throw new Error("No Gun pair available for current user");
@@ -548,6 +541,24 @@ const CloseIcon = () => (
   </svg>
 );
 
+const ImportIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+    <polyline points="14,2 14,8 20,8"></polyline>
+    <line x1="16" y1="13" x2="8" y2="13"></line>
+    <line x1="12" y1="17" x2="12" y2="9"></line>
+  </svg>
+);
+
+const ExportIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+    <polyline points="14,2 14,8 20,8"></polyline>
+    <line x1="12" y1="11" x2="12" y2="21"></line>
+    <polyline points="16,15 12,11 8,15"></polyline>
+  </svg>
+);
+
 // Component for Shogun login button
 export const ShogunButton: ShogunButtonComponent = (() => {
   const Button: React.FC = () => {
@@ -564,7 +575,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [formSecurityAnswer, setFormSecurityAnswer] = useState("");
     const [formMode, setFormMode] = useState<"login" | "signup">("login");
     const [authView, setAuthView] = useState<
-      "options" | "password" | "recover" | "showHint" | "export" | "import"
+      "options" | "password" | "recover" | "showHint" | "export" | "import" | "webauthn-username"
     >("options");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -574,6 +585,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [importPassword, setImportPassword] = useState("");
     const [importPairData, setImportPairData] = useState("");
     const [exportedPair, setExportedPair] = useState("");
+    const [showCopySuccess, setShowCopySuccess] = useState(false);
+    const [showImportSuccess, setShowImportSuccess] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Handle click outside to close dropdown
@@ -593,7 +606,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     }, [dropdownOpen]);
 
     // If already logged in, show only logout button
-    if (isLoggedIn && username) {
+    if (isLoggedIn && username && !modalIsOpen) {
       return (
         <div className="shogun-logged-in-container">
           <div className="shogun-dropdown" ref={dropdownRef}>
@@ -627,17 +640,17 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                     </span>
                   </div>
                 </div>
-                <div className="shogun-dropdown-item" onClick={logout}>
-                  <LogoutIcon />
-                  <span>Disconnect</span>
-                </div>
                 <div className="shogun-dropdown-item" onClick={() => {
                   setDropdownOpen(false);
                   setAuthView("export");
                   setModalIsOpen(true);
                 }}>
-                  <span>📤</span>
+                  <ExportIcon />
                   <span>Export Pair</span>
+                </div>
+                <div className="shogun-dropdown-item" onClick={logout}>
+                  <LogoutIcon />
+                  <span>Disconnect</span>
                 </div>
               </div>
             )}
@@ -714,11 +727,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         setError("WebAuthn is not supported in your browser");
         return;
       }
-      if (!formUsername) {
-        setError("Username required for WebAuthn");
-        return;
-      }
-      handleAuth("webauthn", formUsername);
+      setAuthView("webauthn-username");
     };
 
     const handleNostrAuth = () => handleAuth("nostr");
@@ -758,9 +767,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         // Copy to clipboard
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(pairData);
-          alert("Pair exported and copied to clipboard!");
-        } else {
-          alert("Pair exported! Please copy it manually from the text area.");
+          setShowCopySuccess(true);
+          setTimeout(() => setShowCopySuccess(false), 3000);
         }
       } catch (e: any) {
         setError(e.message || "Failed to export pair");
@@ -779,8 +787,12 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         
         const success = await importGunPair(importPairData, importPassword || undefined);
         if (success) {
-          setModalIsOpen(false);
-          alert("Pair imported successfully! You are now logged in.");
+          setShowImportSuccess(true);
+          // Chiudiamo il modal con un piccolo delay per permettere all'utente di vedere il successo
+          setTimeout(() => {
+            setModalIsOpen(false);
+            setShowImportSuccess(false);
+          }, 1500);
         } else {
           throw new Error("Failed to import pair");
         }
@@ -800,6 +812,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setError("");
       setLoading(false);
       setAuthView("options");
+      setExportPassword("");
+      setImportPassword("");
+      setImportPairData("");
+      setExportedPair("");
+      setShowCopySuccess(false);
+      setShowImportSuccess(false);
+      setRecoveredHint("");
     };
 
     const openModal = () => {
@@ -814,7 +833,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     const toggleMode = () => {
       resetForm();
-      setAuthView("password");
+      setAuthView("options"); // Porta alla selezione dei metodi invece che direttamente al form password
       setFormMode((prev) => (prev === "login" ? "signup" : "login"));
     };
 
@@ -840,13 +859,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             <button
               type="button"
               className="shogun-auth-option-button"
-              onClick={() => {
-                if (!formUsername) {
-                  setError("Username required for WebAuthn");
-                  return;
-                }
-                handleAuth("webauthn", formUsername);
-              }}
+              onClick={handleWebAuthnAuth}
               disabled={loading}
             >
               <WebAuthnIcon />
@@ -904,7 +917,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             onClick={() => setAuthView("import")}
             disabled={loading}
           >
-            <span>📥</span>
+            <ImportIcon />
             Import Gun Pair
           </button>
         )}
@@ -1040,6 +1053,54 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       </form>
     );
 
+    const renderWebAuthnUsernameForm = () => (
+      <div className="shogun-auth-form">
+        <h3>{formMode === "login" ? "Login with WebAuthn" : "Sign Up with WebAuthn"}</h3>
+        <div style={{ backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #0ea5e9' }}>
+          <p style={{ fontSize: '14px', color: '#0c4a6e', margin: '0', fontWeight: '500' }}>
+            🔑 WebAuthn Authentication
+          </p>
+          <p style={{ fontSize: '13px', color: '#075985', margin: '4px 0 0 0' }}>
+            Please enter your username to continue with WebAuthn {formMode === "login" ? "login" : "registration"}.
+          </p>
+        </div>
+        <div className="shogun-form-group">
+          <label htmlFor="username">
+            <UserIcon />
+            <span>Username</span>
+          </label>
+          <input
+            type="text"
+            id="username"
+            value={formUsername}
+            onChange={(e) => setFormUsername(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your username"
+            autoFocus
+          />
+        </div>
+        <button
+          type="button"
+          className="shogun-submit-button"
+          onClick={() => handleAuth("webauthn", formUsername)}
+          disabled={loading || !formUsername.trim()}
+        >
+          {loading ? "Processing..." : `Continue with WebAuthn`}
+        </button>
+        <div className="shogun-form-footer">
+          <button
+            type="button"
+            className="shogun-back-button"
+            onClick={() => setAuthView("options")}
+            disabled={loading}
+          >
+            &larr; Back to Options
+          </button>
+        </div>
+      </div>
+    );
+
     const renderRecoveryForm = () => (
       <div className="shogun-auth-form">
         <div className="shogun-form-group">
@@ -1116,9 +1177,14 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const renderExportForm = () => (
       <div className="shogun-auth-form">
         <h3>Export Gun Pair</h3>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
-          Export your Gun pair to backup your account. You can use this to login from another device.
-        </p>
+        <div style={{ backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #0ea5e9' }}>
+          <p style={{ fontSize: '14px', color: '#0c4a6e', margin: '0', fontWeight: '500' }}>
+            🔒 Backup Your Account
+          </p>
+          <p style={{ fontSize: '13px', color: '#075985', margin: '4px 0 0 0' }}>
+            Export your Gun pair to backup your account. You can use this to login from another device or restore access if needed.
+          </p>
+        </div>
         <div className="shogun-form-group">
           <label htmlFor="exportPassword">
             <LockIcon />
@@ -1136,6 +1202,19 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         {exportedPair && (
           <div className="shogun-form-group">
             <label>Your Gun Pair (copy this safely):</label>
+            {showCopySuccess && (
+              <div style={{ 
+                backgroundColor: '#dcfce7', 
+                color: '#166534', 
+                padding: '8px 12px', 
+                borderRadius: '4px', 
+                marginBottom: '8px',
+                fontSize: '14px',
+                border: '1px solid #22c55e'
+              }}>
+                ✅ Copied to clipboard successfully!
+              </div>
+            )}
             <textarea
               value={exportedPair}
               readOnly
@@ -1149,6 +1228,11 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 borderRadius: '4px'
               }}
             />
+            {!navigator.clipboard && (
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                ⚠️ Auto-copy not available. Please manually copy the text above.
+              </p>
+            )}
           </div>
         )}
         <button
@@ -1163,9 +1247,16 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           <button
             className="shogun-toggle-mode"
             onClick={() => {
-              setAuthView("options");
-              setExportPassword("");
-              setExportedPair("");
+              if (isLoggedIn) {
+                // If user is logged in, close the modal instead of going to options
+                setModalIsOpen(false);
+                setExportPassword("");
+                setExportedPair("");
+              } else {
+                setAuthView("options");
+                setExportPassword("");
+                setExportedPair("");
+              }
             }}
             disabled={loading}
           >
@@ -1178,12 +1269,17 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const renderImportForm = () => (
       <div className="shogun-auth-form">
         <h3>Import Gun Pair</h3>
-        <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
-          Import a Gun pair to login with your existing account from another device.
-        </p>
+        <div style={{ backgroundColor: '#fef3c7', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #f59e0b' }}>
+          <p style={{ fontSize: '14px', color: '#92400e', margin: '0', fontWeight: '500' }}>
+            🔑 Restore Your Account
+          </p>
+          <p style={{ fontSize: '13px', color: '#a16207', margin: '4px 0 0 0' }}>
+            Import a Gun pair to login with your existing account from another device. Make sure you have your backup data ready.
+          </p>
+        </div>
         <div className="shogun-form-group">
           <label htmlFor="importPairData">
-            <span>📄</span>
+            <ImportIcon />
             <span>Gun Pair Data</span>
           </label>
           <textarea
@@ -1217,13 +1313,27 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             placeholder="Enter password if pair was encrypted"
           />
         </div>
+        {showImportSuccess && (
+          <div style={{ 
+            backgroundColor: '#dcfce7', 
+            color: '#166534', 
+            padding: '12px', 
+            borderRadius: '8px', 
+            marginBottom: '16px',
+            fontSize: '14px',
+            border: '1px solid #22c55e',
+            textAlign: 'center'
+          }}>
+            ✅ Pair imported successfully! Logging you in...
+          </div>
+        )}
         <button
           type="button"
           className="shogun-submit-button"
           onClick={handleImportPair}
-          disabled={loading}
+          disabled={loading || showImportSuccess}
         >
-          {loading ? "Importing..." : "Import and Login"}
+          {loading ? "Importing..." : showImportSuccess ? "Success!" : "Import and Login"}
         </button>
         <div className="shogun-form-footer">
           <button
@@ -1262,9 +1372,11 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                         ? "Export Gun Pair"
                         : authView === "import"
                           ? "Import Gun Pair"
-                          : formMode === "login"
-                            ? "Login"
-                            : "Sign Up"}
+                          : authView === "webauthn-username"
+                            ? "WebAuthn"
+                            : formMode === "login"
+                              ? "Login"
+                              : "Sign Up"}
                 </h2>
                 <button
                   className="shogun-close-button"
@@ -1311,6 +1423,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 {authView === "showHint" && renderHint()}
                 {authView === "export" && renderExportForm()}
                 {authView === "import" && renderImportForm()}
+                {authView === "webauthn-username" && renderWebAuthnUsernameForm()}
               </div>
             </div>
           </div>
