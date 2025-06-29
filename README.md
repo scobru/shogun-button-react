@@ -9,6 +9,7 @@ A React component library for seamless integration of Shogun authentication into
 - 🔒 Secure authentication flow
 - 🌓 Dark mode support
 - 🔌 Multiple authentication methods (Username/Password, MetaMask, WebAuthn, Nostr, OAuth)
+- 🔑 Account backup and recovery (Gun pair export/import)
 - 📱 Responsive design
 - 🌍 TypeScript support
 
@@ -66,10 +67,10 @@ The provider component that supplies Shogun context to your application.
 
 | Name            | Type                     | Description                                    |
 | --------------- | ------------------------ | ---------------------------------------------- |
-| sdk             | ShogunSDK                | Shogun SDK instance created by shogunConnector |
+| sdk             | ShogunCore               | Shogun SDK instance created by shogunConnector |
 | options         | Object                   | Configuration options                          |
-| onLoginSuccess  | (data: AuthData) => void | Callback fired on successful login             |
-| onSignupSuccess | (data: AuthData) => void | Callback fired on successful signup            |
+| onLoginSuccess  | (data: { userPub: string; username: string; password?: string; authMethod?: string }) => void | Callback fired on successful login             |
+| onSignupSuccess | (data: { userPub: string; username: string; password?: string; authMethod?: string }) => void | Callback fired on successful signup            |
 | onError         | (error: Error) => void   | Callback fired when an error occurs            |
 
 ### ShogunButton
@@ -81,6 +82,7 @@ The main button component for triggering Shogun authentication. The component pr
 A hook to access Shogun authentication state and functions.
 
 ```tsx
+import React, { useEffect } from "react";
 import { useShogun } from "shogun-button-react";
 
 function Profile() {
@@ -114,11 +116,56 @@ function Profile() {
     
     // Or login with OAuth
     await login("oauth", "google");
+    
+    // Or login with Gun pair (for account recovery)
+    const pairData = { /* Gun pair object */ };
+    await login("pair", pairData);
+  };
+
+  const handleSignUp = async () => {
+    // Sign up with username/password
+    await signup("password", "newusername", "newpassword");
+    
+    // Or sign up with other methods (similar to login)
+    await signup("web3");
+    await signup("webauthn", "newusername");
   };
 
   const switchToCustomNetwork = () => {
     setProvider('https://my-custom-rpc.example.com');
   };
+
+  const handleExportPair = async () => {
+    try {
+      const pairData = await exportGunPair("optional-encryption-password");
+      console.log("Exported pair:", pairData);
+      // Save this data securely for account recovery
+    } catch (error) {
+      console.error("Export failed:", error);
+    }
+  };
+
+  const handleImportPair = async () => {
+    try {
+      const success = await importGunPair(savedPairData, "optional-password");
+      if (success) {
+        console.log("Pair imported successfully");
+      }
+    } catch (error) {
+      console.error("Import failed:", error);
+    }
+  };
+
+  // Observe reactive data changes
+  useEffect(() => {
+    if (isLoggedIn) {
+      const subscription = observe<any>('user/profile').subscribe(data => {
+        console.log('Profile data updated:', data);
+      });
+      
+      return () => subscription.unsubscribe();
+    }
+  }, [isLoggedIn, observe]);
 
   return isLoggedIn ? (
     <div>
@@ -126,6 +173,7 @@ function Profile() {
       <p>User Public Key: {userPub}</p>
       <button onClick={logout}>Logout</button>
       <button onClick={switchToCustomNetwork}>Switch Network</button>
+      <button onClick={handleExportPair}>Export Account</button>
     </div>
   ) : (
     <div>Please login to continue</div>
