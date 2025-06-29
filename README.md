@@ -8,7 +8,7 @@ A React component library for seamless integration of Shogun authentication into
 - 🎨 Customizable UI components
 - 🔒 Secure authentication flow
 - 🌓 Dark mode support
-- 🔌 Multiple authentication methods (Username/Password, MetaMask, WebAuthn)
+- 🔌 Multiple authentication methods (Username/Password, MetaMask, WebAuthn, Nostr, OAuth)
 - 📱 Responsive design
 - 🌍 TypeScript support
 
@@ -20,8 +20,8 @@ import {
   ShogunButton,
   ShogunButtonProvider,
   shogunConnector,
-} from "@shogun/shogun-button-react";
-import "@shogun/shogun-button-react/styles.css";
+} from "shogun-button-react";
+import "shogun-button-react/styles.css";
 
 function App() {
   const { sdk, options, setProvider } = shogunConnector({
@@ -74,52 +74,56 @@ The provider component that supplies Shogun context to your application.
 
 ### ShogunButton
 
-The main button component for triggering Shogun authentication.
-
-#### Custom Button
-
-You can customize the button appearance using `ShogunButton.Custom`:
-
-```tsx
-<ShogunButton.Custom>
-  {({ ready, authenticate }) => (
-    <button
-      className="my-custom-button"
-      disabled={!ready}
-      onClick={authenticate}
-    >
-      Connect with Shogun
-    </button>
-  )}
-</ShogunButton.Custom>
-```
+The main button component for triggering Shogun authentication. The component provides a complete authentication UI with modal dialogs for login and signup.
 
 ### useShogun Hook
 
 A hook to access Shogun authentication state and functions.
 
 ```tsx
-import { useShogun } from "@shogun/shogun-button-react";
+import { useShogun } from "shogun-button-react";
 
 function Profile() {
   const {
-    isAuthenticated,
-    user,
+    isLoggedIn,
+    userPub,
+    username,
     login,
     signup,
     logout,
-    connectWithMetaMask,
-    connectWithWebAuthn,
     setProvider,
+    hasPlugin,
+    getPlugin,
+    exportGunPair,
+    importGunPair,
+    observe,
   } = useShogun();
+
+  const handleLogin = async () => {
+    // Login with username/password
+    await login("password", "username", "password");
+    
+    // Or login with MetaMask
+    await login("web3");
+    
+    // Or login with WebAuthn
+    await login("webauthn", "username");
+    
+    // Or login with Nostr
+    await login("nostr");
+    
+    // Or login with OAuth
+    await login("oauth", "google");
+  };
 
   const switchToCustomNetwork = () => {
     setProvider('https://my-custom-rpc.example.com');
   };
 
-  return isAuthenticated ? (
+  return isLoggedIn ? (
     <div>
-      <h2>Welcome, {user.username}!</h2>
+      <h2>Welcome, {username}!</h2>
+      <p>User Public Key: {userPub}</p>
       <button onClick={logout}>Logout</button>
       <button onClick={switchToCustomNetwork}>Switch Network</button>
     </div>
@@ -135,17 +139,43 @@ The `shogunConnector` accepts the following options:
 
 ```typescript
 interface ShogunConnectorOptions {
+  // App information
   appName: string;
   appDescription?: string;
   appUrl?: string;
   appIcon?: string;
+  
+  // Feature toggles
   showMetamask?: boolean;
   showWebauthn?: boolean;
+  showNostr?: boolean;
+  showOauth?: boolean;
   darkMode?: boolean;
+  
+  // Network configuration
   websocketSecure?: boolean;
-  didRegistryAddress?: string | null;
   providerUrl?: string | null;
   peers?: string[];
+  authToken?: string;
+  gunInstance?: IGunInstance<any>;
+  
+  // Advanced options
+  logging?: {
+    enabled: boolean;
+    level: "error" | "warning" | "info" | "debug";
+  };
+  timeouts?: {
+    login?: number;
+    signup?: number;
+    operation?: number;
+  };
+  oauth?: {
+    providers: Record<string, {
+      clientId: string;
+      clientSecret?: string;
+      redirectUri?: string;
+    }>
+  }
 }
 ```
 
@@ -157,6 +187,8 @@ interface ShogunConnectorResult {
   options: ShogunConnectorOptions;
   setProvider: (provider: string | EthersProvider) => boolean;
   getCurrentProviderUrl: () => string | null;
+  registerPlugin: (plugin: any) => boolean;
+  hasPlugin: (name: string) => boolean;
 }
 ```
 

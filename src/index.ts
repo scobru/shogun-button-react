@@ -1,5 +1,6 @@
 import { ShogunButton, ShogunButtonProvider, useShogun } from './components/ShogunButton.js';
 import { ShogunConnectorOptions, ShogunConnectorResult } from './types/connector-options.js';
+import { shogunConnector } from './connector.js';
 
 // Export components
 export { 
@@ -7,6 +8,9 @@ export {
   ShogunButtonProvider, 
   useShogun 
 };
+
+// Export connector function
+export { shogunConnector };
 
 // Export all types
 export * from './types/index.js';
