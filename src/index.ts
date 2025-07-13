@@ -12,8 +12,5 @@ export {
 // Export connector function
 export { shogunConnector };
 
-// Export all types
-export * from './types/index.js';
-
 // Export specific connector types for backward compatibility
 export { ShogunConnectorOptions, ShogunConnectorResult };

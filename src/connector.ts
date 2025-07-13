@@ -1,5 +1,5 @@
 import { ShogunCore } from "shogun-core";
-import { ShogunConnectorOptions, ShogunConnectorResult } from "./types";
+import { ShogunConnectorOptions, ShogunConnectorResult } from "./types/connector-options";
 
 export function shogunConnector(
   options: ShogunConnectorOptions
@@ -21,37 +21,6 @@ export function shogunConnector(
     oauth,
   });
 
-  const setProvider = (provider: any): boolean => {
-    if (!sdk) {
-      return false;
-    }
-
-    try {
-      let newProviderUrl: string | null = null;
-      if (provider && provider.connection && provider.connection.url) {
-        newProviderUrl = provider.connection.url;
-      } else if (typeof provider === "string") {
-        newProviderUrl = provider;
-      }
-
-      if (newProviderUrl) {
-        if (typeof sdk.setRpcUrl === "function") {
-          return sdk.setRpcUrl(newProviderUrl);
-        }
-      }
-      return false;
-    } catch (error) {
-      console.error("Error setting provider:", error);
-      return false;
-    }
-  };
-
-  const getCurrentProviderUrl = (): string | null => {
-    if (sdk && typeof sdk.getRpcUrl === "function") {
-      return sdk.getRpcUrl();
-    }
-    return null;
-  };
 
   const registerPlugin = (plugin: any): boolean => {
     if (sdk && typeof sdk.register === "function") {
@@ -73,8 +42,6 @@ export function shogunConnector(
   return {
     sdk,
     options,
-    setProvider,
-    getCurrentProviderUrl,
     registerPlugin,
     hasPlugin,
   };

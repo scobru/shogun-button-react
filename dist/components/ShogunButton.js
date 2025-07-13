@@ -1,6 +1,5 @@
-import React, { useContext, useState, createContext, useEffect, useRef } from "react";
+import React, { useContext, useState, createContext, useEffect, useRef, } from "react";
 import { Observable } from "rxjs";
-import "../types/index.js"; // Import type file to extend definitions
 import "../styles/index.css";
 // Default context
 const defaultShogunContext = {
@@ -13,7 +12,6 @@ const defaultShogunContext = {
     signUp: async () => ({}),
     logout: () => { },
     observe: () => new Observable(),
-    setProvider: () => false,
     hasPlugin: () => false,
     getPlugin: () => undefined,
     exportGunPair: async () => "",
@@ -24,7 +22,8 @@ const ShogunContext = createContext(defaultShogunContext);
 // Custom hook to access the context
 export const useShogun = () => useContext(ShogunContext);
 // Provider component
-export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, onSignupSuccess, onError, }) {
+export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, onSignupSuccess, onError, onLogout, // AGGIUNTA
+ }) {
     // Use React's useState directly
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userPub, setUserPub] = useState(null);
@@ -40,10 +39,10 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
             if (pub) {
                 setIsLoggedIn(true);
                 setUserPub(pub);
-                setUsername(pub.slice(0, 8) + '...');
+                setUsername(pub.slice(0, 8) + "...");
             }
         }
-        // Poiché il metodo 'on' non esiste su ShogunCore, 
+        // Poiché il metodo 'on' non esiste su ShogunCore,
         // gestiamo gli stati direttamente nei metodi di login/logout
     }, [sdk, onLoginSuccess]);
     // RxJS observe method
@@ -51,7 +50,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
         if (!sdk) {
             return new Observable();
         }
-        return sdk.observe(path);
+        return sdk.rx.observe(path);
     };
     // Unified login
     const login = async (method, ...args) => {
@@ -71,7 +70,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                 case "pair":
                     // New pair authentication method
                     const pair = args[0];
-                    if (!pair || typeof pair !== 'object') {
+                    if (!pair || typeof pair !== "object") {
                         throw new Error("Invalid pair data provided");
                     }
                     result = await new Promise((resolve, reject) => {
@@ -86,7 +85,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                                 success: true,
                                 userPub: pub,
                                 alias: alias,
-                                method: 'pair'
+                                method: "pair",
                             });
                         });
                     });
@@ -99,6 +98,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                     if (!webauthn)
                         throw new Error("WebAuthn plugin not available");
                     result = await webauthn.login(username);
+                    authMethod = "webauthn";
                     break;
                 case "web3":
                     const web3 = sdk.getPlugin("web3");
@@ -110,6 +110,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                     }
                     username = connectionResult.address;
                     result = await web3.login(connectionResult.address);
+                    authMethod = "web3";
                     break;
                 case "nostr":
                     const nostr = sdk.getPlugin("nostr");
@@ -124,6 +125,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                         throw new Error("Nessuna chiave pubblica ottenuta");
                     username = pubkey;
                     result = await nostr.login(pubkey);
+                    authMethod = "nostr";
                     break;
                 case "oauth":
                     const oauth = sdk.getPlugin("oauth");
@@ -141,7 +143,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
             }
             if (result.success) {
                 const userPub = result.userPub || ((_b = (_a = sdk.gun.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub) || "";
-                const displayName = result.alias || username || userPub.slice(0, 8) + '...';
+                const displayName = result.alias || username || userPub.slice(0, 8) + "...";
                 setIsLoggedIn(true);
                 setUserPub(userPub);
                 setUsername(displayName);
@@ -216,6 +218,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                     if (!oauth)
                         throw new Error("OAuth plugin not available");
                     const provider = args[0] || "google";
+                    // NON serve più setPin né passare il pin
                     result = await oauth.signUp(provider);
                     authMethod = "oauth";
                     if (result.redirectUrl) {
@@ -227,7 +230,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
             }
             if (result.success) {
                 const userPub = result.userPub || ((_b = (_a = sdk.gun.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub) || "";
-                const displayName = result.alias || username || userPub.slice(0, 8) + '...';
+                const displayName = result.alias || username || userPub.slice(0, 8) + "...";
                 setIsLoggedIn(true);
                 setUserPub(userPub);
                 setUsername(displayName);
@@ -256,31 +259,8 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
         sessionStorage.removeItem("gun/pair");
         sessionStorage.removeItem("gun/session");
         sessionStorage.removeItem("pair");
-    };
-    // Implementazione del metodo setProvider
-    const setProvider = (provider) => {
-        if (!sdk) {
-            return false;
-        }
-        try {
-            let newProviderUrl = null;
-            if (provider && provider.connection && provider.connection.url) {
-                newProviderUrl = provider.connection.url;
-            }
-            else if (typeof provider === 'string') {
-                newProviderUrl = provider;
-            }
-            if (newProviderUrl) {
-                if (typeof sdk.setRpcUrl === 'function') {
-                    return sdk.setRpcUrl(newProviderUrl);
-                }
-            }
-            return false;
-        }
-        catch (error) {
-            console.error("Error setting provider:", error);
-            return false;
-        }
+        if (onLogout)
+            onLogout(); // AGGIUNTA
     };
     const hasPlugin = (name) => {
         return sdk ? sdk.hasPlugin(name) : false;
@@ -361,7 +341,6 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
             signUp,
             logout,
             observe,
-            setProvider,
             hasPlugin,
             getPlugin,
             exportGunPair,
@@ -414,7 +393,7 @@ const ExportIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org
 // Component for Shogun login button
 export const ShogunButton = (() => {
     const Button = () => {
-        const { isLoggedIn, username, logout, login, signUp, sdk, options, exportGunPair, importGunPair } = useShogun();
+        const { isLoggedIn, username, logout, login, signUp, sdk, options, exportGunPair, importGunPair, } = useShogun();
         // Form states
         const [modalIsOpen, setModalIsOpen] = useState(false);
         const [formUsername, setFormUsername] = useState("");
@@ -436,17 +415,19 @@ export const ShogunButton = (() => {
         const [showCopySuccess, setShowCopySuccess] = useState(false);
         const [showImportSuccess, setShowImportSuccess] = useState(false);
         const dropdownRef = useRef(null);
+        // Rimuovi tutto ciò che riguarda oauthPin
         // Handle click outside to close dropdown
         useEffect(() => {
             const handleClickOutside = (event) => {
-                if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                if (dropdownRef.current &&
+                    !dropdownRef.current.contains(event.target)) {
                     setDropdownOpen(false);
                 }
             };
             if (dropdownOpen) {
-                document.addEventListener('mousedown', handleClickOutside);
+                document.addEventListener("mousedown", handleClickOutside);
                 return () => {
-                    document.removeEventListener('mousedown', handleClickOutside);
+                    document.removeEventListener("mousedown", handleClickOutside);
                 };
             }
         }, [dropdownOpen]);
@@ -530,7 +511,6 @@ export const ShogunButton = (() => {
                 setLoading(false);
             }
         };
-        const handleWeb3Auth = () => handleAuth("web3");
         const handleWebAuthnAuth = () => {
             if (!(sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("webauthn"))) {
                 setError("WebAuthn is not supported in your browser");
@@ -538,8 +518,6 @@ export const ShogunButton = (() => {
             }
             setAuthView("webauthn-username");
         };
-        const handleNostrAuth = () => handleAuth("nostr");
-        const handleOAuth = (provider) => handleAuth("oauth", provider);
         const handleRecover = async () => {
             setError("");
             setLoading(true);
@@ -628,6 +606,7 @@ export const ShogunButton = (() => {
             setShowCopySuccess(false);
             setShowImportSuccess(false);
             setRecoveredHint("");
+            // Rimuovi tutto ciò che riguarda oauthPin
         };
         const openModal = () => {
             resetForm();
@@ -647,11 +626,15 @@ export const ShogunButton = (() => {
             options.showMetamask !== false && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("web3")) && (React.createElement("div", { className: "shogun-auth-option-group" },
                 React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => handleAuth("web3"), disabled: loading },
                     React.createElement(WalletIcon, null),
-                    formMode === "login" ? "Login with MetaMask" : "Signup with MetaMask"))),
+                    formMode === "login"
+                        ? "Login with MetaMask"
+                        : "Signup with MetaMask"))),
             options.showWebauthn !== false && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("webauthn")) && (React.createElement("div", { className: "shogun-auth-option-group" },
                 React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: handleWebAuthnAuth, disabled: loading },
                     React.createElement(WebAuthnIcon, null),
-                    formMode === "login" ? "Login with WebAuthn" : "Signup with WebAuthn"))),
+                    formMode === "login"
+                        ? "Login with WebAuthn"
+                        : "Signup with WebAuthn"))),
             options.showNostr !== false && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("nostr")) && (React.createElement("div", { className: "shogun-auth-option-group" },
                 React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => handleAuth("nostr"), disabled: loading },
                     React.createElement(NostrIcon, null),
@@ -659,12 +642,16 @@ export const ShogunButton = (() => {
             options.showOauth !== false && (sdk === null || sdk === void 0 ? void 0 : sdk.hasPlugin("oauth")) && (React.createElement("div", { className: "shogun-auth-option-group" },
                 React.createElement("button", { type: "button", className: "shogun-auth-option-button shogun-google-button", onClick: () => handleAuth("oauth", "google"), disabled: loading },
                     React.createElement(GoogleIcon, null),
-                    formMode === "login" ? "Login with Google" : "Signup with Google"))),
+                    formMode === "login"
+                        ? "Login with Google"
+                        : "Signup with Google"))),
             React.createElement("div", { className: "shogun-divider" },
                 React.createElement("span", null, "or")),
             React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => setAuthView("password"), disabled: loading },
                 React.createElement(LockIcon, null),
-                formMode === "login" ? "Login with Password" : "Signup with Password"),
+                formMode === "login"
+                    ? "Login with Password"
+                    : "Signup with Password"),
             formMode === "login" && (React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => setAuthView("import"), disabled: loading },
                 React.createElement(ImportIcon, null),
                 "Import Gun Pair"))));
@@ -711,11 +698,25 @@ export const ShogunButton = (() => {
                     : "Already have an account? Log in"),
                 formMode === "login" && (React.createElement("button", { type: "button", className: "shogun-toggle-mode", onClick: () => setAuthView("recover"), disabled: loading }, "Forgot password?")))));
         const renderWebAuthnUsernameForm = () => (React.createElement("div", { className: "shogun-auth-form" },
-            React.createElement("h3", null, formMode === "login" ? "Login with WebAuthn" : "Sign Up with WebAuthn"),
-            React.createElement("div", { style: { backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #0ea5e9' } },
-                React.createElement("p", { style: { fontSize: '14px', color: '#0c4a6e', margin: '0', fontWeight: '500' } }, "\uD83D\uDD11 WebAuthn Authentication"),
-                React.createElement("p", { style: { fontSize: '13px', color: '#075985', margin: '4px 0 0 0' } },
-                    "Please enter your username to continue with WebAuthn ",
+            React.createElement("h3", null, formMode === "login"
+                ? "Login with WebAuthn"
+                : "Sign Up with WebAuthn"),
+            React.createElement("div", { style: {
+                    backgroundColor: "#f0f9ff",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                    border: "1px solid #0ea5e9",
+                } },
+                React.createElement("p", { style: {
+                        fontSize: "14px",
+                        color: "#0c4a6e",
+                        margin: "0",
+                        fontWeight: "500",
+                    } }, "\uD83D\uDD11 WebAuthn Authentication"),
+                React.createElement("p", { style: { fontSize: "13px", color: "#075985", margin: "4px 0 0 0" } },
+                    "Please enter your username to continue with WebAuthn",
+                    " ",
                     formMode === "login" ? "login" : "registration",
                     ".")),
             React.createElement("div", { className: "shogun-form-group" },
@@ -753,9 +754,20 @@ export const ShogunButton = (() => {
                 } }, "Back to Login")));
         const renderExportForm = () => (React.createElement("div", { className: "shogun-auth-form" },
             React.createElement("h3", null, "Export Gun Pair"),
-            React.createElement("div", { style: { backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #0ea5e9' } },
-                React.createElement("p", { style: { fontSize: '14px', color: '#0c4a6e', margin: '0', fontWeight: '500' } }, "\uD83D\uDD12 Backup Your Account"),
-                React.createElement("p", { style: { fontSize: '13px', color: '#075985', margin: '4px 0 0 0' } }, "Export your Gun pair to backup your account. You can use this to login from another device or restore access if needed.")),
+            React.createElement("div", { style: {
+                    backgroundColor: "#f0f9ff",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                    border: "1px solid #0ea5e9",
+                } },
+                React.createElement("p", { style: {
+                        fontSize: "14px",
+                        color: "#0c4a6e",
+                        margin: "0",
+                        fontWeight: "500",
+                    } }, "\uD83D\uDD12 Backup Your Account"),
+                React.createElement("p", { style: { fontSize: "13px", color: "#075985", margin: "4px 0 0 0" } }, "Export your Gun pair to backup your account. You can use this to login from another device or restore access if needed.")),
             React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", { htmlFor: "exportPassword" },
                     React.createElement(LockIcon, null),
@@ -764,23 +776,23 @@ export const ShogunButton = (() => {
             exportedPair && (React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", null, "Your Gun Pair (copy this safely):"),
                 showCopySuccess && (React.createElement("div", { style: {
-                        backgroundColor: '#dcfce7',
-                        color: '#166534',
-                        padding: '8px 12px',
-                        borderRadius: '4px',
-                        marginBottom: '8px',
-                        fontSize: '14px',
-                        border: '1px solid #22c55e'
+                        backgroundColor: "#dcfce7",
+                        color: "#166534",
+                        padding: "8px 12px",
+                        borderRadius: "4px",
+                        marginBottom: "8px",
+                        fontSize: "14px",
+                        border: "1px solid #22c55e",
                     } }, "\u2705 Copied to clipboard successfully!")),
                 React.createElement("textarea", { value: exportedPair, readOnly: true, rows: 6, style: {
-                        fontFamily: 'monospace',
-                        fontSize: '12px',
-                        width: '100%',
-                        padding: '8px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px'
+                        fontFamily: "monospace",
+                        fontSize: "12px",
+                        width: "100%",
+                        padding: "8px",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
                     } }),
-                !navigator.clipboard && (React.createElement("p", { style: { fontSize: '12px', color: '#666', marginTop: '8px' } }, "\u26A0\uFE0F Auto-copy not available. Please manually copy the text above.")))),
+                !navigator.clipboard && (React.createElement("p", { style: { fontSize: "12px", color: "#666", marginTop: "8px" } }, "\u26A0\uFE0F Auto-copy not available. Please manually copy the text above.")))),
             React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleExportPair, disabled: loading }, loading ? "Exporting..." : "Export Pair"),
             React.createElement("div", { className: "shogun-form-footer" },
                 React.createElement("button", { className: "shogun-toggle-mode", onClick: () => {
@@ -798,20 +810,31 @@ export const ShogunButton = (() => {
                     }, disabled: loading }, "Back"))));
         const renderImportForm = () => (React.createElement("div", { className: "shogun-auth-form" },
             React.createElement("h3", null, "Import Gun Pair"),
-            React.createElement("div", { style: { backgroundColor: '#fef3c7', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #f59e0b' } },
-                React.createElement("p", { style: { fontSize: '14px', color: '#92400e', margin: '0', fontWeight: '500' } }, "\uD83D\uDD11 Restore Your Account"),
-                React.createElement("p", { style: { fontSize: '13px', color: '#a16207', margin: '4px 0 0 0' } }, "Import a Gun pair to login with your existing account from another device. Make sure you have your backup data ready.")),
+            React.createElement("div", { style: {
+                    backgroundColor: "#fef3c7",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                    border: "1px solid #f59e0b",
+                } },
+                React.createElement("p", { style: {
+                        fontSize: "14px",
+                        color: "#92400e",
+                        margin: "0",
+                        fontWeight: "500",
+                    } }, "\uD83D\uDD11 Restore Your Account"),
+                React.createElement("p", { style: { fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" } }, "Import a Gun pair to login with your existing account from another device. Make sure you have your backup data ready.")),
             React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", { htmlFor: "importPairData" },
                     React.createElement(ImportIcon, null),
                     React.createElement("span", null, "Gun Pair Data")),
                 React.createElement("textarea", { id: "importPairData", value: importPairData, onChange: (e) => setImportPairData(e.target.value), disabled: loading, placeholder: "Paste your Gun pair JSON here...", rows: 6, style: {
-                        fontFamily: 'monospace',
-                        fontSize: '12px',
-                        width: '100%',
-                        padding: '8px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px'
+                        fontFamily: "monospace",
+                        fontSize: "12px",
+                        width: "100%",
+                        padding: "8px",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
                     } })),
             React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", { htmlFor: "importPassword" },
@@ -819,16 +842,20 @@ export const ShogunButton = (() => {
                     React.createElement("span", null, "Decryption Password (if encrypted)")),
                 React.createElement("input", { type: "password", id: "importPassword", value: importPassword, onChange: (e) => setImportPassword(e.target.value), disabled: loading, placeholder: "Enter password if pair was encrypted" })),
             showImportSuccess && (React.createElement("div", { style: {
-                    backgroundColor: '#dcfce7',
-                    color: '#166534',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    marginBottom: '16px',
-                    fontSize: '14px',
-                    border: '1px solid #22c55e',
-                    textAlign: 'center'
+                    backgroundColor: "#dcfce7",
+                    color: "#166534",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                    fontSize: "14px",
+                    border: "1px solid #22c55e",
+                    textAlign: "center",
                 } }, "\u2705 Pair imported successfully! Logging you in...")),
-            React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleImportPair, disabled: loading || showImportSuccess }, loading ? "Importing..." : showImportSuccess ? "Success!" : "Import and Login"),
+            React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleImportPair, disabled: loading || showImportSuccess }, loading
+                ? "Importing..."
+                : showImportSuccess
+                    ? "Success!"
+                    : "Import and Login"),
             React.createElement("div", { className: "shogun-form-footer" },
                 React.createElement("button", { className: "shogun-toggle-mode", onClick: () => {
                         setAuthView("options");
@@ -873,7 +900,8 @@ export const ShogunButton = (() => {
                         authView === "showHint" && renderHint(),
                         authView === "export" && renderExportForm(),
                         authView === "import" && renderImportForm(),
-                        authView === "webauthn-username" && renderWebAuthnUsernameForm()))))));
+                        authView === "webauthn-username" &&
+                            renderWebAuthnUsernameForm()))))));
     };
     Button.displayName = "ShogunButton";
     return Object.assign(Button, {

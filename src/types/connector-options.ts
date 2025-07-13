@@ -44,11 +44,6 @@ export interface ShogunConnectorOptions {
 export interface ShogunConnectorResult {
   sdk: ShogunCore;
   options: ShogunConnectorOptions;
-  
-  // Helper methods
-  setProvider: (provider: any) => boolean;
-  getCurrentProviderUrl: () => string | null;
-  
   // Nuovi metodi per la gestione dei plugin
   registerPlugin: (plugin: any) => boolean;
   hasPlugin: (name: string) => boolean;

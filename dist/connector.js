@@ -8,36 +8,6 @@ export function shogunConnector(options) {
         timeouts,
         oauth,
     });
-    const setProvider = (provider) => {
-        if (!sdk) {
-            return false;
-        }
-        try {
-            let newProviderUrl = null;
-            if (provider && provider.connection && provider.connection.url) {
-                newProviderUrl = provider.connection.url;
-            }
-            else if (typeof provider === "string") {
-                newProviderUrl = provider;
-            }
-            if (newProviderUrl) {
-                if (typeof sdk.setRpcUrl === "function") {
-                    return sdk.setRpcUrl(newProviderUrl);
-                }
-            }
-            return false;
-        }
-        catch (error) {
-            console.error("Error setting provider:", error);
-            return false;
-        }
-    };
-    const getCurrentProviderUrl = () => {
-        if (sdk && typeof sdk.getRpcUrl === "function") {
-            return sdk.getRpcUrl();
-        }
-        return null;
-    };
     const registerPlugin = (plugin) => {
         if (sdk && typeof sdk.register === "function") {
             try {
@@ -57,8 +27,6 @@ export function shogunConnector(options) {
     return {
         sdk,
         options,
-        setProvider,
-        getCurrentProviderUrl,
         registerPlugin,
         hasPlugin,
     };

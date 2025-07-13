@@ -34,8 +34,6 @@ export interface ShogunConnectorOptions {
 export interface ShogunConnectorResult {
     sdk: ShogunCore;
     options: ShogunConnectorOptions;
-    setProvider: (provider: any) => boolean;
-    getCurrentProviderUrl: () => string | null;
     registerPlugin: (plugin: any) => boolean;
     hasPlugin: (name: string) => boolean;
 }

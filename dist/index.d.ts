@@ -3,5 +3,4 @@ import { ShogunConnectorOptions, ShogunConnectorResult } from './types/connector
 import { shogunConnector } from './connector.js';
 export { ShogunButton, ShogunButtonProvider, useShogun };
 export { shogunConnector };
-export * from './types/index.js';
 export { ShogunConnectorOptions, ShogunConnectorResult };
