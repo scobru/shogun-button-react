@@ -1,5 +1,8 @@
-import { ShogunCore } from "shogun-core";
-import { ShogunConnectorOptions, ShogunConnectorResult } from "./types/connector-options";
+import ShogunCore from "shogun-core";
+import {
+  ShogunConnectorOptions,
+  ShogunConnectorResult,
+} from "./types/connector-options";
 
 export function shogunConnector(
   options: ShogunConnectorOptions
@@ -20,7 +23,6 @@ export function shogunConnector(
     timeouts,
     oauth,
   });
-
 
   const registerPlugin = (plugin: any): boolean => {
     if (sdk && typeof sdk.register === "function") {
@@ -45,4 +47,4 @@ export function shogunConnector(
     registerPlugin,
     hasPlugin,
   };
-} 
+}

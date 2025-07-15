@@ -1,4 +1,4 @@
-import { ShogunCore } from "shogun-core";
+import ShogunCore from "shogun-core";
 export function shogunConnector(options) {
     const { peers = ["https://gun-manhattan.herokuapp.com/gun"], appName, logging, timeouts, oauth, ...restOptions } = options;
     const sdk = new ShogunCore({
