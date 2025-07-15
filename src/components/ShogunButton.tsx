@@ -210,7 +210,17 @@ export function ShogunButtonProvider({
           const oauth: OAuthPlugin = sdk.getPlugin("oauth") as OAuthPlugin;
           if (!oauth) throw new Error("OAuth plugin not available");
           const provider = args[0] || "google";
-          result = await oauth.login(provider);
+
+          // Se abbiamo code e state, significa che siamo in un callback
+          if (args[1] && args[2]) {
+            const code = args[1];
+            const state = args[2];
+            result = await oauth.handleOAuthCallback(provider, code, state);
+          } else {
+            // Altrimenti iniziamo il flusso OAuth normale
+            result = await oauth.login(provider);
+          }
+
           authMethod = "oauth";
           if (result.redirectUrl) {
             return result;
@@ -299,8 +309,17 @@ export function ShogunButtonProvider({
           const oauth: any = sdk.getPlugin("oauth");
           if (!oauth) throw new Error("OAuth plugin not available");
           const provider = args[0] || "google";
-          // NON serve più setPin né passare il pin
-          result = await oauth.signUp(provider);
+
+          // Se abbiamo code e state, significa che siamo in un callback
+          if (args[1] && args[2]) {
+            const code = args[1];
+            const state = args[2];
+            result = await oauth.handleOAuthCallback(provider, code, state);
+          } else {
+            // Altrimenti iniziamo il flusso OAuth normale
+            result = await oauth.signUp(provider);
+          }
+
           authMethod = "oauth";
 
           if (result.redirectUrl) {
@@ -751,7 +770,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                   : username}
               </span>
             </button>
- 
+
             {dropdownOpen && (
               <div className="shogun-dropdown-menu">
                 <div className="shogun-dropdown-header">
@@ -826,8 +845,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             formPasswordConfirm
           );
           if (result && result.success) {
-            if (sdk?.gundb) {
-              await sdk.gundb.setPasswordHint(
+            if (sdk?.db) {
+              await sdk.db.setPasswordHint(
                 formUsername,
                 formPassword,
                 formHint,
@@ -849,7 +868,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       }
     };
 
-
     const handleWebAuthnAuth = () => {
       if (!sdk?.hasPlugin("webauthn")) {
         setError("WebAuthn is not supported in your browser");
@@ -862,10 +880,10 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setError("");
       setLoading(true);
       try {
-        if (!sdk?.gundb) {
+        if (!sdk?.db) {
           throw new Error("SDK not ready");
         }
-        const result = await sdk.gundb.forgotPassword(formUsername, [
+        const result = await sdk.db.forgotPassword(formUsername, [
           formSecurityAnswer,
         ]);
         if (result.success && result.hint) {
