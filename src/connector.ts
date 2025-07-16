@@ -10,7 +10,6 @@ export function shogunConnector(
   const {
     peers = ["https://gun-manhattan.herokuapp.com/gun"],
     appName,
-    logging,
     timeouts,
     oauth,
     ...restOptions
@@ -19,7 +18,6 @@ export function shogunConnector(
   const sdk = new ShogunCore({
     peers,
     scope: appName,
-    logging,
     timeouts,
     oauth,
   });

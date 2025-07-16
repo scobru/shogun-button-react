@@ -1,10 +1,9 @@
 import ShogunCore from "shogun-core";
 export function shogunConnector(options) {
-    const { peers = ["https://gun-manhattan.herokuapp.com/gun"], appName, logging, timeouts, oauth, ...restOptions } = options;
+    const { peers = ["https://gun-manhattan.herokuapp.com/gun"], appName, timeouts, oauth, ...restOptions } = options;
     const sdk = new ShogunCore({
         peers,
         scope: appName,
-        logging,
         timeouts,
         oauth,
     });

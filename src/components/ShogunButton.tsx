@@ -105,7 +105,8 @@ export function ShogunButtonProvider({
     if (!sdk) return;
 
     // Verifichiamo se l'utente è già loggato all'inizializzazione
-    if (sdk.isLoggedIn()) {
+    // Aggiungiamo un controllo di sicurezza per verificare se il metodo esiste
+    if (sdk && typeof sdk.isLoggedIn === "function" && sdk.isLoggedIn()) {
       const pub = sdk.gun.user()?.is?.pub;
       if (pub) {
         setIsLoggedIn(true);
@@ -367,11 +368,15 @@ export function ShogunButtonProvider({
   };
 
   const hasPlugin = (name: string): boolean => {
-    return sdk ? sdk.hasPlugin(name) : false;
+    return sdk && typeof sdk.hasPlugin === "function"
+      ? sdk.hasPlugin(name)
+      : false;
   };
 
   const getPlugin = <T,>(name: string): T | undefined => {
-    return sdk ? sdk.getPlugin<T>(name) : undefined;
+    return sdk && typeof sdk.getPlugin === "function"
+      ? sdk.getPlugin<T>(name)
+      : undefined;
   };
 
   // Export Gun pair functionality

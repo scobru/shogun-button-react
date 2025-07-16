@@ -14,10 +14,6 @@ export interface ShogunConnectorOptions {
     peers?: string[];
     authToken?: string;
     gunInstance?: IGunInstance<any>;
-    logging?: {
-        enabled: boolean;
-        level: "error" | "warning" | "info" | "debug";
-    };
     timeouts?: {
         login?: number;
         signup?: number;
