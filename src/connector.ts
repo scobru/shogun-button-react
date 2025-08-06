@@ -1,4 +1,4 @@
-import ShogunCore from "shogun-core";
+import { ShogunCore } from "shogun-core";
 import {
   ShogunConnectorOptions,
   ShogunConnectorResult,
