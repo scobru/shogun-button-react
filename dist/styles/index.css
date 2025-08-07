@@ -445,10 +445,36 @@
   border-radius: 6px;
   background-color: transparent;
   transition: all 0.2s ease;
+  cursor: pointer;
+  display: inline-block;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.4;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .shogun-prominent-toggle:hover {
   text-decoration: underline;
+  background-color: rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.shogun-prominent-toggle:active {
+  transform: translateY(0);
+}
+
+.shogun-prominent-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.shogun-prominent-toggle:focus {
+  outline: 2px solid var(--shogun-primary);
+  outline-offset: 2px;
 }
 
 /* Redundant dark theme styles removed */ 

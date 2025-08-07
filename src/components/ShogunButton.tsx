@@ -102,17 +102,55 @@ export function ShogunButtonProvider({
 
   // Effetto per gestire l'inizializzazione e pulizia
   useEffect(() => {
+    console.log(`🔧 ShogunButtonProvider useEffect - SDK available:`, !!sdk);
     if (!sdk) return;
+
+    // Check for existing session data
+    const sessionData = sessionStorage.getItem("gunSessionData");
+    const pairData =
+      sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair");
+    console.log(`🔧 Session data available:`, {
+      hasSessionData: !!sessionData,
+      hasPairData: !!pairData,
+    });
 
     // Verifichiamo se l'utente è già loggato all'inizializzazione
     // Aggiungiamo un controllo di sicurezza per verificare se il metodo esiste
-    if (sdk && typeof sdk.isLoggedIn === "function" && sdk.isLoggedIn()) {
-      const pub = sdk.gun.user()?.is?.pub;
-      if (pub) {
-        setIsLoggedIn(true);
-        setUserPub(pub);
-        setUsername(pub.slice(0, 8) + "...");
+    if (sdk && typeof sdk.isLoggedIn === "function") {
+      const isLoggedIn = sdk.isLoggedIn();
+      console.log(`🔧 SDK isLoggedIn(): ${isLoggedIn}`);
+
+      if (isLoggedIn) {
+        const pub = sdk.gun.user()?.is?.pub;
+        console.log(
+          `🔧 User already logged in with pub: ${pub?.slice(0, 8)}...`
+        );
+
+        if (pub) {
+          console.log(`🔧 Setting user state from existing session`);
+          setIsLoggedIn(true);
+          setUserPub(pub);
+          setUsername(pub.slice(0, 8) + "...");
+        }
+      } else {
+        console.log(`🔧 User not logged in`);
+
+        // Try to restore session if we have pair data
+        if (pairData && !isLoggedIn) {
+          console.log(`🔧 Attempting to restore session from pair data`);
+          try {
+            const pair = JSON.parse(pairData);
+            if (pair.pub) {
+              console.log(`🔧 Found pair with pub: ${pair.pub.slice(0, 8)}...`);
+              // Don't auto-login, just log the available data
+            }
+          } catch (error) {
+            console.error(`🔧 Error parsing pair data:`, error);
+          }
+        }
       }
+    } else {
+      console.log(`🔧 SDK isLoggedIn method not available`);
     }
 
     // Poiché il metodo 'on' non esiste su ShogunCore,
@@ -129,6 +167,10 @@ export function ShogunButtonProvider({
 
   // Unified login
   const login = async (method: string, ...args: any[]) => {
+    console.log(
+      `🔧 ShogunButtonProvider.login called with method: ${method}`,
+      args
+    );
     try {
       if (!sdk) {
         throw new Error("SDK not initialized");
@@ -138,9 +180,12 @@ export function ShogunButtonProvider({
       let authMethod = method;
       let username: string | undefined;
 
+      console.log(`🔧 Processing login method: ${method}`);
+
       switch (method) {
         case "password":
           username = args[0];
+          console.log(`🔧 Password login for username: ${username}`);
           result = await sdk.login(args[0], args[1]);
           break;
         case "pair":
@@ -149,6 +194,8 @@ export function ShogunButtonProvider({
           if (!pair || typeof pair !== "object") {
             throw new Error("Invalid pair data provided");
           }
+
+          console.log(`🔧 Pair login with pub: ${pair.pub?.slice(0, 8)}...`);
 
           result = await new Promise((resolve, reject) => {
             sdk.gun.user().auth(pair, (ack: any) => {
@@ -174,12 +221,14 @@ export function ShogunButtonProvider({
           break;
         case "webauthn":
           username = args[0];
+          console.log(`🔧 WebAuthn login for username: ${username}`);
           const webauthn: any = sdk.getPlugin("webauthn");
           if (!webauthn) throw new Error("WebAuthn plugin not available");
           result = await webauthn.login(username);
           authMethod = "webauthn";
           break;
         case "web3":
+          console.log(`🔧 Web3 login initiated`);
           const web3: any = sdk.getPlugin("web3");
           if (!web3) throw new Error("Web3 plugin not available");
           const connectionResult = await web3.connectMetaMask();
@@ -189,10 +238,12 @@ export function ShogunButtonProvider({
             );
           }
           username = connectionResult.address;
+          console.log(`🔧 Web3 connected to address: ${username}`);
           result = await web3.login(connectionResult.address);
           authMethod = "web3";
           break;
         case "nostr":
+          console.log(`🔧 Nostr login initiated`);
           const nostr: any = sdk.getPlugin("nostr");
           if (!nostr) throw new Error("Nostr plugin not available");
           const nostrResult = await nostr.connectBitcoinWallet();
@@ -204,10 +255,12 @@ export function ShogunButtonProvider({
           const pubkey = nostrResult.address;
           if (!pubkey) throw new Error("Nessuna chiave pubblica ottenuta");
           username = pubkey;
+          console.log(`🔧 Nostr connected to pubkey: ${username}`);
           result = await nostr.login(pubkey);
           authMethod = "nostr";
           break;
         case "oauth":
+          console.log(`🔧 OAuth login initiated`);
           const oauth: OAuthPlugin = sdk.getPlugin("oauth") as OAuthPlugin;
           if (!oauth) throw new Error("OAuth plugin not available");
           const provider = args[0] || "google";
@@ -231,10 +284,18 @@ export function ShogunButtonProvider({
           throw new Error("Unsupported login method");
       }
 
+      console.log(`🔧 Login result:`, result);
+
       if (result.success) {
         const userPub = result.userPub || sdk.gun.user()?.is?.pub || "";
         const displayName =
           result.alias || username || userPub.slice(0, 8) + "...";
+
+        console.log(`🔧 Login successful! Setting user state:`, {
+          userPub: userPub.slice(0, 8) + "...",
+          displayName,
+          authMethod,
+        });
 
         setIsLoggedIn(true);
         setUserPub(userPub);
@@ -246,10 +307,12 @@ export function ShogunButtonProvider({
           authMethod: authMethod as any,
         });
       } else {
+        console.error(`🔧 Login failed:`, result.error);
         onError?.(result.error || "Login failed");
       }
       return result;
     } catch (error: any) {
+      console.error(`🔧 Login error:`, error);
       onError?.(error.message || "Error during login");
       return { success: false, error: error.message };
     }
@@ -814,24 +877,39 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     // Event handlers
     const handleAuth = async (method: string, ...args: any[]) => {
+      console.log(`🔧 handleAuth called with method: ${method}`, args);
       setError("");
       setLoading(true);
 
       try {
         // Use formMode to determine whether to call login or signUp
         const action = formMode === "login" ? login : signUp;
+        console.log(
+          `🔧 Using action: ${formMode === "login" ? "login" : "signUp"}`
+        );
+
+        console.log(`🔧 Calling ${action.name} with method: ${method}`);
         const result = await action(method, ...args);
+        console.log(`🔧 ${action.name} result:`, result);
 
         if (result && !result.success && result.error) {
+          console.error(`🔧 ${action.name} failed with error:`, result.error);
           setError(result.error);
         } else if (result && result.redirectUrl) {
+          console.log(`🔧 Redirecting to: ${result.redirectUrl}`);
           window.location.href = result.redirectUrl;
+        } else if (result && result.success) {
+          console.log(`🔧 ${action.name} successful, closing modal`);
+          setModalIsOpen(false);
         } else {
+          console.warn(`🔧 Unexpected result:`, result);
           setModalIsOpen(false);
         }
       } catch (e: any) {
+        console.error(`🔧 handleAuth error:`, e);
         setError(e.message || "An unexpected error occurred.");
       } finally {
+        console.log(`🔧 handleAuth completed, setting loading to false`);
         setLoading(false);
       }
     };
@@ -983,9 +1061,15 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     };
 
     const toggleMode = () => {
+      console.log("🔧 toggleMode called - current formMode:", formMode);
+      console.log("🔧 loading state:", loading);
       resetForm();
       setAuthView("options"); // Porta alla selezione dei metodi invece che direttamente al form password
-      setFormMode((prev) => (prev === "login" ? "signup" : "login"));
+      setFormMode((prev) => {
+        const newMode = prev === "login" ? "signup" : "login";
+        console.log("🔧 Switching from", prev, "to", newMode);
+        return newMode;
+      });
     };
 
     // Add buttons for both login and signup for alternative auth methods
@@ -1191,7 +1275,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           <button
             type="button"
             className="shogun-toggle-mode shogun-prominent-toggle"
-            onClick={toggleMode}
+            onClick={() => {
+              console.log("🔧 Signup button clicked!");
+              console.log("🔧 Current formMode:", formMode);
+              console.log("🔧 Current loading:", loading);
+              console.log("🔧 Current authView:", authView);
+              toggleMode();
+            }}
             disabled={loading}
           >
             {formMode === "login"
@@ -1621,7 +1711,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                       <button
                         type="button"
                         className="shogun-toggle-mode shogun-prominent-toggle"
-                        onClick={toggleMode}
+                        onClick={() => {
+                          console.log("🔧 Signup button clicked!");
+                          console.log("🔧 Current formMode:", formMode);
+                          console.log("🔧 Current loading:", loading);
+                          console.log("🔧 Current authView:", authView);
+                          toggleMode();
+                        }}
                         disabled={loading}
                       >
                         {formMode === "login"
