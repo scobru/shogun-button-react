@@ -112,22 +112,28 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
                         throw new Error("Invalid pair data provided");
                     }
                     console.log(`🔧 Pair login with pub: ${(_a = pair.pub) === null || _a === void 0 ? void 0 : _a.slice(0, 8)}...`);
-                    result = await new Promise((resolve, reject) => {
-                        sdk.gun.user().auth(pair, (ack) => {
-                            if (ack.err) {
-                                reject(new Error(`Pair authentication failed: ${ack.err}`));
-                                return;
-                            }
-                            const pub = ack.pub || pair.pub;
-                            const alias = ack.alias || `user_${pub === null || pub === void 0 ? void 0 : pub.substring(0, 8)}`;
-                            resolve({
-                                success: true,
-                                userPub: pub,
-                                alias: alias,
-                                method: "pair",
+                    // Prefer official API from shogun-core when available
+                    if (typeof sdk.loginWithPair === "function") {
+                        result = await sdk.loginWithPair(pair);
+                    }
+                    else {
+                        result = await new Promise((resolve, reject) => {
+                            sdk.gun.user().auth(pair, (ack) => {
+                                if (ack.err) {
+                                    reject(new Error(`Pair authentication failed: ${ack.err}`));
+                                    return;
+                                }
+                                const pub = ack.pub || pair.pub;
+                                const alias = ack.alias || `user_${pub === null || pub === void 0 ? void 0 : pub.substring(0, 8)}`;
+                                resolve({
+                                    success: true,
+                                    userPub: pub,
+                                    alias: alias,
+                                    method: "pair",
+                                });
                             });
                         });
-                    });
+                    }
                     username = result.alias;
                     authMethod = "pair";
                     break;
@@ -351,11 +357,22 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
             throw new Error("User not authenticated");
         }
         try {
-            const pair = sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair");
-            if (!pair) {
+            // Prefer SDK export if available, fallback to storage
+            let pairJson = null;
+            if (typeof sdk.exportPair === "function") {
+                pairJson = sdk.exportPair();
+            }
+            else {
+                const stored = sessionStorage.getItem("gun/pair") ||
+                    sessionStorage.getItem("pair") ||
+                    null;
+                // Stored value is already a JSON stringified pair; don't double-encode
+                pairJson = stored;
+            }
+            if (!pairJson) {
                 throw new Error("No Gun pair available for current user");
             }
-            let pairData = JSON.stringify(pair);
+            let pairData = pairJson;
             // If password provided, encrypt the pair
             if (password && password.trim()) {
                 // Use Gun's SEA for encryption if available

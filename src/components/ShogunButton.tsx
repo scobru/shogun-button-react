@@ -197,24 +197,29 @@ export function ShogunButtonProvider({
 
           console.log(`🔧 Pair login with pub: ${pair.pub?.slice(0, 8)}...`);
 
-          result = await new Promise((resolve, reject) => {
-            sdk.gun.user().auth(pair, (ack: any) => {
-              if (ack.err) {
-                reject(new Error(`Pair authentication failed: ${ack.err}`));
-                return;
-              }
+          // Prefer official API from shogun-core when available
+          if (typeof (sdk as any).loginWithPair === "function") {
+            result = await (sdk as any).loginWithPair(pair);
+          } else {
+            result = await new Promise((resolve, reject) => {
+              sdk.gun.user().auth(pair, (ack: any) => {
+                if (ack.err) {
+                  reject(new Error(`Pair authentication failed: ${ack.err}`));
+                  return;
+                }
 
-              const pub = ack.pub || pair.pub;
-              const alias = ack.alias || `user_${pub?.substring(0, 8)}`;
+                const pub = ack.pub || pair.pub;
+                const alias = ack.alias || `user_${pub?.substring(0, 8)}`;
 
-              resolve({
-                success: true,
-                userPub: pub,
-                alias: alias,
-                method: "pair",
-              } as AuthResult);
+                resolve({
+                  success: true,
+                  userPub: pub,
+                  alias: alias,
+                  method: "pair",
+                } as AuthResult);
+              });
             });
-          });
+          }
 
           username = (result as any).alias;
           authMethod = "pair";
@@ -453,14 +458,24 @@ export function ShogunButtonProvider({
     }
 
     try {
-      const pair =
-        sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair");
+      // Prefer SDK export if available, fallback to storage
+      let pairJson: string | null = null;
+      if (typeof (sdk as any).exportPair === "function") {
+        pairJson = (sdk as any).exportPair();
+      } else {
+        const stored =
+          sessionStorage.getItem("gun/pair") ||
+          sessionStorage.getItem("pair") ||
+          null;
+        // Stored value is already a JSON stringified pair; don't double-encode
+        pairJson = stored;
+      }
 
-      if (!pair) {
+      if (!pairJson) {
         throw new Error("No Gun pair available for current user");
       }
 
-      let pairData = JSON.stringify(pair);
+      let pairData = pairJson;
 
       // If password provided, encrypt the pair
       if (password && password.trim()) {
