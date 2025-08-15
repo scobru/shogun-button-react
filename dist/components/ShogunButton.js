@@ -205,18 +205,47 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
             }
             console.log(`🔧 Login result:`, result);
             if (result.success) {
-                const userPub = result.userPub || ((_c = (_b = sdk.gun.user()) === null || _b === void 0 ? void 0 : _b.is) === null || _c === void 0 ? void 0 : _c.pub) || "";
-                const displayName = result.alias || username || userPub.slice(0, 8) + "...";
+                // Try multiple ways to get userPub
+                let userPub = result.userPub;
+                if (!userPub) {
+                    console.log(`🔧 userPub not in result, trying sdk.gun.user()?.is?.pub`);
+                    userPub = (_c = (_b = sdk.gun.user()) === null || _b === void 0 ? void 0 : _b.is) === null || _c === void 0 ? void 0 : _c.pub;
+                }
+                if (!userPub) {
+                    console.log(`🔧 userPub still not available, trying to get from gun user object`);
+                    const gunUser = sdk.gun.user();
+                    console.log(`🔧 Gun user object:`, gunUser);
+                    if (gunUser && gunUser.is) {
+                        userPub = gunUser.is.pub;
+                        console.log(`🔧 Found userPub in gun user:`, userPub ? userPub.slice(0, 8) + "..." : "null");
+                    }
+                }
+                if (!userPub) {
+                    console.error(`🔧 Could not get userPub after successful login`);
+                    // Try to get it from the result object if available
+                    if (result &&
+                        typeof result === "object" &&
+                        "user" in result &&
+                        result.user &&
+                        typeof result.user === "object" &&
+                        "pub" in result.user) {
+                        userPub = result.user.pub;
+                        console.log(`🔧 Got userPub from result.user:`, userPub ? userPub.slice(0, 8) + "..." : "null");
+                    }
+                }
+                const displayName = result.alias ||
+                    username ||
+                    (userPub ? userPub.slice(0, 8) + "..." : "Unknown User");
                 console.log(`🔧 Login successful! Setting user state:`, {
-                    userPub: userPub.slice(0, 8) + "...",
+                    userPub: userPub ? userPub.slice(0, 8) + "..." : "null",
                     displayName,
                     authMethod,
                 });
                 setIsLoggedIn(true);
-                setUserPub(userPub);
+                setUserPub(userPub || "");
                 setUsername(displayName);
                 onLoginSuccess === null || onLoginSuccess === void 0 ? void 0 : onLoginSuccess({
-                    userPub: userPub,
+                    userPub: userPub || "",
                     username: displayName,
                     authMethod: authMethod,
                 });
