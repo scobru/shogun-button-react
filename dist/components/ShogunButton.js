@@ -6,6 +6,7 @@ const defaultShogunContext = {
     sdk: null,
     options: {},
     isLoggedIn: false,
+    isConnected: false,
     userPub: null,
     username: null,
     login: async () => ({}),
@@ -24,6 +25,7 @@ export const useShogun = () => useContext(ShogunContext);
 // Provider component
 export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, onSignupSuccess, onError, onLogout, // AGGIUNTA
  }) {
+    var _a, _b;
     // Use React's useState directly
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userPub, setUserPub] = useState(null);
@@ -426,6 +428,7 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
             sdk,
             options,
             isLoggedIn,
+            isConnected: !!((_b = (_a = sdk === null || sdk === void 0 ? void 0 : sdk.gun.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub), // Verifica corretta se l'utente Gun è autenticato
             userPub,
             username,
             login,
@@ -596,7 +599,7 @@ export const ShogunButton = (() => {
                     const result = await signUp("password", formUsername, formPassword, formPasswordConfirm);
                     if (result && result.success) {
                         if (sdk === null || sdk === void 0 ? void 0 : sdk.db) {
-                            await sdk.db.setPasswordHint(formUsername, formPassword, formHint, [formSecurityQuestion], [formSecurityAnswer]);
+                            await sdk.db.setPasswordHint(formHint);
                         }
                         setModalIsOpen(false);
                     }

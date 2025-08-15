@@ -24,6 +24,7 @@ type ShogunContextType = {
   sdk: ShogunCore | null;
   options: any; // Allow any options for flexibility
   isLoggedIn: boolean;
+  isConnected: boolean;
   userPub: string | null;
   username: string | null;
   // Unified Authentication methods
@@ -46,6 +47,7 @@ const defaultShogunContext: ShogunContextType = {
   sdk: null,
   options: {},
   isLoggedIn: false,
+  isConnected: false,
   userPub: null,
   username: null,
   login: async () => ({}),
@@ -542,6 +544,7 @@ export function ShogunButtonProvider({
         sdk,
         options,
         isLoggedIn,
+        isConnected: !!sdk?.gun.user()?.is?.pub, // Verifica corretta se l'utente Gun è autenticato
         userPub,
         username,
         login,
@@ -944,13 +947,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           );
           if (result && result.success) {
             if (sdk?.db) {
-              await sdk.db.setPasswordHint(
-                formUsername,
-                formPassword,
-                formHint,
-                [formSecurityQuestion],
-                [formSecurityAnswer]
-              );
+              await sdk.db.setPasswordHint(formHint);
             }
             setModalIsOpen(false);
           } else if (result && result.error) {

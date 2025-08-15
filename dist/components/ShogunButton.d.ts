@@ -6,6 +6,7 @@ type ShogunContextType = {
     sdk: ShogunCore | null;
     options: any;
     isLoggedIn: boolean;
+    isConnected: boolean;
     userPub: string | null;
     username: string | null;
     login: (method: string, ...args: any[]) => Promise<any>;
