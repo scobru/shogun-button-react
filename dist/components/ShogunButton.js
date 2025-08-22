@@ -628,7 +628,7 @@ export const ShogunButton = (() => {
                     const result = await signUp("password", formUsername, formPassword, formPasswordConfirm);
                     if (result && result.success) {
                         if (sdk === null || sdk === void 0 ? void 0 : sdk.db) {
-                            await sdk.db.setPasswordHint(formHint);
+                            await sdk.db.setPasswordHint(username, formPasswordConfirm, formHint, [formSecurityQuestion], [formSecurityAnswer]);
                         }
                         setModalIsOpen(false);
                     }

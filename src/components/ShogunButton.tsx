@@ -992,7 +992,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           );
           if (result && result.success) {
             if (sdk?.db) {
-              await sdk.db.setPasswordHint(formHint);
+              await sdk.db.setPasswordHint(
+                username,
+                formPasswordConfirm,
+                formHint,
+                [formSecurityQuestion],
+                [formSecurityAnswer]
+              );
             }
             setModalIsOpen(false);
           } else if (result && result.error) {
