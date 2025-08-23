@@ -1,5 +1,8 @@
-import { ShogunCore } from "shogun-core";
-export function shogunConnector(options) {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.shogunConnector = shogunConnector;
+const shogun_core_1 = require("shogun-core");
+function shogunConnector(options) {
     const { peers = ["https://gun-manhattan.herokuapp.com/gun"], appName, timeouts, oauth, showMetamask, showWebauthn, showNostr, showOauth, ...restOptions } = options;
     // Build ShogunCore configuration with authentication plugins
     const shogunConfig = {
@@ -42,7 +45,7 @@ export function shogunConnector(options) {
         showNostr,
         showOauth,
     });
-    const sdk = new ShogunCore(shogunConfig);
+    const sdk = new shogun_core_1.ShogunCore(shogunConfig);
     const registerPlugin = (plugin) => {
         if (sdk && typeof sdk.register === "function") {
             try {
