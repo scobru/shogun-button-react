@@ -14,6 +14,8 @@ export interface ShogunConnectorOptions {
     peers?: string[];
     authToken?: string;
     gunInstance?: IGunInstance<any>;
+    localStorage?: boolean;
+    radisk?: boolean;
     timeouts?: {
         login?: number;
         signup?: number;
@@ -28,7 +30,7 @@ export interface ShogunConnectorOptions {
     };
 }
 export interface ShogunConnectorResult {
-    sdk: ShogunCore;
+    core: ShogunCore;
     options: ShogunConnectorOptions;
     registerPlugin: (plugin: any) => boolean;
     hasPlugin: (name: string) => boolean;

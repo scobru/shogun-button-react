@@ -1,9 +1,9 @@
 import React from "react";
-import { ShogunCore } from "shogun-core";
+import { IGunInstance, ShogunCore } from "shogun-core";
 import { Observable } from "rxjs";
 import "../styles/index.css";
 type ShogunContextType = {
-    sdk: ShogunCore | null;
+    core: ShogunCore | null;
     options: any;
     isLoggedIn: boolean;
     isConnected: boolean;
@@ -21,7 +21,8 @@ type ShogunContextType = {
 export declare const useShogun: () => ShogunContextType;
 type ShogunButtonProviderProps = {
     children: React.ReactNode;
-    sdk: ShogunCore;
+    core: ShogunCore;
+    gun: IGunInstance<any>;
     options: any;
     onLoginSuccess?: (data: {
         userPub: string;
@@ -38,7 +39,7 @@ type ShogunButtonProviderProps = {
     onError?: (error: string) => void;
     onLogout?: () => void;
 };
-export declare function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, onSignupSuccess, onError, onLogout, }: ShogunButtonProviderProps): React.JSX.Element;
+export declare function ShogunButtonProvider({ children, core, gun, options, onLoginSuccess, onSignupSuccess, onError, onLogout, }: ShogunButtonProviderProps): React.JSX.Element;
 type ShogunButtonComponent = React.FC & {
     Provider: typeof ShogunButtonProvider;
     useShogun: typeof useShogun;

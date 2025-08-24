@@ -20,6 +20,8 @@ export interface ShogunConnectorOptions {
   peers?: string[];
   authToken?: string;
   gunInstance?: IGunInstance<any>;
+  localStorage?: boolean;
+  radisk?: boolean;
 
   // Advanced options (directly mapped to ShogunSDKConfig)
   timeouts?: {
@@ -41,7 +43,7 @@ export interface ShogunConnectorOptions {
 
 // Definisco un nuovo tipo per l'oggetto ritornato dal connettore
 export interface ShogunConnectorResult {
-  sdk: ShogunCore;
+  core: ShogunCore;
   options: ShogunConnectorOptions;
   // Nuovi metodi per la gestione dei plugin
   registerPlugin: (plugin: any) => boolean;

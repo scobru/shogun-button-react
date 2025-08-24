@@ -3,12 +3,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.shogunConnector = shogunConnector;
 const shogun_core_1 = require("shogun-core");
 function shogunConnector(options) {
-    const { peers = ["https://gun-manhattan.herokuapp.com/gun"], appName, timeouts, oauth, showMetamask, showWebauthn, showNostr, showOauth, ...restOptions } = options;
+    const { peers = ["https://relay.shogun-eco.xyz/gun"], appName, timeouts, oauth, showMetamask, showWebauthn, showNostr, showOauth, localStorage, radisk, ...restOptions } = options;
     // Build ShogunCore configuration with authentication plugins
     const shogunConfig = {
         peers,
         scope: appName,
         timeouts,
+        localStorage,
+        radisk,
     };
     // Configure Web3/MetaMask plugin
     if (showMetamask) {
@@ -45,11 +47,11 @@ function shogunConnector(options) {
         showNostr,
         showOauth,
     });
-    const sdk = new shogun_core_1.ShogunCore(shogunConfig);
+    const core = new shogun_core_1.ShogunCore(shogunConfig);
     const registerPlugin = (plugin) => {
-        if (sdk && typeof sdk.register === "function") {
+        if (core && typeof core.register === "function") {
             try {
-                sdk.register(plugin);
+                core.register(plugin);
                 return true;
             }
             catch (error) {
@@ -60,10 +62,10 @@ function shogunConnector(options) {
         return false;
     };
     const hasPlugin = (name) => {
-        return sdk ? sdk.hasPlugin(name) : false;
+        return core ? core.hasPlugin(name) : false;
     };
     return {
-        sdk,
+        core,
         options,
         registerPlugin,
         hasPlugin,

@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { OAuthPlugin, ShogunCore } from "shogun-core";
+import { IGunInstance, OAuthPlugin, ShogunCore } from "shogun-core";
 import { Observable } from "rxjs";
 import "../styles/index.css";
 
@@ -21,7 +21,7 @@ interface AuthResult {
 
 // Context type for ShogunProvider
 type ShogunContextType = {
-  sdk: ShogunCore | null;
+  core: ShogunCore | null;
   options: any; // Allow any options for flexibility
   isLoggedIn: boolean;
   isConnected: boolean;
@@ -44,7 +44,7 @@ type ShogunContextType = {
 
 // Default context
 const defaultShogunContext: ShogunContextType = {
-  sdk: null,
+  core: null,
   options: {},
   isLoggedIn: false,
   isConnected: false,
@@ -69,7 +69,8 @@ export const useShogun = () => useContext(ShogunContext);
 // Props for the provider component
 type ShogunButtonProviderProps = {
   children: React.ReactNode;
-  sdk: ShogunCore;
+  core: ShogunCore;
+  gun: IGunInstance<any>;
   options: any;
   onLoginSuccess?: (data: {
     userPub: string;
@@ -90,7 +91,8 @@ type ShogunButtonProviderProps = {
 // Provider component
 export function ShogunButtonProvider({
   children,
-  sdk,
+  core,
+  gun,
   options,
   onLoginSuccess,
   onSignupSuccess,
@@ -104,8 +106,8 @@ export function ShogunButtonProvider({
 
   // Effetto per gestire l'inizializzazione e pulizia
   useEffect(() => {
-    console.log(`🔧 ShogunButtonProvider useEffect - SDK available:`, !!sdk);
-    if (!sdk) return;
+    console.log(`🔧 ShogunButtonProvider useEffect - SDK available:`, !!core);
+    if (!core) return;
 
     // Check for existing session data
     const sessionData = sessionStorage.getItem("gunSessionData");
@@ -118,12 +120,12 @@ export function ShogunButtonProvider({
 
     // Verifichiamo se l'utente è già loggato all'inizializzazione
     // Aggiungiamo un controllo di sicurezza per verificare se il metodo esiste
-    if (sdk && typeof sdk.isLoggedIn === "function") {
-      const isLoggedIn = sdk.isLoggedIn();
+    if (core && typeof core.isLoggedIn === "function") {
+      const isLoggedIn = core.isLoggedIn();
       console.log(`🔧 SDK isLoggedIn(): ${isLoggedIn}`);
 
       if (isLoggedIn) {
-        const pub = sdk.gun.user()?.is?.pub;
+        const pub = core.gun.user()?.is?.pub;
         console.log(
           `🔧 User already logged in with pub: ${pub?.slice(0, 8)}...`
         );
@@ -157,14 +159,14 @@ export function ShogunButtonProvider({
 
     // Poiché il metodo 'on' non esiste su ShogunCore,
     // gestiamo gli stati direttamente nei metodi di login/logout
-  }, [sdk, onLoginSuccess]);
+  }, [core, onLoginSuccess]);
 
   // RxJS observe method
   const observe = <T,>(path: string): Observable<T> => {
-    if (!sdk) {
+    if (!core) {
       return new Observable<T>();
     }
-    return sdk.rx.observe<T>(path);
+    return core.rx.observe<T>(path);
   };
 
   // Unified login
@@ -174,7 +176,7 @@ export function ShogunButtonProvider({
       args
     );
     try {
-      if (!sdk) {
+      if (!core) {
         throw new Error("SDK not initialized");
       }
 
@@ -188,7 +190,7 @@ export function ShogunButtonProvider({
         case "password":
           username = args[0];
           console.log(`🔧 Password login for username: ${username}`);
-          result = await sdk.login(args[0], args[1]);
+          result = await core.login(args[0], args[1]);
           break;
         case "pair":
           // New pair authentication method
@@ -200,11 +202,11 @@ export function ShogunButtonProvider({
           console.log(`🔧 Pair login with pub: ${pair.pub?.slice(0, 8)}...`);
 
           // Prefer official API from shogun-core when available
-          if (typeof (sdk as any).loginWithPair === "function") {
-            result = await (sdk as any).loginWithPair(pair);
+          if (typeof (core as any).loginWithPair === "function") {
+            result = await (core as any).loginWithPair(pair);
           } else {
             result = await new Promise((resolve, reject) => {
-              sdk.gun.user().auth(pair, (ack: any) => {
+              core.gun.user().auth(pair, (ack: any) => {
                 if (ack.err) {
                   reject(new Error(`Pair authentication failed: ${ack.err}`));
                   return;
@@ -229,14 +231,14 @@ export function ShogunButtonProvider({
         case "webauthn":
           username = args[0];
           console.log(`🔧 WebAuthn login for username: ${username}`);
-          const webauthn: any = sdk.getPlugin("webauthn");
+          const webauthn: any = core.getPlugin("webauthn");
           if (!webauthn) throw new Error("WebAuthn plugin not available");
           result = await webauthn.login(username);
           authMethod = "webauthn";
           break;
         case "web3":
           console.log(`🔧 Web3 login initiated`);
-          const web3: any = sdk.getPlugin("web3");
+          const web3: any = core.getPlugin("web3");
           if (!web3) throw new Error("Web3 plugin not available");
           const connectionResult = await web3.connectMetaMask();
           if (!connectionResult.success || !connectionResult.address) {
@@ -251,7 +253,7 @@ export function ShogunButtonProvider({
           break;
         case "nostr":
           console.log(`🔧 Nostr login initiated`);
-          const nostr: any = sdk.getPlugin("nostr");
+          const nostr: any = core.getPlugin("nostr");
           if (!nostr) throw new Error("Nostr plugin not available");
           const nostrResult = await nostr.connectBitcoinWallet();
           if (!nostrResult || !nostrResult.success) {
@@ -268,7 +270,7 @@ export function ShogunButtonProvider({
           break;
         case "oauth":
           console.log(`🔧 OAuth login initiated`);
-          const oauth: OAuthPlugin = sdk.getPlugin("oauth") as OAuthPlugin;
+          const oauth: OAuthPlugin = core.getPlugin("oauth") as OAuthPlugin;
           if (!oauth) throw new Error("OAuth plugin not available");
           const provider = args[0] || "google";
 
@@ -299,16 +301,16 @@ export function ShogunButtonProvider({
 
         if (!userPub) {
           console.log(
-            `🔧 userPub not in result, trying sdk.gun.user()?.is?.pub`
+            `🔧 userPub not in result, trying core.gun.user()?.is?.pub`
           );
-          userPub = sdk.gun.user()?.is?.pub;
+          userPub = core.gun.user()?.is?.pub;
         }
 
         if (!userPub) {
           console.log(
             `🔧 userPub still not available, trying to get from gun user object`
           );
-          const gunUser = sdk.gun.user();
+          const gunUser = core.gun.user();
           console.log(`🔧 Gun user object:`, gunUser);
           if (gunUser && gunUser.is) {
             userPub = gunUser.is.pub;
@@ -373,7 +375,7 @@ export function ShogunButtonProvider({
   // Unified signup
   const signUp = async (method: string, ...args: any[]) => {
     try {
-      if (!sdk) {
+      if (!core) {
         throw new Error("SDK not initialized");
       }
 
@@ -387,16 +389,16 @@ export function ShogunButtonProvider({
           if (args[1] !== args[2]) {
             throw new Error("Passwords do not match");
           }
-          result = await sdk.signUp(args[0], args[1]);
+          result = await core.signUp(args[0], args[1]);
           break;
         case "webauthn":
           username = args[0];
-          const webauthn: any = sdk.getPlugin("webauthn");
+          const webauthn: any = core.getPlugin("webauthn");
           if (!webauthn) throw new Error("WebAuthn plugin not available");
           result = await webauthn.signUp(username);
           break;
         case "web3":
-          const web3: any = sdk.getPlugin("web3");
+          const web3: any = core.getPlugin("web3");
           if (!web3) throw new Error("Web3 plugin not available");
           const connectionResult = await web3.connectMetaMask();
           if (!connectionResult.success || !connectionResult.address) {
@@ -408,7 +410,7 @@ export function ShogunButtonProvider({
           result = await web3.signUp(connectionResult.address);
           break;
         case "nostr":
-          const nostr: any = sdk.getPlugin("nostr");
+          const nostr: any = core.getPlugin("nostr");
           if (!nostr) throw new Error("Nostr plugin not available");
           const nostrResult = await nostr.connectBitcoinWallet();
           if (!nostrResult || !nostrResult.success) {
@@ -422,7 +424,7 @@ export function ShogunButtonProvider({
           result = await nostr.signUp(pubkey);
           break;
         case "oauth":
-          const oauth: any = sdk.getPlugin("oauth");
+          const oauth: any = core.getPlugin("oauth");
           if (!oauth) throw new Error("OAuth plugin not available");
           const provider = args[0] || "google";
 
@@ -447,7 +449,7 @@ export function ShogunButtonProvider({
       }
 
       if (result.success) {
-        const userPub = result.userPub || sdk.gun.user()?.is?.pub || "";
+        const userPub = result.userPub || core.gun.user()?.is?.pub || "";
         const displayName =
           result.alias || username || userPub.slice(0, 8) + "...";
 
@@ -472,7 +474,7 @@ export function ShogunButtonProvider({
 
   // Logout
   const logout = () => {
-    sdk.logout();
+    core.logout();
     setIsLoggedIn(false);
     setUserPub(null);
     setUsername(null);
@@ -483,20 +485,20 @@ export function ShogunButtonProvider({
   };
 
   const hasPlugin = (name: string): boolean => {
-    return sdk && typeof sdk.hasPlugin === "function"
-      ? sdk.hasPlugin(name)
+    return core && typeof core.hasPlugin === "function"
+      ? core.hasPlugin(name)
       : false;
   };
 
   const getPlugin = <T,>(name: string): T | undefined => {
-    return sdk && typeof sdk.getPlugin === "function"
-      ? sdk.getPlugin<T>(name)
+    return core && typeof core.getPlugin === "function"
+      ? core.getPlugin<T>(name)
       : undefined;
   };
 
   // Export Gun pair functionality
   const exportGunPair = async (password?: string): Promise<string> => {
-    if (!sdk) {
+    if (!core) {
       throw new Error("SDK not initialized");
     }
 
@@ -507,8 +509,8 @@ export function ShogunButtonProvider({
     try {
       // Prefer SDK export if available, fallback to storage
       let pairJson: string | null = null;
-      if (typeof (sdk as any).exportPair === "function") {
-        pairJson = (sdk as any).exportPair();
+      if (typeof (core as any).exportPair === "function") {
+        pairJson = (core as any).exportPair();
       } else {
         const stored =
           sessionStorage.getItem("gun/pair") ||
@@ -545,7 +547,7 @@ export function ShogunButtonProvider({
     pairData: string,
     password?: string
   ): Promise<boolean> => {
-    if (!sdk) {
+    if (!core) {
       throw new Error("SDK not initialized");
     }
 
@@ -586,10 +588,10 @@ export function ShogunButtonProvider({
   return (
     <ShogunContext.Provider
       value={{
-        sdk,
+        core,
         options,
         isLoggedIn,
-        isConnected: !!sdk?.gun.user()?.is?.pub, // Verifica corretta se l'utente Gun è autenticato
+        isConnected: !!core?.gun.user()?.is?.pub, // Verifica corretta se l'utente Gun è autenticato
         userPub,
         username,
         login,
@@ -827,7 +829,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       logout,
       login,
       signUp,
-      sdk,
+      core,
       options,
       exportGunPair,
       importGunPair,
@@ -991,8 +993,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             formPasswordConfirm
           );
           if (result && result.success) {
-            if (sdk?.db) {
-              sdk.db.setPasswordHint(formHint);
+            if (core?.db) {
+              core.db.setPasswordHint(formHint);
             }
             setModalIsOpen(false);
           } else if (result && result.error) {
@@ -1009,7 +1011,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     };
 
     const handleWebAuthnAuth = () => {
-      if (!sdk?.hasPlugin("webauthn")) {
+      if (!core?.hasPlugin("webauthn")) {
         setError("WebAuthn is not supported in your browser");
         return;
       }
@@ -1020,10 +1022,10 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setError("");
       setLoading(true);
       try {
-        if (!sdk?.db) {
+        if (!core?.db) {
           throw new Error("SDK not ready");
         }
-        const result = await sdk.db.forgotPassword(formUsername, [
+        const result = await core.db.forgotPassword(formUsername, [
           formSecurityAnswer,
         ]);
         if (result.success && result.hint) {
@@ -1132,7 +1134,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     // Add buttons for both login and signup for alternative auth methods
     const renderAuthOptions = () => (
       <div className="shogun-auth-options">
-        {options.showMetamask !== false && sdk?.hasPlugin("web3") && (
+        {options.showMetamask !== false && core?.hasPlugin("web3") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -1148,7 +1150,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </div>
         )}
 
-        {options.showWebauthn !== false && sdk?.hasPlugin("webauthn") && (
+        {options.showWebauthn !== false && core?.hasPlugin("webauthn") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -1164,7 +1166,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </div>
         )}
 
-        {options.showNostr !== false && sdk?.hasPlugin("nostr") && (
+        {options.showNostr !== false && core?.hasPlugin("nostr") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -1178,7 +1180,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </div>
         )}
 
-        {options.showOauth !== false && sdk?.hasPlugin("oauth") && (
+        {options.showOauth !== false && core?.hasPlugin("oauth") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
