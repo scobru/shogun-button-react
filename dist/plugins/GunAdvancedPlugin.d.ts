@@ -1,4 +1,4 @@
-import { ShogunCore } from "shogun-core";
+import { ShogunCore, BasePlugin } from "shogun-core";
 export interface GunAdvancedPluginConfig {
     enableDebug?: boolean;
     enableConnectionMonitoring?: boolean;
@@ -38,13 +38,15 @@ export interface GunStateResult<T> {
     remove: () => Promise<void>;
     refresh: () => void;
 }
-export declare class GunAdvancedPlugin {
-    private sdk;
+export declare class GunAdvancedPlugin extends BasePlugin {
+    version: string;
+    readonly name = "gun-advanced";
+    core: ShogunCore;
     private config;
     private debugEnabled;
     private connectionMonitors;
     private collectionCache;
-    constructor(sdk: ShogunCore, config?: GunAdvancedPluginConfig);
+    constructor(core: ShogunCore, config?: GunAdvancedPluginConfig);
     setDebugEnabled(enabled: boolean): void;
     private log;
     createHooks(): {
