@@ -37,14 +37,22 @@ export interface ShogunConnectorOptions {
       clientSecret?: string;
       redirectUri?: string;
     }>
-  }
+  };
+  
+  // Configurazione plugin Gun avanzato
+  enableGunDebug?: boolean;
+  enableConnectionMonitoring?: boolean;
+  defaultPageSize?: number;
+  connectionTimeout?: number;
+  debounceInterval?: number;
 }
 
-// Definisco un nuovo tipo per l'oggetto ritornato dal connettore
 export interface ShogunConnectorResult {
   sdk: ShogunCore;
   options: ShogunConnectorOptions;
   // Nuovi metodi per la gestione dei plugin
   registerPlugin: (plugin: any) => boolean;
   hasPlugin: (name: string) => boolean;
-} 
+  // Plugin Gun avanzato
+  gunPlugin: any; // GunAdvancedPlugin
+}

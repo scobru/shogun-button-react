@@ -2,6 +2,7 @@ import React from "react";
 import { ShogunCore } from "shogun-core";
 import { Observable } from "rxjs";
 import "../styles/index.css";
+import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 type ShogunContextType = {
     sdk: ShogunCore | null;
     options: any;
@@ -16,6 +17,22 @@ type ShogunContextType = {
     getPlugin: <T>(name: string) => T | undefined;
     exportGunPair: (password?: string) => Promise<string>;
     importGunPair: (pairData: string, password?: string) => Promise<boolean>;
+    gunPlugin: GunAdvancedPlugin | null;
+    useGunState: <T>(path: string, defaultValue?: T) => any;
+    useGunCollection: <T>(path: string, options?: any) => any;
+    useGunConnection: (path: string) => {
+        isConnected: boolean;
+        lastSeen: Date | null;
+        error: string | null;
+    };
+    useGunDebug: (path: string, enabled?: boolean) => void;
+    useGunRealtime: <T>(path: string, callback?: (data: T, key: string) => void) => {
+        data: T | null;
+        key: string | null;
+    };
+    put: (path: string, data: any) => Promise<void>;
+    get: (path: string) => any;
+    remove: (path: string) => Promise<void>;
 };
 export declare const useShogun: () => ShogunContextType;
 type ShogunButtonProviderProps = {

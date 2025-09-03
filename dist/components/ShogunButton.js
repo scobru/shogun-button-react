@@ -1,6 +1,7 @@
 import React, { useContext, useState, createContext, useEffect, useRef, } from "react";
 import { Observable } from "rxjs";
 import "../styles/index.css";
+import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 // Default context
 const defaultShogunContext = {
     sdk: null,
@@ -16,6 +17,15 @@ const defaultShogunContext = {
     getPlugin: () => undefined,
     exportGunPair: async () => "",
     importGunPair: async () => false,
+    gunPlugin: null,
+    useGunState: () => ({}),
+    useGunCollection: () => ({}),
+    useGunConnection: () => ({ isConnected: false, lastSeen: null, error: null }),
+    useGunDebug: () => { },
+    useGunRealtime: () => ({ data: null, key: null }),
+    put: async () => { },
+    get: () => null,
+    remove: async () => { },
 };
 // Create context using React's createContext directly
 const ShogunContext = createContext(defaultShogunContext);
@@ -330,22 +340,94 @@ export function ShogunButtonProvider({ children, sdk, options, onLoginSuccess, o
             throw new Error(`Failed to import Gun pair: ${error.message}`);
         }
     };
+    // Inizializza il plugin
+    const gunPlugin = React.useMemo(() => {
+        if (!sdk)
+            return null;
+        return new GunAdvancedPlugin(sdk, {
+            enableDebug: options.enableGunDebug !== false,
+            enableConnectionMonitoring: options.enableConnectionMonitoring !== false,
+            defaultPageSize: options.defaultPageSize || 20,
+            connectionTimeout: options.connectionTimeout || 10000,
+            debounceInterval: options.debounceInterval || 100,
+        });
+    }, [sdk, options]);
+    // Effetto per pulizia del plugin
+    React.useEffect(() => {
+        return () => {
+            if (gunPlugin) {
+                gunPlugin.cleanup();
+            }
+        };
+    }, [gunPlugin]);
+    // Crea gli hook del plugin
+    const pluginHooks = React.useMemo(() => {
+        if (!gunPlugin)
+            return {};
+        return gunPlugin.createHooks();
+    }, [gunPlugin]);
+    // Create a properly typed context value
+    const contextValue = React.useMemo(() => ({
+        sdk,
+        options,
+        isLoggedIn,
+        userPub,
+        username,
+        login,
+        signUp,
+        logout,
+        observe,
+        hasPlugin,
+        getPlugin,
+        exportGunPair,
+        importGunPair,
+        gunPlugin,
+        // Ensure all required hooks are present with proper fallbacks
+        useGunState: pluginHooks.useGunState || (() => ({
+            data: null,
+            isLoading: false,
+            error: null,
+            update: async () => { },
+            set: async () => { },
+            remove: async () => { },
+            refresh: () => { }
+        })),
+        useGunCollection: pluginHooks.useGunCollection || (() => ({
+            items: [],
+            currentPage: 0,
+            totalPages: 0,
+            hasNextPage: false,
+            hasPrevPage: false,
+            nextPage: () => { },
+            prevPage: () => { },
+            goToPage: () => { },
+            isLoading: false,
+            error: null,
+            refresh: () => { },
+            addItem: async () => { },
+            updateItem: async () => { },
+            removeItem: async () => { }
+        })),
+        useGunConnection: pluginHooks.useGunConnection || (() => ({
+            isConnected: false,
+            lastSeen: null,
+            error: null
+        })),
+        useGunDebug: pluginHooks.useGunDebug || (() => { }),
+        useGunRealtime: pluginHooks.useGunRealtime || (() => ({
+            data: null,
+            key: null
+        })),
+        put: (gunPlugin === null || gunPlugin === void 0 ? void 0 : gunPlugin.put.bind(gunPlugin)) || (async () => { }),
+        get: (gunPlugin === null || gunPlugin === void 0 ? void 0 : gunPlugin.get.bind(gunPlugin)) || (() => null),
+        remove: (gunPlugin === null || gunPlugin === void 0 ? void 0 : gunPlugin.remove.bind(gunPlugin)) || (async () => { }),
+    }), [
+        sdk, options, isLoggedIn, userPub, username, login, signUp, logout,
+        observe, hasPlugin, getPlugin, exportGunPair, importGunPair,
+        gunPlugin, pluginHooks
+    ]);
     // Provide the context value to children
-    return (React.createElement(ShogunContext.Provider, { value: {
-            sdk,
-            options,
-            isLoggedIn,
-            userPub,
-            username,
-            login,
-            signUp,
-            logout,
-            observe,
-            hasPlugin,
-            getPlugin,
-            exportGunPair,
-            importGunPair,
-        } }, children));
+    return (React.createElement(ShogunContext.Provider, { value: contextValue }, children));
 }
 // SVG Icons Components
 const WalletIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },

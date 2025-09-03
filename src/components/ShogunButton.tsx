@@ -8,6 +8,7 @@ import React, {
 import { OAuthPlugin, ShogunCore } from "shogun-core";
 import { Observable } from "rxjs";
 import "../styles/index.css";
+import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 
 // Definiamo i tipi localmente se non sono disponibili da shogun-core
 interface AuthResult {
@@ -17,6 +18,15 @@ interface AuthResult {
   method?: string;
   error?: string;
   redirectUrl?: string;
+}
+
+// Interface for plugin hooks
+interface PluginHooks {
+  useGunState?: any;
+  useGunCollection?: any;
+  useGunConnection?: any;
+  useGunDebug?: any;
+  useGunRealtime?: any;
 }
 
 // Context type for ShogunProvider
@@ -39,6 +49,21 @@ type ShogunContextType = {
   // Pair export/import methods
   exportGunPair: (password?: string) => Promise<string>;
   importGunPair: (pairData: string, password?: string) => Promise<boolean>;
+
+  // Plugin avanzato
+  gunPlugin: GunAdvancedPlugin | null;
+  
+  // Hook del plugin
+  useGunState: <T>(path: string, defaultValue?: T) => any;
+  useGunCollection: <T>(path: string, options?: any) => any;
+  useGunConnection: (path: string) => { isConnected: boolean; lastSeen: Date | null; error: string | null };
+  useGunDebug: (path: string, enabled?: boolean) => void;
+  useGunRealtime: <T>(path: string, callback?: (data: T, key: string) => void) => { data: T | null; key: string | null };
+  
+  // Metodi di utilità
+  put: (path: string, data: any) => Promise<void>;
+  get: (path: string) => any;
+  remove: (path: string) => Promise<void>;
 };
 
 // Default context
@@ -56,6 +81,15 @@ const defaultShogunContext: ShogunContextType = {
   getPlugin: () => undefined,
   exportGunPair: async () => "",
   importGunPair: async () => false,
+  gunPlugin: null,
+  useGunState: () => ({}),
+  useGunCollection: () => ({}),
+  useGunConnection: () => ({ isConnected: false, lastSeen: null, error: null }),
+  useGunDebug: () => {},
+  useGunRealtime: () => ({ data: null, key: null }),
+  put: async () => {},
+  get: () => null,
+  remove: async () => {},
 };
 
 // Create context using React's createContext directly
@@ -433,25 +467,97 @@ export function ShogunButtonProvider({
     }
   };
 
+  // Inizializza il plugin
+  const gunPlugin = React.useMemo(() => {
+    if (!sdk) return null;
+    return new GunAdvancedPlugin(sdk, {
+      enableDebug: options.enableGunDebug !== false,
+      enableConnectionMonitoring: options.enableConnectionMonitoring !== false,
+      defaultPageSize: options.defaultPageSize || 20,
+      connectionTimeout: options.connectionTimeout || 10000,
+      debounceInterval: options.debounceInterval || 100,
+    });
+  }, [sdk, options]);
+
+  // Effetto per pulizia del plugin
+  React.useEffect(() => {
+    return () => {
+      if (gunPlugin) {
+        gunPlugin.cleanup();
+      }
+    };
+  }, [gunPlugin]);
+
+  // Crea gli hook del plugin
+  const pluginHooks: PluginHooks = React.useMemo(() => {
+    if (!gunPlugin) return {};
+    return gunPlugin.createHooks();
+  }, [gunPlugin]);
+
+  // Create a properly typed context value
+  const contextValue: ShogunContextType = React.useMemo(() => ({
+    sdk,
+    options,
+    isLoggedIn,
+    userPub,
+    username,
+    login,
+    signUp,
+    logout,
+    observe,
+    hasPlugin,
+    getPlugin,
+    exportGunPair,
+    importGunPair,
+    gunPlugin,
+    // Ensure all required hooks are present with proper fallbacks
+    useGunState: pluginHooks.useGunState || (() => ({ 
+      data: null, 
+      isLoading: false, 
+      error: null, 
+      update: async () => {}, 
+      set: async () => {}, 
+      remove: async () => {}, 
+      refresh: () => {} 
+    })),
+    useGunCollection: pluginHooks.useGunCollection || (() => ({ 
+      items: [], 
+      currentPage: 0, 
+      totalPages: 0, 
+      hasNextPage: false, 
+      hasPrevPage: false, 
+      nextPage: () => {}, 
+      prevPage: () => {}, 
+      goToPage: () => {}, 
+      isLoading: false, 
+      error: null, 
+      refresh: () => {}, 
+      addItem: async () => {}, 
+      updateItem: async () => {}, 
+      removeItem: async () => {} 
+    })),
+    useGunConnection: pluginHooks.useGunConnection || (() => ({ 
+      isConnected: false, 
+      lastSeen: null, 
+      error: null 
+    })),
+    useGunDebug: pluginHooks.useGunDebug || (() => {}),
+    useGunRealtime: pluginHooks.useGunRealtime || (() => ({ 
+      data: null, 
+      key: null 
+    })),
+    put: gunPlugin?.put.bind(gunPlugin) || (async () => {}),
+    get: gunPlugin?.get.bind(gunPlugin) || (() => null),
+    remove: gunPlugin?.remove.bind(gunPlugin) || (async () => {}),
+  }), [
+    sdk, options, isLoggedIn, userPub, username, login, signUp, logout, 
+    observe, hasPlugin, getPlugin, exportGunPair, importGunPair, 
+    gunPlugin, pluginHooks
+  ]);
+
   // Provide the context value to children
   return (
-    <ShogunContext.Provider
-      value={{
-        sdk,
-        options,
-        isLoggedIn,
-        userPub,
-        username,
-        login,
-        signUp,
-        logout,
-        observe,
-        hasPlugin,
-        getPlugin,
-        exportGunPair,
-        importGunPair,
-      }}
-    >
+    <ShogunContext.Provider value={contextValue}>
       {children}
     </ShogunContext.Provider>
   );

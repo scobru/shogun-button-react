@@ -1,19 +1,29 @@
 # Shogun Button React
 
-A React component library for seamless integration of Shogun authentication into your applications. This library provides a simple yet powerful way to add Shogun authentication to your React applications.
+A comprehensive React component library for seamless integration of Shogun authentication into your applications. This library provides a simple yet powerful way to add multi-method authentication, account management, and real-time data synchronization to your React applications.
 
-## Features
+## ✨ Features
 
-- 🚀 Easy to integrate
-- 🎨 Customizable UI components
-- 🔒 Secure authentication flow
-- 🌓 Dark mode support
-- 🔌 Multiple authentication methods (Username/Password, MetaMask, WebAuthn, Nostr, OAuth)
-- 🔑 Account backup and recovery (Gun pair export/import)
-- 📱 Responsive design
-- 🌍 TypeScript support
+- 🚀 **Easy Integration** - Simple setup with minimal configuration
+- 🎨 **Customizable UI** - Modern, responsive design with dark mode support
+- 🔒 **Multi-Authentication** - Support for Password, MetaMask, WebAuthn, Nostr, and OAuth
+- 🔑 **Account Management** - Export/import Gun pairs for account backup and recovery
+- 📱 **Responsive Design** - Works seamlessly across all device sizes
+- 🌍 **TypeScript Support** - Full type safety and IntelliSense support
+- 🔌 **Plugin System** - Advanced Gun operations with custom hooks
+- 📊 **Real-time Data** - Reactive data synchronization with RxJS observables
 
-## Quick Start
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+npm install shogun-button-react
+# or
+yarn add shogun-button-react
+```
+
+### Basic Usage
 
 ```tsx
 import React from "react";
@@ -25,11 +35,16 @@ import {
 import "shogun-button-react/styles.css";
 
 function App() {
-  const { sdk, options, setProvider } = shogunConnector({
-    appName: "My App",
-    appDescription: "An awesome app with Shogun authentication",
+  const { sdk, options } = shogunConnector({
+    appName: "My Awesome App",
+    appDescription: "A decentralized application with Shogun authentication",
     appUrl: "https://myapp.com",
     appIcon: "https://myapp.com/icon.png",
+    // Enable specific authentication methods
+    showMetamask: true,
+    showWebauthn: true,
+    showNostr: true,
+    showOauth: true,
   });
 
   return (
@@ -37,18 +52,33 @@ function App() {
       sdk={sdk}
       options={options}
       onLoginSuccess={(data) => {
-        console.log("Login successful!", data);
+        console.log("🎉 Login successful!", data);
+        // Handle successful login
+        // data.userPub - User's public key
+        // data.username - Display name
+        // data.authMethod - Authentication method used
       }}
       onSignupSuccess={(data) => {
-        console.log("Signup successful!", data);
+        console.log("🎊 Account created successfully!", data);
+        // Handle successful account creation
       }}
       onError={(error) => {
-        console.error("An error occurred:", error);
+        console.error("❌ Authentication error:", error);
+        // Handle authentication errors
+      }}
+      onLogout={() => {
+        console.log("👋 User logged out");
+        // Handle logout events
       }}
     >
-      <div>
-        <h1>Welcome to My App</h1>
-        <ShogunButton />
+      <div className="app">
+        <header>
+          <h1>Welcome to My Awesome App</h1>
+          <ShogunButton />
+        </header>
+        <main>
+          {/* Your app content */}
+        </main>
       </div>
     </ShogunButtonProvider>
   );
@@ -57,7 +87,56 @@ function App() {
 export default App;
 ```
 
-## API Reference
+## 🔧 Advanced Configuration
+
+### Custom Authentication Options
+
+```tsx
+const { sdk, options } = shogunConnector({
+  appName: "My App",
+  
+  // Customize which authentication methods to show
+  showMetamask: true,      // Enable MetaMask login
+  showWebauthn: true,      // Enable WebAuthn (biometric/security keys)
+  showNostr: true,         // Enable Nostr wallet connection
+  showOauth: true,         // Enable OAuth providers
+  
+  // Network configuration
+  peers: [
+    "https://gun-manhattan.herokuapp.com/gun",
+    "https://gun-us.herokuapp.com/gun"
+  ],
+  
+  // OAuth provider configuration
+  oauth: {
+    providers: {
+      google: {
+        clientId: "your-google-client-id",
+        clientSecret: "your-google-client-secret",
+        redirectUri: "https://myapp.com/auth/callback"
+      },
+      github: {
+        clientId: "your-github-client-id",
+        redirectUri: "https://myapp.com/auth/callback"
+      }
+    }
+  },
+  
+  // Advanced plugin configuration
+  enableGunDebug: true,
+  enableConnectionMonitoring: true,
+  defaultPageSize: 20,
+  connectionTimeout: 10000,
+  
+  // Logging configuration
+  logging: {
+    enabled: true,
+    level: "info" // "error" | "warning" | "info" | "debug"
+  }
+});
+```
+
+## 🎯 API Reference
 
 ### ShogunButtonProvider
 
@@ -65,125 +144,366 @@ The provider component that supplies Shogun context to your application.
 
 #### Props
 
-| Name            | Type                     | Description                                    |
-| --------------- | ------------------------ | ---------------------------------------------- |
-| sdk             | ShogunCore               | Shogun SDK instance created by shogunConnector |
-| options         | Object                   | Configuration options                          |
-| onLoginSuccess  | (data: { userPub: string; username: string; password?: string; authMethod?: string }) => void | Callback fired on successful login             |
-| onSignupSuccess | (data: { userPub: string; username: string; password?: string; authMethod?: string }) => void | Callback fired on successful signup            |
-| onError         | (error: Error) => void   | Callback fired when an error occurs            |
+| Name | Type | Description | Required |
+|------|------|-------------|----------|
+| `sdk` | `ShogunCore` | Shogun SDK instance created by `shogunConnector` | ✅ |
+| `options` | `ShogunConnectorOptions` | Configuration options | ✅ |
+| `onLoginSuccess` | `(data: AuthData) => void` | Callback fired on successful login | ❌ |
+| `onSignupSuccess` | `(data: AuthData) => void` | Callback fired on successful signup | ❌ |
+| `onError` | `(error: string) => void` | Callback fired when an error occurs | ❌ |
+| `onLogout` | `() => void` | Callback fired when user logs out | ❌ |
+
+#### AuthData Interface
+
+```typescript
+interface AuthData {
+  userPub: string;           // User's public key
+  username: string;          // Display name
+  password?: string;         // Password (if applicable)
+  authMethod?: "password" | "web3" | "webauthn" | "nostr" | "oauth" | "pair";
+}
+```
 
 ### ShogunButton
 
-The main button component for triggering Shogun authentication. The component provides a complete authentication UI with modal dialogs for login and signup.
+The main button component that provides a complete authentication UI with modal dialogs for login, signup, and account management.
+
+**Features:**
+- Multi-method authentication selection
+- Password-based login/signup with recovery
+- Gun pair export/import for account backup
+- Responsive modal design
+- Error handling and user feedback
 
 ### useShogun Hook
 
-A hook to access Shogun authentication state and functions.
+A comprehensive hook to access Shogun authentication state and functions.
 
 ```tsx
 import React, { useEffect } from "react";
 import { useShogun } from "shogun-button-react";
 
-function Profile() {
+function UserProfile() {
   const {
+    // Authentication state
     isLoggedIn,
     userPub,
     username,
+    
+    // Authentication methods
     login,
-    signup,
+    signUp,
     logout,
-    setProvider,
+    
+    // Plugin management
     hasPlugin,
     getPlugin,
+    
+    // Account management
     exportGunPair,
     importGunPair,
+    
+    // Data operations
     observe,
+    put,
+    get,
+    remove,
+    
+    // Advanced Gun hooks
+    useGunState,
+    useGunCollection,
+    useGunConnection,
+    useGunDebug,
+    useGunRealtime,
   } = useShogun();
 
-  const handleLogin = async () => {
-    // Login with username/password
-    await login("password", "username", "password");
-    
-    // Or login with MetaMask
-    await login("web3");
-    
-    // Or login with WebAuthn
-    await login("webauthn", "username");
-    
-    // Or login with Nostr
-    await login("nostr");
-    
-    // Or login with OAuth
-    await login("oauth", "google");
-    
-    // Or login with Gun pair (for account recovery)
-    const pairData = { /* Gun pair object */ };
-    await login("pair", pairData);
-  };
-
-  const handleSignUp = async () => {
-    // Sign up with username/password
-    await signup("password", "newusername", "newpassword");
-    
-    // Or sign up with other methods (similar to login)
-    await signup("web3");
-    await signup("webauthn", "newusername");
-  };
-
-  const switchToCustomNetwork = () => {
-    setProvider('https://my-custom-rpc.example.com');
-  };
-
-  const handleExportPair = async () => {
+  // Example: Login with different methods
+  const handlePasswordLogin = async () => {
     try {
-      const pairData = await exportGunPair("optional-encryption-password");
-      console.log("Exported pair:", pairData);
-      // Save this data securely for account recovery
+      const result = await login("password", "username", "password");
+      if (result.success) {
+        console.log("Password login successful!");
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  };
+
+  const handleMetaMaskLogin = async () => {
+    try {
+      const result = await login("web3");
+      if (result.success) {
+        console.log("MetaMask login successful!");
+      }
+    } catch (error) {
+      console.error("MetaMask login failed:", error);
+    }
+  };
+
+  const handleWebAuthnLogin = async () => {
+    try {
+      const result = await login("webauthn", "username");
+      if (result.success) {
+        console.log("WebAuthn login successful!");
+      }
+    } catch (error) {
+      console.error("WebAuthn login failed:", error);
+    }
+  };
+
+  // Example: Account backup and recovery
+  const handleExportAccount = async () => {
+    try {
+      const pairData = await exportGunPair("my-secure-password");
+      console.log("Account exported successfully!");
+      
+      // Save to file or copy to clipboard
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(pairData);
+        alert("Account data copied to clipboard!");
+      }
     } catch (error) {
       console.error("Export failed:", error);
     }
   };
 
-  const handleImportPair = async () => {
+  const handleImportAccount = async (pairData: string, password?: string) => {
     try {
-      const success = await importGunPair(savedPairData, "optional-password");
+      const success = await importGunPair(pairData, password);
       if (success) {
-        console.log("Pair imported successfully");
+        console.log("Account imported successfully!");
       }
     } catch (error) {
       console.error("Import failed:", error);
     }
   };
 
-  // Observe reactive data changes
+  // Example: Real-time data observation
   useEffect(() => {
     if (isLoggedIn) {
       const subscription = observe<any>('user/profile').subscribe(data => {
-        console.log('Profile data updated:', data);
+        console.log('Profile updated:', data);
       });
       
       return () => subscription.unsubscribe();
     }
   }, [isLoggedIn, observe]);
 
-  return isLoggedIn ? (
-    <div>
+  if (!isLoggedIn) {
+    return <div>Please log in to view your profile</div>;
+  }
+
+  return (
+    <div className="user-profile">
       <h2>Welcome, {username}!</h2>
-      <p>User Public Key: {userPub}</p>
-      <button onClick={logout}>Logout</button>
-      <button onClick={switchToCustomNetwork}>Switch Network</button>
-      <button onClick={handleExportPair}>Export Account</button>
+      <div className="profile-info">
+        <p><strong>Public Key:</strong> {userPub}</p>
+        <p><strong>Authentication Method:</strong> {authMethod}</p>
+      </div>
+      
+      <div className="actions">
+        <button onClick={handleExportAccount}>
+          🔒 Export Account
+        </button>
+        <button onClick={logout}>
+          🚪 Logout
+        </button>
+      </div>
     </div>
-  ) : (
-    <div>Please login to continue</div>
   );
 }
 ```
 
-## Configuration Options
+## 🔌 Advanced Gun Plugin Usage
 
-The `shogunConnector` accepts the following options:
+### Using Gun State Hooks
+
+```tsx
+function UserSettings() {
+  const { useGunState, useGunCollection } = useShogun();
+  
+  // Single value state
+  const profile = useGunState('user/profile', {
+    name: '',
+    email: '',
+    preferences: {}
+  });
+  
+  // Collection management
+  const posts = useGunCollection('user/posts', {
+    pageSize: 10,
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+    filter: (post) => post.isPublished
+  });
+
+  const updateProfile = async () => {
+    await profile.update({
+      name: 'New Name',
+      preferences: { theme: 'dark' }
+    });
+  };
+
+  const addPost = async () => {
+    await posts.addItem({
+      title: 'New Post',
+      content: 'Post content...',
+      createdAt: Date.now(),
+      isPublished: true
+    });
+  };
+
+  return (
+    <div>
+      <h3>Profile Settings</h3>
+      {profile.isLoading ? (
+        <p>Loading...</p>
+      ) : profile.error ? (
+        <p>Error: {profile.error}</p>
+      ) : (
+        <div>
+          <input
+            value={profile.data?.name || ''}
+            onChange={(e) => profile.update({ name: e.target.value })}
+            placeholder="Name"
+          />
+          <button onClick={updateProfile}>Save Changes</button>
+        </div>
+      )}
+
+      <h3>Your Posts ({posts.items.length})</h3>
+      {posts.isLoading ? (
+        <p>Loading posts...</p>
+      ) : (
+        <div>
+          {posts.items.map((post, index) => (
+            <div key={index}>
+              <h4>{post.title}</h4>
+              <p>{post.content}</p>
+            </div>
+          ))}
+          
+          <div className="pagination">
+            {posts.hasPrevPage && (
+              <button onClick={posts.prevPage}>Previous</button>
+            )}
+            <span>Page {posts.currentPage + 1} of {posts.totalPages}</span>
+            {posts.hasNextPage && (
+              <button onClick={posts.nextPage}>Next</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+### Connection Monitoring
+
+```tsx
+function ConnectionStatus() {
+  const { useGunConnection, useGunDebug } = useShogun();
+  
+  // Monitor connection status
+  const connection = useGunConnection('user/data');
+  
+  // Enable debug logging
+  useGunDebug('user/data', true);
+
+  return (
+    <div className="connection-status">
+      <div className={`status-indicator ${connection.isConnected ? 'connected' : 'disconnected'}`}>
+        {connection.isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+      </div>
+      
+      {connection.lastSeen && (
+        <p>Last seen: {connection.lastSeen.toLocaleTimeString()}</p>
+      )}
+      
+      {connection.error && (
+        <p className="error">Error: {connection.error}</p>
+      )}
+    </div>
+  );
+}
+```
+
+## 🎨 Customization
+
+### CSS Variables
+
+Customize the appearance using CSS variables:
+
+```css
+:root {
+  /* Primary colors */
+  --shogun-primary: #3b82f6;
+  --shogun-primary-hover: #2563eb;
+  
+  /* Background colors */
+  --shogun-bg: #ffffff;
+  --shogun-bg-secondary: #f3f4f6;
+  
+  /* Text colors */
+  --shogun-text: #1f2937;
+  --shogun-text-secondary: #6b7280;
+  
+  /* Border and shadow */
+  --shogun-border: #e5e7eb;
+  --shogun-border-radius: 12px;
+  --shogun-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  
+  /* Transitions */
+  --shogun-transition: all 0.2s ease;
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --shogun-bg: #1f2937;
+    --shogun-bg-secondary: #374151;
+    --shogun-text: #f3f4f6;
+    --shogun-text-secondary: #9ca3af;
+    --shogun-border: #4b5563;
+  }
+}
+```
+
+### Custom Styling
+
+```css
+/* Custom button styles */
+.shogun-connect-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 25px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Custom modal styles */
+.shogun-modal {
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom form styles */
+.shogun-form-group input {
+  border-radius: 10px;
+  border: 2px solid transparent;
+  transition: border-color 0.3s ease;
+}
+
+.shogun-form-group input:focus {
+  border-color: var(--shogun-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+```
+
+## 🔧 Configuration Options
+
+### Complete Configuration Interface
 
 ```typescript
 interface ShogunConnectorOptions {
@@ -223,50 +543,84 @@ interface ShogunConnectorOptions {
       clientSecret?: string;
       redirectUri?: string;
     }>
-  }
+  };
+  
+  // Gun Advanced Plugin configuration
+  enableGunDebug?: boolean;
+  enableConnectionMonitoring?: boolean;
+  defaultPageSize?: number;
+  connectionTimeout?: number;
+  debounceInterval?: number;
 }
 ```
 
-The `shogunConnector` returns an object with the following properties:
+### Connector Result
 
 ```typescript
 interface ShogunConnectorResult {
   sdk: ShogunCore;
   options: ShogunConnectorOptions;
-  setProvider: (provider: string | EthersProvider) => boolean;
-  getCurrentProviderUrl: () => string | null;
   registerPlugin: (plugin: any) => boolean;
   hasPlugin: (name: string) => boolean;
+  gunPlugin: GunAdvancedPlugin;
 }
 ```
 
-> **Note**: The `setProvider` method attempts to update the RPC provider URL used by the SDK. This functionality depends on the specific version of Shogun Core you're using. If the SDK does not have a public `setRpcUrl` method available, the provider URL will still be saved but not applied to the SDK directly. In such cases, the setting will only be available through the `getCurrentProviderUrl` method.
+## 🌐 Browser Support
 
-## Styling
+- **Chrome** ≥ 60
+- **Firefox** ≥ 60
+- **Safari** ≥ 12
+- **Edge** ≥ 79
 
-The component comes with default styling that you can override using CSS variables:
+## 📱 Mobile Support
 
-```css
-:root {
-  --shogun-button-primary: #5c6bc0;
-  --shogun-button-hover: #3f51b5;
-  --shogun-text-primary: #333333;
-  --shogun-background: #ffffff;
-  /* ... other variables */
-}
-```
+The library is fully responsive and works seamlessly on mobile devices. All authentication methods are optimized for touch interfaces.
 
-## Browser Support
+## 🔒 Security Features
 
-- Chrome ≥ 60
-- Firefox ≥ 60
-- Safari ≥ 12
-- Edge ≥ 79
+- **Encrypted Storage**: Gun pairs can be encrypted with passwords
+- **Secure Authentication**: Multiple secure authentication methods
+- **Session Management**: Automatic session handling and cleanup
+- **Error Handling**: Comprehensive error handling and user feedback
 
-## Contributing
+## 🚀 Performance
+
+- **Lazy Loading**: Components load only when needed
+- **Optimized Rendering**: Efficient React rendering with proper memoization
+- **Connection Pooling**: Smart connection management for optimal performance
+- **Debounced Updates**: Prevents excessive re-renders during rapid data changes
+
+## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-## License
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/shogun/shogun-button-react.git
+
+# Install dependencies
+yarn install
+
+# Start development server
+yarn dev
+
+# Build the library
+yarn build
+
+# Run tests
+yarn test
+```
+
+## 📄 License
 
 MIT © [Shogun](https://github.com/shogun)
+
+## 🆘 Support
+
+- **Documentation**: [Full API Reference](https://docs.shogun.dev)
+- **Issues**: [GitHub Issues](https://github.com/shogun/shogun-button-react/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/shogun/shogun-button-react/discussions)
+- **Discord**: [Join our community](https://discord.gg/shogun)

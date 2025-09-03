@@ -1,15 +1,20 @@
 import { ShogunCore } from "shogun-core";
 import { ShogunConnectorOptions, ShogunConnectorResult } from "./types/connector-options";
+import { GunAdvancedPlugin } from "./plugins/GunAdvancedPlugin";
 
-export function shogunConnector(
-  options: ShogunConnectorOptions
-): ShogunConnectorResult {
+export function shogunConnector(options: ShogunConnectorOptions): ShogunConnectorResult {
   const {
     peers = ["https://gun-manhattan.herokuapp.com/gun"],
     appName,
     logging,
     timeouts,
     oauth,
+    // Nuove opzioni per il plugin
+    enableGunDebug = true,
+    enableConnectionMonitoring = true,
+    defaultPageSize = 20,
+    connectionTimeout = 10000,
+    debounceInterval = 100,
     ...restOptions
   } = options;
 
@@ -20,7 +25,6 @@ export function shogunConnector(
     timeouts,
     oauth,
   });
-
 
   const registerPlugin = (plugin: any): boolean => {
     if (sdk && typeof sdk.register === "function") {
@@ -39,10 +43,25 @@ export function shogunConnector(
     return sdk ? sdk.hasPlugin(name) : false;
   };
 
+  // Registra automaticamente il plugin Gun avanzato
+  let gunPlugin: GunAdvancedPlugin | null = null;
+  if (sdk) {
+    gunPlugin = new GunAdvancedPlugin(sdk, {
+      enableDebug: enableGunDebug,
+      enableConnectionMonitoring,
+      defaultPageSize,
+      connectionTimeout,
+      debounceInterval,
+    });
+    
+    registerPlugin(gunPlugin);
+  }
+
   return {
     sdk,
     options,
     registerPlugin,
     hasPlugin,
+    gunPlugin, // Esporta il plugin per uso esterno
   };
-} 
+}

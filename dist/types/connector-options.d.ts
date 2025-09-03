@@ -30,10 +30,16 @@ export interface ShogunConnectorOptions {
             redirectUri?: string;
         }>;
     };
+    enableGunDebug?: boolean;
+    enableConnectionMonitoring?: boolean;
+    defaultPageSize?: number;
+    connectionTimeout?: number;
+    debounceInterval?: number;
 }
 export interface ShogunConnectorResult {
     sdk: ShogunCore;
     options: ShogunConnectorOptions;
     registerPlugin: (plugin: any) => boolean;
     hasPlugin: (name: string) => boolean;
+    gunPlugin: any;
 }
