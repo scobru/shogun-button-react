@@ -1,9 +1,26 @@
-import React, { useContext, useState, createContext, useEffect, useRef } from "react";
+import React, {
+  useContext,
+  useState,
+  createContext,
+  useEffect,
+  useRef,
+} from "react";
 import { ShogunCore } from "shogun-core";
 import { Observable } from "rxjs";
+import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
+
 import "../types/index.js"; // Import type file to extend definitions
 
 import "../styles/index.css";
+
+// Interface for plugin hooks
+interface PluginHooks {
+  useGunState?: any;
+  useGunCollection?: any;
+  useGunConnection?: any;
+  useGunDebug?: any;
+  useGunRealtime?: any;
+}
 
 // Definiamo i tipi localmente se non sono disponibili da shogun-core
 interface AuthResult {
@@ -17,7 +34,7 @@ interface AuthResult {
 
 // Context type for ShogunProvider
 type ShogunContextType = {
-  sdk: ShogunCore | null;
+  core: ShogunCore | null;
   options: any; // Allow any options for flexibility
   isLoggedIn: boolean;
   userPub: string | null;
@@ -36,11 +53,32 @@ type ShogunContextType = {
   // Pair export/import methods
   exportGunPair: (password?: string) => Promise<string>;
   importGunPair: (pairData: string, password?: string) => Promise<boolean>;
+
+  gunPlugin: GunAdvancedPlugin | null;
+
+  // Hook del plugin
+  useGunState: <T>(path: string, defaultValue?: T) => any;
+  useGunCollection: <T>(path: string, options?: any) => any;
+  useGunConnection: (path: string) => {
+    isConnected: boolean;
+    lastSeen: Date | null;
+    error: string | null;
+  };
+  useGunDebug: (path: string, enabled?: boolean) => void;
+  useGunRealtime: <T>(
+    path: string,
+    callback?: (data: T, key: string) => void
+  ) => { data: T | null; key: string | null };
+
+  // Metodi di utilità
+  put: (path: string, data: any) => Promise<void>;
+  get: (path: string) => any;
+  remove: (path: string) => Promise<void>;
 };
 
 // Default context
 const defaultShogunContext: ShogunContextType = {
-  sdk: null,
+  core: null,
   options: {},
   isLoggedIn: false,
   userPub: null,
@@ -54,6 +92,15 @@ const defaultShogunContext: ShogunContextType = {
   getPlugin: () => undefined,
   exportGunPair: async () => "",
   importGunPair: async () => false,
+  gunPlugin: null,
+  useGunState: () => ({}),
+  useGunCollection: () => ({}),
+  useGunConnection: () => ({ isConnected: false, lastSeen: null, error: null }),
+  useGunDebug: () => {},
+  useGunRealtime: () => ({ data: null, key: null }),
+  put: async () => {},
+  get: () => null,
+  remove: async () => {},
 };
 
 // Create context using React's createContext directly
@@ -65,7 +112,7 @@ export const useShogun = () => useContext(ShogunContext);
 // Props for the provider component
 type ShogunButtonProviderProps = {
   children: React.ReactNode;
-  sdk: ShogunCore;
+  core: ShogunCore;
   options: any;
   onLoginSuccess?: (data: {
     userPub: string;
@@ -85,7 +132,7 @@ type ShogunButtonProviderProps = {
 // Provider component
 export function ShogunButtonProvider({
   children,
-  sdk,
+  core,
   options,
   onLoginSuccess,
   onSignupSuccess,
@@ -98,34 +145,34 @@ export function ShogunButtonProvider({
 
   // Effetto per gestire l'inizializzazione e pulizia
   useEffect(() => {
-    if (!sdk) return;
+    if (!core) return;
 
     // Verifichiamo se l'utente è già loggato all'inizializzazione
-    if (sdk.isLoggedIn()) {
-      const pub = sdk.gun.user()?.is?.pub;
+    if (core.isLoggedIn()) {
+      const pub = core.gun.user()?.is?.pub;
       if (pub) {
         setIsLoggedIn(true);
         setUserPub(pub);
-        setUsername(pub.slice(0, 8) + '...');
+        setUsername(pub.slice(0, 8) + "...");
       }
     }
 
-    // Poiché il metodo 'on' non esiste su ShogunCore, 
+    // Poiché il metodo 'on' non esiste su ShogunCore,
     // gestiamo gli stati direttamente nei metodi di login/logout
-  }, [sdk, onLoginSuccess]);
+  }, [core, onLoginSuccess]);
 
   // RxJS observe method
   const observe = <T,>(path: string): Observable<T> => {
-    if (!sdk) {
+    if (!core) {
       return new Observable<T>();
     }
-    return sdk.observe<T>(path);
+    return core.observe<T>(path);
   };
 
   // Unified login
   const login = async (method: string, ...args: any[]) => {
     try {
-      if (!sdk) {
+      if (!core) {
         throw new Error("SDK not initialized");
       }
 
@@ -136,55 +183,57 @@ export function ShogunButtonProvider({
       switch (method) {
         case "password":
           username = args[0];
-          result = await sdk.login(args[0], args[1]);
+          result = await core.login(args[0], args[1]);
           break;
         case "pair":
           // New pair authentication method
           const pair = args[0];
-          if (!pair || typeof pair !== 'object') {
+          if (!pair || typeof pair !== "object") {
             throw new Error("Invalid pair data provided");
           }
-          
+
           result = await new Promise((resolve, reject) => {
-            sdk.gun.user().auth(pair, (ack: any) => {
+            core.gun.user().auth(pair, (ack: any) => {
               if (ack.err) {
                 reject(new Error(`Pair authentication failed: ${ack.err}`));
                 return;
               }
-              
+
               const pub = ack.pub || pair.pub;
               const alias = ack.alias || `user_${pub?.substring(0, 8)}`;
-              
+
               resolve({
                 success: true,
                 userPub: pub,
                 alias: alias,
-                method: 'pair'
+                method: "pair",
               } as AuthResult);
             });
           });
-          
+
           username = (result as any).alias;
           authMethod = "pair";
           break;
         case "webauthn":
           username = args[0];
-          const webauthn: any = sdk.getPlugin("webauthn");
+          const webauthn: any = core.getPlugin("webauthn");
           if (!webauthn) throw new Error("WebAuthn plugin not available");
           result = await webauthn.login(username);
           break;
         case "web3":
-          const web3: any = sdk.getPlugin("web3");
+          const web3: any = core.getPlugin("web3");
           if (!web3) throw new Error("Web3 plugin not available");
           const connectionResult = await web3.connectMetaMask();
           if (!connectionResult.success || !connectionResult.address) {
-            throw new Error(connectionResult.error || "Failed to connect wallet.");
+            throw new Error(
+              connectionResult.error || "Failed to connect wallet."
+            );
           }
           username = connectionResult.address;
           result = await web3.login(connectionResult.address);
           break;
         case "nostr":
-          const nostr: any = sdk.getPlugin("nostr");
+          const nostr: any = core.getPlugin("nostr");
           if (!nostr) throw new Error("Nostr plugin not available");
           const nostrResult = await nostr.connectBitcoinWallet();
           if (!nostrResult || !nostrResult.success) {
@@ -198,7 +247,7 @@ export function ShogunButtonProvider({
           result = await nostr.login(pubkey);
           break;
         case "oauth":
-          const oauth: any = sdk.getPlugin("oauth");
+          const oauth: any = core.getPlugin("oauth");
           if (!oauth) throw new Error("OAuth plugin not available");
           const provider = args[0] || "google";
           result = await oauth.login(provider);
@@ -213,9 +262,10 @@ export function ShogunButtonProvider({
       }
 
       if (result.success) {
-        const userPub = result.userPub || sdk.gun.user()?.is?.pub || "";
-        const displayName = result.alias || username || userPub.slice(0, 8) + '...';
-        
+        const userPub = result.userPub || core.gun.user()?.is?.pub || "";
+        const displayName =
+          result.alias || username || userPub.slice(0, 8) + "...";
+
         setIsLoggedIn(true);
         setUserPub(userPub);
         setUsername(displayName);
@@ -238,7 +288,7 @@ export function ShogunButtonProvider({
   // Unified signup
   const signUp = async (method: string, ...args: any[]) => {
     try {
-      if (!sdk) {
+      if (!core) {
         throw new Error("SDK not initialized");
       }
 
@@ -252,26 +302,28 @@ export function ShogunButtonProvider({
           if (args[1] !== args[2]) {
             throw new Error("Passwords do not match");
           }
-          result = await sdk.signUp(args[0], args[1]);
+          result = await core.signUp(args[0], args[1]);
           break;
         case "webauthn":
           username = args[0];
-          const webauthn: any = sdk.getPlugin("webauthn");
+          const webauthn: any = core.getPlugin("webauthn");
           if (!webauthn) throw new Error("WebAuthn plugin not available");
           result = await webauthn.signUp(username);
           break;
         case "web3":
-          const web3: any = sdk.getPlugin("web3");
+          const web3: any = core.getPlugin("web3");
           if (!web3) throw new Error("Web3 plugin not available");
           const connectionResult = await web3.connectMetaMask();
           if (!connectionResult.success || !connectionResult.address) {
-            throw new Error(connectionResult.error || "Failed to connect wallet.");
+            throw new Error(
+              connectionResult.error || "Failed to connect wallet."
+            );
           }
           username = connectionResult.address;
           result = await web3.signUp(connectionResult.address);
           break;
         case "nostr":
-          const nostr: any = sdk.getPlugin("nostr");
+          const nostr: any = core.getPlugin("nostr");
           if (!nostr) throw new Error("Nostr plugin not available");
           const nostrResult = await nostr.connectBitcoinWallet();
           if (!nostrResult || !nostrResult.success) {
@@ -285,7 +337,7 @@ export function ShogunButtonProvider({
           result = await nostr.signUp(pubkey);
           break;
         case "oauth":
-          const oauth: any = sdk.getPlugin("oauth");
+          const oauth: any = core.getPlugin("oauth");
           if (!oauth) throw new Error("OAuth plugin not available");
           const provider = args[0] || "google";
           result = await oauth.signUp(provider);
@@ -300,9 +352,10 @@ export function ShogunButtonProvider({
       }
 
       if (result.success) {
-        const userPub = result.userPub || sdk.gun.user()?.is?.pub || "";
-        const displayName = result.alias || username || userPub.slice(0, 8) + '...';
-        
+        const userPub = result.userPub || core.gun.user()?.is?.pub || "";
+        const displayName =
+          result.alias || username || userPub.slice(0, 8) + "...";
+
         setIsLoggedIn(true);
         setUserPub(userPub);
         setUsername(displayName);
@@ -324,7 +377,7 @@ export function ShogunButtonProvider({
 
   // Logout
   const logout = () => {
-    sdk.logout();
+    core.logout();
     setIsLoggedIn(false);
     setUserPub(null);
     setUsername(null);
@@ -335,23 +388,22 @@ export function ShogunButtonProvider({
 
   // Implementazione del metodo setProvider
   const setProvider = (provider: any): boolean => {
-    if (!sdk) {
+    if (!core) {
       return false;
     }
 
     try {
       let newProviderUrl: string | null = null;
-      
+
       if (provider && provider.connection && provider.connection.url) {
         newProviderUrl = provider.connection.url;
-      } 
-      else if (typeof provider === 'string') {
+      } else if (typeof provider === "string") {
         newProviderUrl = provider;
       }
-      
+
       if (newProviderUrl) {
-        if (typeof sdk.setRpcUrl === 'function') {
-          return sdk.setRpcUrl(newProviderUrl);
+        if (typeof core.setRpcUrl === "function") {
+          return core.setRpcUrl(newProviderUrl);
         }
       }
       return false;
@@ -362,16 +414,16 @@ export function ShogunButtonProvider({
   };
 
   const hasPlugin = (name: string): boolean => {
-    return sdk ? sdk.hasPlugin(name) : false;
+    return core ? core.hasPlugin(name) : false;
   };
 
   const getPlugin = <T,>(name: string): T | undefined => {
-    return sdk ? sdk.getPlugin<T>(name) : undefined;
+    return core ? core.getPlugin<T>(name) : undefined;
   };
 
   // Export Gun pair functionality
   const exportGunPair = async (password?: string): Promise<string> => {
-    if (!sdk) {
+    if (!core) {
       throw new Error("SDK not initialized");
     }
 
@@ -380,8 +432,9 @@ export function ShogunButtonProvider({
     }
 
     try {
-      const pair = sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair") ;
-      
+      const pair =
+        sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair");
+
       if (!pair) {
         throw new Error("No Gun pair available for current user");
       }
@@ -405,8 +458,11 @@ export function ShogunButtonProvider({
   };
 
   // Import Gun pair functionality
-  const importGunPair = async (pairData: string, password?: string): Promise<boolean> => {
-    if (!sdk) {
+  const importGunPair = async (
+    pairData: string,
+    password?: string
+  ): Promise<boolean> => {
+    if (!core) {
       throw new Error("SDK not initialized");
     }
 
@@ -421,12 +477,14 @@ export function ShogunButtonProvider({
             throw new Error("Failed to decrypt pair data - wrong password?");
           }
         } else {
-          console.warn("SEA decryption not available, assuming unencrypted data");
+          console.warn(
+            "SEA decryption not available, assuming unencrypted data"
+          );
         }
       }
 
       const pair = JSON.parse(dataString);
-      
+
       // Validate pair structure
       if (!pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
         throw new Error("Invalid pair structure - missing required keys");
@@ -434,33 +492,128 @@ export function ShogunButtonProvider({
 
       // Authenticate with the imported pair
       const result = await login("pair", pair);
-      
+
       return result.success;
     } catch (error: any) {
       throw new Error(`Failed to import Gun pair: ${error.message}`);
     }
   };
 
+  // Inizializza il plugin
+  const gunPlugin = React.useMemo(() => {
+    if (!core) return null;
+    return new GunAdvancedPlugin(core, {
+      enableDebug: options.enableGunDebug !== false,
+      enableConnectionMonitoring: options.enableConnectionMonitoring !== false,
+      defaultPageSize: options.defaultPageSize || 20,
+      connectionTimeout: options.connectionTimeout || 10000,
+      debounceInterval: options.debounceInterval || 100,
+    });
+  }, [core, options]);
+
+  // Effetto per pulizia del plugin
+  React.useEffect(() => {
+    return () => {
+      if (gunPlugin) {
+        gunPlugin.cleanup();
+      }
+    };
+  }, [gunPlugin]);
+
+  // Crea gli hook del plugin
+  const pluginHooks: PluginHooks = React.useMemo(() => {
+    if (!gunPlugin) return {};
+    return gunPlugin.createHooks();
+  }, [gunPlugin]);
+
+  // Create a properly typed context value
+  const contextValue: ShogunContextType = React.useMemo(
+    () => ({
+      core,
+      options,
+      isLoggedIn,
+      userPub,
+      username,
+      login,
+      signUp,
+      logout,
+      observe,
+      hasPlugin,
+      getPlugin,
+      exportGunPair,
+      importGunPair,
+      setProvider,
+      gunPlugin,
+      // Ensure all required hooks are present with proper fallbacks
+      useGunState:
+        pluginHooks.useGunState ||
+        (() => ({
+          data: null,
+          isLoading: false,
+          error: null,
+          update: async () => {},
+          set: async () => {},
+          remove: async () => {},
+          refresh: () => {},
+        })),
+      useGunCollection:
+        pluginHooks.useGunCollection ||
+        (() => ({
+          items: [],
+          currentPage: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+          nextPage: () => {},
+          prevPage: () => {},
+          goToPage: () => {},
+          isLoading: false,
+          error: null,
+          refresh: () => {},
+          addItem: async () => {},
+          updateItem: async () => {},
+          removeItem: async () => {},
+        })),
+      useGunConnection:
+        pluginHooks.useGunConnection ||
+        (() => ({
+          isConnected: false,
+          lastSeen: null,
+          error: null,
+        })),
+      useGunDebug: pluginHooks.useGunDebug || (() => {}),
+      useGunRealtime:
+        pluginHooks.useGunRealtime ||
+        (() => ({
+          data: null,
+          key: null,
+        })),
+      put: gunPlugin?.put.bind(gunPlugin) || (async () => {}),
+      get: gunPlugin?.get.bind(gunPlugin) || (() => null),
+      remove: gunPlugin?.remove.bind(gunPlugin) || (async () => {}),
+    }),
+    [
+      core,
+      options,
+      isLoggedIn,
+      userPub,
+      username,
+      login,
+      signUp,
+      logout,
+      observe,
+      hasPlugin,
+      getPlugin,
+      exportGunPair,
+      importGunPair,
+      gunPlugin,
+      pluginHooks,
+    ]
+  );
+
   // Provide the context value to children
   return (
-    <ShogunContext.Provider
-      value={{
-        sdk,
-        options,
-        isLoggedIn,
-        userPub,
-        username,
-        login,
-        signUp,
-        logout,
-        observe,
-        setProvider,
-        hasPlugin,
-        getPlugin,
-        exportGunPair,
-        importGunPair,
-      }}
-    >
+    <ShogunContext.Provider value={contextValue}>
       {children}
     </ShogunContext.Provider>
   );
@@ -474,7 +627,17 @@ type ShogunButtonComponent = React.FC & {
 
 // SVG Icons Components
 const WalletIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
     <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
     <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
@@ -482,7 +645,17 @@ const WalletIcon = () => (
 );
 
 const KeyIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <circle cx="7.5" cy="15.5" r="5.5"></circle>
     <path d="m21 2-9.6 9.6"></path>
     <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
@@ -490,30 +663,78 @@ const KeyIcon = () => (
 );
 
 const GoogleIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+  >
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
   </svg>
 );
 
 const NostrIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M19.5 4.5 15 9l-3-3-4.5 4.5L9 12l-1.5 1.5L12 18l4.5-4.5L15 12l1.5-1.5L21 6l-1.5-1.5Z"></path>
     <path d="M12 12 6 6l-1.5 1.5L9 12l-4.5 4.5L6 18l6-6Z"></path>
   </svg>
 );
 
 const WebAuthnIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M7 11v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-4"></path>
     <path d="M14 4V2a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2"></path>
   </svg>
 );
 
 const LogoutIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
     <polyline points="16 17 21 12 16 7"></polyline>
     <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -521,28 +742,68 @@ const LogoutIcon = () => (
 );
 
 const UserIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
     <circle cx="12" cy="7" r="4"></circle>
   </svg>
 );
 
 const LockIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
   </svg>
 );
 
 const CloseIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <line x1="18" y1="6" x2="6" y2="18"></line>
     <line x1="6" y1="6" x2="18" y2="18"></line>
   </svg>
 );
 
 const ImportIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
     <polyline points="14,2 14,8 20,8"></polyline>
     <line x1="16" y1="13" x2="8" y2="13"></line>
@@ -551,7 +812,17 @@ const ImportIcon = () => (
 );
 
 const ExportIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
     <polyline points="14,2 14,8 20,8"></polyline>
     <line x1="12" y1="11" x2="12" y2="21"></line>
@@ -562,8 +833,17 @@ const ExportIcon = () => (
 // Component for Shogun login button
 export const ShogunButton: ShogunButtonComponent = (() => {
   const Button: React.FC = () => {
-    const { isLoggedIn, username, logout, login, signUp, sdk, options, exportGunPair, importGunPair } =
-      useShogun();
+    const {
+      isLoggedIn,
+      username,
+      logout,
+      login,
+      signUp,
+      core,
+      options,
+      exportGunPair,
+      importGunPair,
+    } = useShogun();
 
     // Form states
     const [modalIsOpen, setModalIsOpen] = useState(false);
@@ -575,7 +855,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [formSecurityAnswer, setFormSecurityAnswer] = useState("");
     const [formMode, setFormMode] = useState<"login" | "signup">("login");
     const [authView, setAuthView] = useState<
-      "options" | "password" | "recover" | "showHint" | "export" | "import" | "webauthn-username"
+      | "options"
+      | "password"
+      | "recover"
+      | "showHint"
+      | "export"
+      | "import"
+      | "webauthn-username"
     >("options");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -592,15 +878,18 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     // Handle click outside to close dropdown
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        if (
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target as Node)
+        ) {
           setDropdownOpen(false);
         }
       };
 
       if (dropdownOpen) {
-        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener("mousedown", handleClickOutside);
         return () => {
-          document.removeEventListener('mousedown', handleClickOutside);
+          document.removeEventListener("mousedown", handleClickOutside);
         };
       }
     }, [dropdownOpen]);
@@ -610,20 +899,19 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       return (
         <div className="shogun-logged-in-container">
           <div className="shogun-dropdown" ref={dropdownRef}>
-            <button 
-              className="shogun-button shogun-logged-in" 
+            <button
+              className="shogun-button shogun-logged-in"
               onClick={() => setDropdownOpen(!dropdownOpen)}
             >
               <div className="shogun-avatar">
                 {username.substring(0, 2).toUpperCase()}
               </div>
               <span className="shogun-username">
-                {username.length > 12 
+                {username.length > 12
                   ? `${username.substring(0, 6)}...${username.substring(username.length - 4)}`
-                  : username
-                }
+                  : username}
               </span>
-          </button>
+            </button>
 
             {dropdownOpen && (
               <div className="shogun-dropdown-menu">
@@ -633,18 +921,20 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                   </div>
                   <div className="shogun-user-info">
                     <span className="shogun-username-full">
-                      {username.length > 20 
+                      {username.length > 20
                         ? `${username.substring(0, 10)}...${username.substring(username.length - 6)}`
-                        : username
-                      }
+                        : username}
                     </span>
                   </div>
                 </div>
-                <div className="shogun-dropdown-item" onClick={() => {
-                  setDropdownOpen(false);
-                  setAuthView("export");
-                  setModalIsOpen(true);
-                }}>
+                <div
+                  className="shogun-dropdown-item"
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    setAuthView("export");
+                    setModalIsOpen(true);
+                  }}
+                >
                   <ExportIcon />
                   <span>Export Pair</span>
                 </div>
@@ -694,16 +984,16 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             "password",
             formUsername,
             formPassword,
-            formPasswordConfirm,
+            formPasswordConfirm
           );
           if (result && result.success) {
-            if (sdk?.gundb) {
-              await sdk.gundb.setPasswordHint(
+            if (core?.gundb) {
+              await core.gundb.setPasswordHint(
                 formUsername,
                 formPassword,
                 formHint,
                 [formSecurityQuestion],
-                [formSecurityAnswer],
+                [formSecurityAnswer]
               );
             }
             setModalIsOpen(false);
@@ -723,7 +1013,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const handleWeb3Auth = () => handleAuth("web3");
 
     const handleWebAuthnAuth = () => {
-      if (!sdk?.hasPlugin("webauthn")) {
+      if (!core?.hasPlugin("webauthn")) {
         setError("WebAuthn is not supported in your browser");
         return;
       }
@@ -738,10 +1028,10 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setError("");
       setLoading(true);
       try {
-        if (!sdk?.gundb) {
+        if (!core?.gundb) {
           throw new Error("SDK not ready");
         }
-        const result = await sdk.gundb.forgotPassword(formUsername, [
+        const result = await core.gundb.forgotPassword(formUsername, [
           formSecurityAnswer,
         ]);
         if (result.success && result.hint) {
@@ -763,7 +1053,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       try {
         const pairData = await exportGunPair(exportPassword || undefined);
         setExportedPair(pairData);
-        
+
         // Copy to clipboard
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(pairData);
@@ -784,8 +1074,11 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         if (!importPairData.trim()) {
           throw new Error("Please enter pair data");
         }
-        
-        const success = await importGunPair(importPairData, importPassword || undefined);
+
+        const success = await importGunPair(
+          importPairData,
+          importPassword || undefined
+        );
         if (success) {
           setShowImportSuccess(true);
           // Chiudiamo il modal con un piccolo delay per permettere all'utente di vedere il successo
@@ -840,7 +1133,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     // Add buttons for both login and signup for alternative auth methods
     const renderAuthOptions = () => (
       <div className="shogun-auth-options">
-        {options.showMetamask !== false && sdk?.hasPlugin("web3") && (
+        {options.showMetamask !== false && core?.hasPlugin("web3") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -849,12 +1142,14 @@ export const ShogunButton: ShogunButtonComponent = (() => {
               disabled={loading}
             >
               <WalletIcon />
-              {formMode === "login" ? "Login with MetaMask" : "Signup with MetaMask"}
+              {formMode === "login"
+                ? "Login with MetaMask"
+                : "Signup with MetaMask"}
             </button>
           </div>
         )}
 
-        {options.showWebauthn !== false && sdk?.hasPlugin("webauthn") && (
+        {options.showWebauthn !== false && core?.hasPlugin("webauthn") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -863,12 +1158,14 @@ export const ShogunButton: ShogunButtonComponent = (() => {
               disabled={loading}
             >
               <WebAuthnIcon />
-              {formMode === "login" ? "Login with WebAuthn" : "Signup with WebAuthn"}
+              {formMode === "login"
+                ? "Login with WebAuthn"
+                : "Signup with WebAuthn"}
             </button>
           </div>
         )}
 
-        {options.showNostr !== false && sdk?.hasPlugin("nostr") && (
+        {options.showNostr !== false && core?.hasPlugin("nostr") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -882,7 +1179,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </div>
         )}
 
-        {options.showOauth !== false && sdk?.hasPlugin("oauth") && (
+        {options.showOauth !== false && core?.hasPlugin("oauth") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -891,7 +1188,9 @@ export const ShogunButton: ShogunButtonComponent = (() => {
               disabled={loading}
             >
               <GoogleIcon />
-              {formMode === "login" ? "Login with Google" : "Signup with Google"}
+              {formMode === "login"
+                ? "Login with Google"
+                : "Signup with Google"}
             </button>
           </div>
         )}
@@ -907,9 +1206,11 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           disabled={loading}
         >
           <LockIcon />
-          {formMode === "login" ? "Login with Password" : "Signup with Password"}
+          {formMode === "login"
+            ? "Login with Password"
+            : "Signup with Password"}
         </button>
-        
+
         {formMode === "login" && (
           <button
             type="button"
@@ -1055,13 +1356,35 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     const renderWebAuthnUsernameForm = () => (
       <div className="shogun-auth-form">
-        <h3>{formMode === "login" ? "Login with WebAuthn" : "Sign Up with WebAuthn"}</h3>
-        <div style={{ backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #0ea5e9' }}>
-          <p style={{ fontSize: '14px', color: '#0c4a6e', margin: '0', fontWeight: '500' }}>
+        <h3>
+          {formMode === "login"
+            ? "Login with WebAuthn"
+            : "Sign Up with WebAuthn"}
+        </h3>
+        <div
+          style={{
+            backgroundColor: "#f0f9ff",
+            padding: "12px",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            border: "1px solid #0ea5e9",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#0c4a6e",
+              margin: "0",
+              fontWeight: "500",
+            }}
+          >
             🔑 WebAuthn Authentication
           </p>
-          <p style={{ fontSize: '13px', color: '#075985', margin: '4px 0 0 0' }}>
-            Please enter your username to continue with WebAuthn {formMode === "login" ? "login" : "registration"}.
+          <p
+            style={{ fontSize: "13px", color: "#075985", margin: "4px 0 0 0" }}
+          >
+            Please enter your username to continue with WebAuthn{" "}
+            {formMode === "login" ? "login" : "registration"}.
           </p>
         </div>
         <div className="shogun-form-group">
@@ -1177,12 +1500,30 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const renderExportForm = () => (
       <div className="shogun-auth-form">
         <h3>Export Gun Pair</h3>
-        <div style={{ backgroundColor: '#f0f9ff', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #0ea5e9' }}>
-          <p style={{ fontSize: '14px', color: '#0c4a6e', margin: '0', fontWeight: '500' }}>
+        <div
+          style={{
+            backgroundColor: "#f0f9ff",
+            padding: "12px",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            border: "1px solid #0ea5e9",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#0c4a6e",
+              margin: "0",
+              fontWeight: "500",
+            }}
+          >
             🔒 Backup Your Account
           </p>
-          <p style={{ fontSize: '13px', color: '#075985', margin: '4px 0 0 0' }}>
-            Export your Gun pair to backup your account. You can use this to login from another device or restore access if needed.
+          <p
+            style={{ fontSize: "13px", color: "#075985", margin: "4px 0 0 0" }}
+          >
+            Export your Gun pair to backup your account. You can use this to
+            login from another device or restore access if needed.
           </p>
         </div>
         <div className="shogun-form-group">
@@ -1203,15 +1544,17 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           <div className="shogun-form-group">
             <label>Your Gun Pair (copy this safely):</label>
             {showCopySuccess && (
-              <div style={{ 
-                backgroundColor: '#dcfce7', 
-                color: '#166534', 
-                padding: '8px 12px', 
-                borderRadius: '4px', 
-                marginBottom: '8px',
-                fontSize: '14px',
-                border: '1px solid #22c55e'
-              }}>
+              <div
+                style={{
+                  backgroundColor: "#dcfce7",
+                  color: "#166534",
+                  padding: "8px 12px",
+                  borderRadius: "4px",
+                  marginBottom: "8px",
+                  fontSize: "14px",
+                  border: "1px solid #22c55e",
+                }}
+              >
                 ✅ Copied to clipboard successfully!
               </div>
             )}
@@ -1220,16 +1563,16 @@ export const ShogunButton: ShogunButtonComponent = (() => {
               readOnly
               rows={6}
               style={{
-                fontFamily: 'monospace',
-                fontSize: '12px',
-                width: '100%',
-                padding: '8px',
-                border: '1px solid #ccc',
-                borderRadius: '4px'
+                fontFamily: "monospace",
+                fontSize: "12px",
+                width: "100%",
+                padding: "8px",
+                border: "1px solid #ccc",
+                borderRadius: "4px",
               }}
             />
             {!navigator.clipboard && (
-              <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+              <p style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>
                 ⚠️ Auto-copy not available. Please manually copy the text above.
               </p>
             )}
@@ -1269,12 +1612,30 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const renderImportForm = () => (
       <div className="shogun-auth-form">
         <h3>Import Gun Pair</h3>
-        <div style={{ backgroundColor: '#fef3c7', padding: '12px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #f59e0b' }}>
-          <p style={{ fontSize: '14px', color: '#92400e', margin: '0', fontWeight: '500' }}>
+        <div
+          style={{
+            backgroundColor: "#fef3c7",
+            padding: "12px",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            border: "1px solid #f59e0b",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#92400e",
+              margin: "0",
+              fontWeight: "500",
+            }}
+          >
             🔑 Restore Your Account
           </p>
-          <p style={{ fontSize: '13px', color: '#a16207', margin: '4px 0 0 0' }}>
-            Import a Gun pair to login with your existing account from another device. Make sure you have your backup data ready.
+          <p
+            style={{ fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" }}
+          >
+            Import a Gun pair to login with your existing account from another
+            device. Make sure you have your backup data ready.
           </p>
         </div>
         <div className="shogun-form-group">
@@ -1290,12 +1651,12 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             placeholder="Paste your Gun pair JSON here..."
             rows={6}
             style={{
-              fontFamily: 'monospace',
-              fontSize: '12px',
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #ccc',
-              borderRadius: '4px'
+              fontFamily: "monospace",
+              fontSize: "12px",
+              width: "100%",
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
             }}
           />
         </div>
@@ -1314,16 +1675,18 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           />
         </div>
         {showImportSuccess && (
-          <div style={{ 
-            backgroundColor: '#dcfce7', 
-            color: '#166534', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            marginBottom: '16px',
-            fontSize: '14px',
-            border: '1px solid #22c55e',
-            textAlign: 'center'
-          }}>
+          <div
+            style={{
+              backgroundColor: "#dcfce7",
+              color: "#166534",
+              padding: "12px",
+              borderRadius: "8px",
+              marginBottom: "16px",
+              fontSize: "14px",
+              border: "1px solid #22c55e",
+              textAlign: "center",
+            }}
+          >
             ✅ Pair imported successfully! Logging you in...
           </div>
         )}
@@ -1333,7 +1696,11 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           onClick={handleImportPair}
           disabled={loading || showImportSuccess}
         >
-          {loading ? "Importing..." : showImportSuccess ? "Success!" : "Import and Login"}
+          {loading
+            ? "Importing..."
+            : showImportSuccess
+              ? "Success!"
+              : "Import and Login"}
         </button>
         <div className="shogun-form-footer">
           <button
@@ -1423,7 +1790,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 {authView === "showHint" && renderHint()}
                 {authView === "export" && renderExportForm()}
                 {authView === "import" && renderImportForm()}
-                {authView === "webauthn-username" && renderWebAuthnUsernameForm()}
+                {authView === "webauthn-username" &&
+                  renderWebAuthnUsernameForm()}
               </div>
             </div>
           </div>

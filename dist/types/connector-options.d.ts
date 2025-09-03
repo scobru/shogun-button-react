@@ -1,4 +1,5 @@
 import { ShogunCore, IGunInstance } from "shogun-core";
+import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 export interface ShogunConnectorOptions {
     appName: string;
     appDescription?: string;
@@ -30,12 +31,18 @@ export interface ShogunConnectorOptions {
             redirectUri?: string;
         }>;
     };
+    enableGunDebug?: boolean;
+    enableConnectionMonitoring?: boolean;
+    defaultPageSize?: number;
+    connectionTimeout?: number;
+    debounceInterval?: number;
 }
 export interface ShogunConnectorResult {
-    sdk: ShogunCore;
+    core: ShogunCore;
     options: ShogunConnectorOptions;
     setProvider: (provider: any) => boolean;
     getCurrentProviderUrl: () => string | null;
     registerPlugin: (plugin: any) => boolean;
     hasPlugin: (name: string) => boolean;
+    gunPlugin: GunAdvancedPlugin;
 }

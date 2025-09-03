@@ -1,7 +1,8 @@
 import { ShogunCore } from "shogun-core";
+import { GunAdvancedPlugin } from "./plugins/GunAdvancedPlugin";
 export function shogunConnector(options) {
-    const { peers = ["https://gun-manhattan.herokuapp.com/gun"], appName, logging, timeouts, oauth, ...restOptions } = options;
-    const sdk = new ShogunCore({
+    const { peers = ["https://gun-manhattan.herokuapp.com/gun"], appName, logging, timeouts, oauth, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
+    const core = new ShogunCore({
         peers,
         scope: appName,
         logging,
@@ -9,7 +10,7 @@ export function shogunConnector(options) {
         oauth,
     });
     const setProvider = (provider) => {
-        if (!sdk) {
+        if (!core) {
             return false;
         }
         try {
@@ -21,8 +22,8 @@ export function shogunConnector(options) {
                 newProviderUrl = provider;
             }
             if (newProviderUrl) {
-                if (typeof sdk.setRpcUrl === "function") {
-                    return sdk.setRpcUrl(newProviderUrl);
+                if (typeof core.setRpcUrl === "function") {
+                    return core.setRpcUrl(newProviderUrl);
                 }
             }
             return false;
@@ -33,15 +34,15 @@ export function shogunConnector(options) {
         }
     };
     const getCurrentProviderUrl = () => {
-        if (sdk && typeof sdk.getRpcUrl === "function") {
-            return sdk.getRpcUrl();
+        if (core && typeof core.getRpcUrl === "function") {
+            return core.getRpcUrl();
         }
         return null;
     };
     const registerPlugin = (plugin) => {
-        if (sdk && typeof sdk.register === "function") {
+        if (core && typeof core.register === "function") {
             try {
-                sdk.register(plugin);
+                core.register(plugin);
                 return true;
             }
             catch (error) {
@@ -52,14 +53,31 @@ export function shogunConnector(options) {
         return false;
     };
     const hasPlugin = (name) => {
-        return sdk ? sdk.hasPlugin(name) : false;
+        return core ? core.hasPlugin(name) : false;
     };
+    // Registra automaticamente il plugin Gun avanzato
+    let gunPlugin = null;
+    if (core) {
+        gunPlugin = new GunAdvancedPlugin(core, {
+            enableDebug: enableGunDebug,
+            enableConnectionMonitoring,
+            defaultPageSize,
+            connectionTimeout,
+            debounceInterval,
+        });
+        registerPlugin(gunPlugin);
+    }
+    // Ensure gunPlugin is always available
+    if (!gunPlugin) {
+        throw new Error("Failed to initialize GunAdvancedPlugin");
+    }
     return {
-        sdk,
+        core,
         options,
         setProvider,
         getCurrentProviderUrl,
         registerPlugin,
         hasPlugin,
+        gunPlugin,
     };
 }
