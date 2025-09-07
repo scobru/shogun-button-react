@@ -16,18 +16,10 @@ export interface ShogunConnectorOptions {
   showOauth?: boolean;
   darkMode?: boolean;
 
-  // Network configuration
-  websocketSecure?: boolean;
-  providerUrl?: string | null;
   peers?: string[];
   authToken?: string;
   gunInstance?: IGunInstance<any>;
 
-  // Advanced options (directly mapped to ShogunSDKConfig)
-  logging?: {
-    enabled: boolean;
-    level: "error" | "warning" | "info" | "debug";
-  };
   timeouts?: {
     login?: number;
     signup?: number;
@@ -43,6 +35,17 @@ export interface ShogunConnectorOptions {
       }
     >;
   };
+  webauthn?: {
+    enabled?: boolean;
+  };
+  nostr?: {
+    enabled?: boolean;
+  };
+  web3?: {
+    enabled?: boolean;
+  };
+  localStorage?: boolean;
+  radisk?: boolean;
   // Configurazione plugin Gun avanzato
   enableGunDebug?: boolean;
   enableConnectionMonitoring?: boolean;

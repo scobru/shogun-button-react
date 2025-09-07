@@ -166,7 +166,12 @@ export function ShogunButtonProvider({
     if (!core) {
       return new Observable<T>();
     }
-    return core.observe<T>(path);
+    const rx: any = (core as any)?.rx || (core as any)?.db?.rx;
+    if (rx && typeof rx.observe === "function") {
+      const observable = rx.observe(path) as Observable<T>;
+      return observable;
+    }
+    return new Observable<T>();
   };
 
   // Unified login
@@ -402,8 +407,15 @@ export function ShogunButtonProvider({
       }
 
       if (newProviderUrl) {
-        if (typeof core.setRpcUrl === "function") {
-          return core.setRpcUrl(newProviderUrl);
+        const gun: any = (core as any)?.db?.gun || (core as any)?.gun;
+        if (gun && typeof gun.opt === "function") {
+          try {
+            gun.opt({ peers: [newProviderUrl] });
+            return true;
+          } catch (e) {
+            console.error("Error adding peer via gun.opt:", e);
+            return false;
+          }
         }
       }
       return false;
@@ -987,13 +999,9 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             formPasswordConfirm
           );
           if (result && result.success) {
-            if (core?.gundb) {
-              await core.gundb.setPasswordHint(
-                formUsername,
-                formPassword,
+            if (core?.db) {
+              await core.db.setPasswordHint(
                 formHint,
-                [formSecurityQuestion],
-                [formSecurityAnswer]
               );
             }
             setModalIsOpen(false);
@@ -1028,10 +1036,10 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setError("");
       setLoading(true);
       try {
-        if (!core?.gundb) {
+        if (!core?.db) {
           throw new Error("SDK not ready");
         }
-        const result = await core.gundb.forgotPassword(formUsername, [
+        const result = await core.db.forgotPassword(formUsername, [
           formSecurityAnswer,
         ]);
         if (result.success && result.hint) {

@@ -58,10 +58,16 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
     }, [core, onLoginSuccess]);
     // RxJS observe method
     const observe = (path) => {
+        var _a;
         if (!core) {
             return new Observable();
         }
-        return core.observe(path);
+        const rx = (core === null || core === void 0 ? void 0 : core.rx) || ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.rx);
+        if (rx && typeof rx.observe === "function") {
+            const observable = rx.observe(path);
+            return observable;
+        }
+        return new Observable();
     };
     // Unified login
     const login = async (method, ...args) => {
@@ -269,6 +275,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
     };
     // Implementazione del metodo setProvider
     const setProvider = (provider) => {
+        var _a;
         if (!core) {
             return false;
         }
@@ -281,8 +288,16 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                 newProviderUrl = provider;
             }
             if (newProviderUrl) {
-                if (typeof core.setRpcUrl === "function") {
-                    return core.setRpcUrl(newProviderUrl);
+                const gun = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.gun) || (core === null || core === void 0 ? void 0 : core.gun);
+                if (gun && typeof gun.opt === "function") {
+                    try {
+                        gun.opt({ peers: [newProviderUrl] });
+                        return true;
+                    }
+                    catch (e) {
+                        console.error("Error adding peer via gun.opt:", e);
+                        return false;
+                    }
                 }
             }
             return false;
@@ -609,8 +624,8 @@ export const ShogunButton = (() => {
                 if (formMode === "signup") {
                     const result = await signUp("password", formUsername, formPassword, formPasswordConfirm);
                     if (result && result.success) {
-                        if (core === null || core === void 0 ? void 0 : core.gundb) {
-                            await core.gundb.setPasswordHint(formUsername, formPassword, formHint, [formSecurityQuestion], [formSecurityAnswer]);
+                        if (core === null || core === void 0 ? void 0 : core.db) {
+                            await core.db.setPasswordHint(formHint);
                         }
                         setModalIsOpen(false);
                     }
@@ -643,10 +658,10 @@ export const ShogunButton = (() => {
             setError("");
             setLoading(true);
             try {
-                if (!(core === null || core === void 0 ? void 0 : core.gundb)) {
+                if (!(core === null || core === void 0 ? void 0 : core.db)) {
                     throw new Error("SDK not ready");
                 }
-                const result = await core.gundb.forgotPassword(formUsername, [
+                const result = await core.db.forgotPassword(formUsername, [
                     formSecurityAnswer,
                 ]);
                 if (result.success && result.hint) {

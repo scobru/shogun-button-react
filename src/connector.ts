@@ -1,5 +1,5 @@
 import { ShogunCore } from "shogun-core";
-import { ShogunConnectorOptions, ShogunConnectorResult } from "./types";
+import { ShogunConnectorOptions, ShogunConnectorResult } from "./types/connector-options";
 import { GunAdvancedPlugin } from "./plugins/GunAdvancedPlugin";
 
 export function shogunConnector(
@@ -8,9 +8,19 @@ export function shogunConnector(
   const {
     peers = ["https://gun-manhattan.herokuapp.com/gun"],
     appName,
-    logging,
     timeouts,
     oauth,
+    webauthn,
+    nostr,
+    web3,
+    localStorage,
+    radisk,
+    showOauth,
+    showWebauthn,
+    showNostr,
+    showMetamask,
+    darkMode,
+    authToken,
     enableGunDebug = true,
     enableConnectionMonitoring = true,
     defaultPageSize = 20,
@@ -22,9 +32,14 @@ export function shogunConnector(
   const core = new ShogunCore({
     peers,
     scope: appName,
-    logging,
-    timeouts,
     oauth,
+    webauthn,
+    nostr,
+    web3,
+    localStorage,
+    radisk,
+    authToken,
+    timeouts,
   });
 
   const setProvider = (provider: any): boolean => {
@@ -41,8 +56,15 @@ export function shogunConnector(
       }
 
       if (newProviderUrl) {
-        if (typeof core.setRpcUrl === "function") {
-          return core.setRpcUrl(newProviderUrl);
+        const gun: any = (core as any)?.db?.gun || (core as any)?.gun;
+        if (gun && typeof gun.opt === "function") {
+          try {
+            gun.opt({ peers: [newProviderUrl] });
+            return true;
+          } catch (e) {
+            console.error("Error adding peer via gun.opt:", e);
+            return false;
+          }
         }
       }
       return false;
@@ -53,10 +75,14 @@ export function shogunConnector(
   };
 
   const getCurrentProviderUrl = (): string | null => {
-    if (core && typeof core.getRpcUrl === "function") {
-      return core.getRpcUrl();
+    const gun: any = (core as any)?.db?.gun || (core as any)?.gun;
+    try {
+      const peersObj = gun && gun.back ? gun.back('opt.peers') : undefined;
+      const urls = peersObj && typeof peersObj === 'object' ? Object.keys(peersObj) : [];
+      return urls.length > 0 ? urls[0] : null;
+    } catch {
+      return null;
     }
-    return null;
   };
 
   const registerPlugin = (plugin: any): boolean => {

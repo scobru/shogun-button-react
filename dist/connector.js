@@ -1,15 +1,21 @@
 import { ShogunCore } from "shogun-core";
 import { GunAdvancedPlugin } from "./plugins/GunAdvancedPlugin";
 export function shogunConnector(options) {
-    const { peers = ["https://gun-manhattan.herokuapp.com/gun"], appName, logging, timeouts, oauth, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
+    const { peers = ["https://gun-manhattan.herokuapp.com/gun"], appName, timeouts, oauth, webauthn, nostr, web3, localStorage, radisk, showOauth, showWebauthn, showNostr, showMetamask, darkMode, authToken, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
     const core = new ShogunCore({
         peers,
         scope: appName,
-        logging,
-        timeouts,
         oauth,
+        webauthn,
+        nostr,
+        web3,
+        localStorage,
+        radisk,
+        authToken,
+        timeouts,
     });
     const setProvider = (provider) => {
+        var _a;
         if (!core) {
             return false;
         }
@@ -22,8 +28,16 @@ export function shogunConnector(options) {
                 newProviderUrl = provider;
             }
             if (newProviderUrl) {
-                if (typeof core.setRpcUrl === "function") {
-                    return core.setRpcUrl(newProviderUrl);
+                const gun = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.gun) || (core === null || core === void 0 ? void 0 : core.gun);
+                if (gun && typeof gun.opt === "function") {
+                    try {
+                        gun.opt({ peers: [newProviderUrl] });
+                        return true;
+                    }
+                    catch (e) {
+                        console.error("Error adding peer via gun.opt:", e);
+                        return false;
+                    }
                 }
             }
             return false;
@@ -34,10 +48,16 @@ export function shogunConnector(options) {
         }
     };
     const getCurrentProviderUrl = () => {
-        if (core && typeof core.getRpcUrl === "function") {
-            return core.getRpcUrl();
+        var _a;
+        const gun = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.gun) || (core === null || core === void 0 ? void 0 : core.gun);
+        try {
+            const peersObj = gun && gun.back ? gun.back('opt.peers') : undefined;
+            const urls = peersObj && typeof peersObj === 'object' ? Object.keys(peersObj) : [];
+            return urls.length > 0 ? urls[0] : null;
         }
-        return null;
+        catch {
+            return null;
+        }
     };
     const registerPlugin = (plugin) => {
         if (core && typeof core.register === "function") {

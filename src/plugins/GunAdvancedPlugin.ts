@@ -100,18 +100,19 @@ export class GunAdvancedPlugin extends BasePlugin {
       setIsLoading(true);
       setError(null);
 
-      const gunRef = this.core.gun.get(path);
-      
-      const off = gunRef.on((item: T) => {
+      const chain = this.core.gun.get(path);
+
+      const handler = (item: any) => {
         if (!isMounted.current) return;
-        
+
         if (item) {
-          setData(item);
+          setData(item as T);
           setIsLoading(false);
           setError(null);
           this.log(`State updated for ${path}:`, item);
         }
-      });
+      };
+      chain.on(handler as any);
 
       const timeoutId = setTimeout(() => {
         if (isLoading) {
@@ -122,7 +123,7 @@ export class GunAdvancedPlugin extends BasePlugin {
 
       return () => {
         isMounted.current = false;
-        if (typeof off === 'function') off();
+        chain.off();
         clearTimeout(timeoutId);
       };
     }, [path]);
@@ -255,7 +256,7 @@ export class GunAdvancedPlugin extends BasePlugin {
       setIsLoading(true);
       setError(null);
 
-      const gunRef = this.core.gun.get(path);
+      const chain = this.core.gun.get(path);
       const tempItems: T[] = [];
 
       const processItems = (items: T[]) => {
@@ -292,16 +293,17 @@ export class GunAdvancedPlugin extends BasePlugin {
         });
       };
 
-      const off = gunRef.map().on((item: T, key: string) => {
+      const mapHandler = (item: any, key: string) => {
         if (item) {
-          const itemWithKey = { ...item, _key: key } as T;
+          const itemWithKey = { ...(item as T), _key: key } as T;
           tempItems.push(itemWithKey);
-          
+
           if (enableRealtime) {
             processItems(tempItems);
           }
         }
-      });
+      };
+      chain.map().on(mapHandler as any);
 
       const timeoutId = setTimeout(() => {
         if (isLoading) {
@@ -312,7 +314,7 @@ export class GunAdvancedPlugin extends BasePlugin {
 
       return () => {
         isMounted.current = false;
-        if (typeof off === 'function') off();
+        chain.off();
         clearTimeout(timeoutId);
       };
     }, [path, currentPage, pageSize, sortBy, sortOrder, filter, enableRealtime]);
@@ -453,7 +455,7 @@ export class GunAdvancedPlugin extends BasePlugin {
       if (!this.config.enableConnectionMonitoring || !this.core?.gun || !this.core.isLoggedIn()) return;
 
       let timeoutId: number;
-      const gunRef = this.core.gun.get(path);
+      const chain = this.core.gun.get(path);
 
       const resetTimeout = () => {
         clearTimeout(timeoutId);
@@ -464,21 +466,22 @@ export class GunAdvancedPlugin extends BasePlugin {
         }, this.config.connectionTimeout);
       };
 
-      const off = gunRef.on(() => {
+      const handler = () => {
         setIsConnected(true);
         setLastSeen(new Date());
         setError(null);
         resetTimeout();
         this.log(`Connection active for ${path}`);
-      });
+      };
+      chain.on(handler as any);
 
       resetTimeout();
 
-      this.connectionMonitors.set(path, { off, timeoutId });
+      this.connectionMonitors.set(path, { off: () => chain.off(), timeoutId });
 
       return () => {
         clearTimeout(timeoutId);
-        if (typeof off === 'function') off();
+        chain.off();
         this.connectionMonitors.delete(path);
       };
     }, [path]);
@@ -491,18 +494,19 @@ export class GunAdvancedPlugin extends BasePlugin {
       if (!enabled || !this.debugEnabled || !this.core?.gun || !this.core.isLoggedIn()) return;
 
       this.log(`Debug mode enabled for ${path}`);
-      const gunRef = this.core.gun.get(path);
+      const chain = this.core.gun.get(path);
 
-      const off = gunRef.on((data, key) => {
+      const handler = (data: any, key: string) => {
         this.log(`[${path}] Update:`, {
           key,
           data,
           timestamp: new Date().toISOString(),
         });
-      });
+      };
+      chain.on(handler as any);
 
       return () => {
-        if (typeof off === 'function') off();
+        chain.off();
         this.log(`Debug mode disabled for ${path}`);
       };
     }, [path, enabled]);
@@ -515,23 +519,24 @@ export class GunAdvancedPlugin extends BasePlugin {
     React.useEffect(() => {
       if (!this.core?.gun || !this.core.isLoggedIn()) return;
 
-      const gunRef = this.core.gun.get(path);
+      const chain = this.core.gun.get(path);
 
-      const off = gunRef.on((item: T, itemKey: string) => {
+      const handler = (item: any, itemKey: string) => {
         if (item) {
-          setData(item);
+          setData(item as T);
           setKey(itemKey);
-          
+
           if (callback) {
-            callback(item, itemKey);
+            callback(item as T, itemKey);
           }
-          
+
           this.log(`Realtime update for ${path}:`, { data: item, key: itemKey });
         }
-      });
+      };
+      chain.on(handler as any);
 
       return () => {
-        if (typeof off === 'function') off();
+        chain.off();
       };
     }, [path, callback]);
 

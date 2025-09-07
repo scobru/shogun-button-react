@@ -10,15 +10,9 @@ export interface ShogunConnectorOptions {
     showNostr?: boolean;
     showOauth?: boolean;
     darkMode?: boolean;
-    websocketSecure?: boolean;
-    providerUrl?: string | null;
     peers?: string[];
     authToken?: string;
     gunInstance?: IGunInstance<any>;
-    logging?: {
-        enabled: boolean;
-        level: "error" | "warning" | "info" | "debug";
-    };
     timeouts?: {
         login?: number;
         signup?: number;
@@ -31,6 +25,17 @@ export interface ShogunConnectorOptions {
             redirectUri?: string;
         }>;
     };
+    webauthn?: {
+        enabled?: boolean;
+    };
+    nostr?: {
+        enabled?: boolean;
+    };
+    web3?: {
+        enabled?: boolean;
+    };
+    localStorage?: boolean;
+    radisk?: boolean;
     enableGunDebug?: boolean;
     enableConnectionMonitoring?: boolean;
     defaultPageSize?: number;

@@ -46,8 +46,8 @@ export class GunAdvancedPlugin extends BasePlugin {
                 return;
             setIsLoading(true);
             setError(null);
-            const gunRef = this.core.gun.get(path);
-            const off = gunRef.on((item) => {
+            const chain = this.core.gun.get(path);
+            const handler = (item) => {
                 if (!isMounted.current)
                     return;
                 if (item) {
@@ -56,7 +56,8 @@ export class GunAdvancedPlugin extends BasePlugin {
                     setError(null);
                     this.log(`State updated for ${path}:`, item);
                 }
-            });
+            };
+            chain.on(handler);
             const timeoutId = setTimeout(() => {
                 if (isLoading) {
                     setError('Connection timeout - no data received');
@@ -65,8 +66,7 @@ export class GunAdvancedPlugin extends BasePlugin {
             }, this.config.connectionTimeout);
             return () => {
                 isMounted.current = false;
-                if (typeof off === 'function')
-                    off();
+                chain.off();
                 clearTimeout(timeoutId);
             };
         }, [path]);
@@ -183,7 +183,7 @@ export class GunAdvancedPlugin extends BasePlugin {
                 return;
             setIsLoading(true);
             setError(null);
-            const gunRef = this.core.gun.get(path);
+            const chain = this.core.gun.get(path);
             const tempItems = [];
             const processItems = (items) => {
                 if (!isMounted.current)
@@ -216,7 +216,7 @@ export class GunAdvancedPlugin extends BasePlugin {
                     timestamp: Date.now()
                 });
             };
-            const off = gunRef.map().on((item, key) => {
+            const mapHandler = (item, key) => {
                 if (item) {
                     const itemWithKey = { ...item, _key: key };
                     tempItems.push(itemWithKey);
@@ -224,7 +224,8 @@ export class GunAdvancedPlugin extends BasePlugin {
                         processItems(tempItems);
                     }
                 }
-            });
+            };
+            chain.map().on(mapHandler);
             const timeoutId = setTimeout(() => {
                 if (isLoading) {
                     setError('Connection timeout - no data received');
@@ -233,8 +234,7 @@ export class GunAdvancedPlugin extends BasePlugin {
             }, this.config.connectionTimeout);
             return () => {
                 isMounted.current = false;
-                if (typeof off === 'function')
-                    off();
+                chain.off();
                 clearTimeout(timeoutId);
             };
         }, [path, currentPage, pageSize, sortBy, sortOrder, filter, enableRealtime]);
@@ -369,7 +369,7 @@ export class GunAdvancedPlugin extends BasePlugin {
             if (!this.config.enableConnectionMonitoring || !((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn())
                 return;
             let timeoutId;
-            const gunRef = this.core.gun.get(path);
+            const chain = this.core.gun.get(path);
             const resetTimeout = () => {
                 clearTimeout(timeoutId);
                 timeoutId = window.setTimeout(() => {
@@ -378,19 +378,19 @@ export class GunAdvancedPlugin extends BasePlugin {
                     this.log(`Connection timeout for ${path}`);
                 }, this.config.connectionTimeout);
             };
-            const off = gunRef.on(() => {
+            const handler = () => {
                 setIsConnected(true);
                 setLastSeen(new Date());
                 setError(null);
                 resetTimeout();
                 this.log(`Connection active for ${path}`);
-            });
+            };
+            chain.on(handler);
             resetTimeout();
-            this.connectionMonitors.set(path, { off, timeoutId });
+            this.connectionMonitors.set(path, { off: () => chain.off(), timeoutId });
             return () => {
                 clearTimeout(timeoutId);
-                if (typeof off === 'function')
-                    off();
+                chain.off();
                 this.connectionMonitors.delete(path);
             };
         }, [path]);
@@ -402,17 +402,17 @@ export class GunAdvancedPlugin extends BasePlugin {
             if (!enabled || !this.debugEnabled || !((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn())
                 return;
             this.log(`Debug mode enabled for ${path}`);
-            const gunRef = this.core.gun.get(path);
-            const off = gunRef.on((data, key) => {
+            const chain = this.core.gun.get(path);
+            const handler = (data, key) => {
                 this.log(`[${path}] Update:`, {
                     key,
                     data,
                     timestamp: new Date().toISOString(),
                 });
-            });
+            };
+            chain.on(handler);
             return () => {
-                if (typeof off === 'function')
-                    off();
+                chain.off();
                 this.log(`Debug mode disabled for ${path}`);
             };
         }, [path, enabled]);
@@ -424,8 +424,8 @@ export class GunAdvancedPlugin extends BasePlugin {
             var _a;
             if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn())
                 return;
-            const gunRef = this.core.gun.get(path);
-            const off = gunRef.on((item, itemKey) => {
+            const chain = this.core.gun.get(path);
+            const handler = (item, itemKey) => {
                 if (item) {
                     setData(item);
                     setKey(itemKey);
@@ -434,10 +434,10 @@ export class GunAdvancedPlugin extends BasePlugin {
                     }
                     this.log(`Realtime update for ${path}:`, { data: item, key: itemKey });
                 }
-            });
+            };
+            chain.on(handler);
             return () => {
-                if (typeof off === 'function')
-                    off();
+                chain.off();
             };
         }, [path, callback]);
         return { data, key };
