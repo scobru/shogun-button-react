@@ -1,9 +1,12 @@
 import React from 'react';
-export class GunAdvancedPlugin {
-    constructor(sdk, config = {}) {
+import { BasePlugin } from "shogun-core";
+export class GunAdvancedPlugin extends BasePlugin {
+    constructor(core, config = {}) {
+        super();
+        this.name = "gun-advanced";
         this.connectionMonitors = new Map();
         this.collectionCache = new Map();
-        this.sdk = sdk;
+        this.core = core;
         this.config = {
             enableDebug: true,
             enableConnectionMonitoring: true,
@@ -39,11 +42,11 @@ export class GunAdvancedPlugin {
         const isMounted = React.useRef(true);
         React.useEffect(() => {
             var _a;
-            if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn())
+            if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn())
                 return;
             setIsLoading(true);
             setError(null);
-            const gunRef = this.sdk.gun.get(path);
+            const gunRef = this.core.gun.get(path);
             const off = gunRef.on((item) => {
                 if (!isMounted.current)
                     return;
@@ -69,14 +72,14 @@ export class GunAdvancedPlugin {
         }, [path]);
         const update = async (updates) => {
             var _a;
-            if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn()) {
+            if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn()) {
                 throw new Error('SDK not initialized or user not logged in');
             }
             try {
                 setError(null);
                 const newData = { ...data, ...updates };
                 await new Promise((resolve, reject) => {
-                    this.sdk.gun.get(path).put(newData, (ack) => {
+                    this.core.gun.get(path).put(newData, (ack) => {
                         if (ack.err) {
                             reject(new Error(ack.err));
                         }
@@ -96,13 +99,13 @@ export class GunAdvancedPlugin {
         };
         const set = async (newData) => {
             var _a;
-            if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn()) {
+            if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn()) {
                 throw new Error('SDK not initialized or user not logged in');
             }
             try {
                 setError(null);
                 await new Promise((resolve, reject) => {
-                    this.sdk.gun.get(path).put(newData, (ack) => {
+                    this.core.gun.get(path).put(newData, (ack) => {
                         if (ack.err) {
                             reject(new Error(ack.err));
                         }
@@ -122,13 +125,13 @@ export class GunAdvancedPlugin {
         };
         const remove = async () => {
             var _a;
-            if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn()) {
+            if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn()) {
                 throw new Error('SDK not initialized or user not logged in');
             }
             try {
                 setError(null);
                 await new Promise((resolve, reject) => {
-                    this.sdk.gun.get(path).put(null, (ack) => {
+                    this.core.gun.get(path).put(null, (ack) => {
                         if (ack.err) {
                             reject(new Error(ack.err));
                         }
@@ -151,8 +154,8 @@ export class GunAdvancedPlugin {
             var _a;
             setIsLoading(true);
             setError(null);
-            if ((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) {
-                this.sdk.gun.get(path).once(() => { });
+            if ((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) {
+                this.core.gun.get(path).once(() => { });
             }
         };
         return {
@@ -176,11 +179,11 @@ export class GunAdvancedPlugin {
         const cacheKey = `${path}-${JSON.stringify(options)}`;
         React.useEffect(() => {
             var _a;
-            if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn())
+            if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn())
                 return;
             setIsLoading(true);
             setError(null);
-            const gunRef = this.sdk.gun.get(path);
+            const gunRef = this.core.gun.get(path);
             const tempItems = [];
             const processItems = (items) => {
                 if (!isMounted.current)
@@ -255,19 +258,19 @@ export class GunAdvancedPlugin {
             setIsLoading(true);
             setError(null);
             this.collectionCache.delete(cacheKey);
-            if ((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) {
-                this.sdk.gun.get(path).once(() => { });
+            if ((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) {
+                this.core.gun.get(path).once(() => { });
             }
         };
         const addItem = async (item) => {
             var _a;
-            if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn()) {
+            if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn()) {
                 throw new Error('SDK not initialized or user not logged in');
             }
             try {
                 setError(null);
                 await new Promise((resolve, reject) => {
-                    this.sdk.gun.get(path).set(item, (ack) => {
+                    this.core.gun.get(path).set(item, (ack) => {
                         if (ack.err) {
                             reject(new Error(ack.err));
                         }
@@ -288,13 +291,13 @@ export class GunAdvancedPlugin {
         };
         const updateItem = async (id, updates) => {
             var _a;
-            if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn()) {
+            if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn()) {
                 throw new Error('SDK not initialized or user not logged in');
             }
             try {
                 setError(null);
                 await new Promise((resolve, reject) => {
-                    this.sdk.gun.get(path).get(id).put(updates, (ack) => {
+                    this.core.gun.get(path).get(id).put(updates, (ack) => {
                         if (ack.err) {
                             reject(new Error(ack.err));
                         }
@@ -315,13 +318,13 @@ export class GunAdvancedPlugin {
         };
         const removeItem = async (id) => {
             var _a;
-            if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn()) {
+            if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn()) {
                 throw new Error('SDK not initialized or user not logged in');
             }
             try {
                 setError(null);
                 await new Promise((resolve, reject) => {
-                    this.sdk.gun.get(path).get(id).put(null, (ack) => {
+                    this.core.gun.get(path).get(id).put(null, (ack) => {
                         if (ack.err) {
                             reject(new Error(ack.err));
                         }
@@ -363,10 +366,10 @@ export class GunAdvancedPlugin {
         const [error, setError] = React.useState(null);
         React.useEffect(() => {
             var _a;
-            if (!this.config.enableConnectionMonitoring || !((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn())
+            if (!this.config.enableConnectionMonitoring || !((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn())
                 return;
             let timeoutId;
-            const gunRef = this.sdk.gun.get(path);
+            const gunRef = this.core.gun.get(path);
             const resetTimeout = () => {
                 clearTimeout(timeoutId);
                 timeoutId = window.setTimeout(() => {
@@ -396,10 +399,10 @@ export class GunAdvancedPlugin {
     useGunDebug(path, enabled = true) {
         React.useEffect(() => {
             var _a;
-            if (!enabled || !this.debugEnabled || !((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn())
+            if (!enabled || !this.debugEnabled || !((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn())
                 return;
             this.log(`Debug mode enabled for ${path}`);
-            const gunRef = this.sdk.gun.get(path);
+            const gunRef = this.core.gun.get(path);
             const off = gunRef.on((data, key) => {
                 this.log(`[${path}] Update:`, {
                     key,
@@ -419,9 +422,9 @@ export class GunAdvancedPlugin {
         const [key, setKey] = React.useState(null);
         React.useEffect(() => {
             var _a;
-            if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn())
+            if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn())
                 return;
-            const gunRef = this.sdk.gun.get(path);
+            const gunRef = this.core.gun.get(path);
             const off = gunRef.on((item, itemKey) => {
                 if (item) {
                     setData(item);
@@ -441,11 +444,11 @@ export class GunAdvancedPlugin {
     }
     async put(path, data) {
         var _a;
-        if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn()) {
+        if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn()) {
             throw new Error('SDK not initialized or user not logged in');
         }
         return new Promise((resolve, reject) => {
-            this.sdk.gun.get(path).put(data, (ack) => {
+            this.core.gun.get(path).put(data, (ack) => {
                 if (ack.err) {
                     reject(new Error(ack.err));
                 }
@@ -457,17 +460,17 @@ export class GunAdvancedPlugin {
     }
     get(path) {
         var _a;
-        if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn())
+        if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn())
             return null;
-        return this.sdk.gun.get(path);
+        return this.core.gun.get(path);
     }
     async remove(path) {
         var _a;
-        if (!((_a = this.sdk) === null || _a === void 0 ? void 0 : _a.gun) || !this.sdk.isLoggedIn()) {
+        if (!((_a = this.core) === null || _a === void 0 ? void 0 : _a.gun) || !this.core.isLoggedIn()) {
             throw new Error('SDK not initialized or user not logged in');
         }
         return new Promise((resolve, reject) => {
-            this.sdk.gun.get(path).put(null, (ack) => {
+            this.core.gun.get(path).put(null, (ack) => {
                 if (ack.err) {
                     reject(new Error(ack.err));
                 }

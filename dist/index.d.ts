@@ -6,3 +6,4 @@ export { ShogunButton, ShogunButtonProvider, useShogun };
 export { shogunConnector };
 export { GunAdvancedPlugin };
 export { ShogunConnectorOptions, ShogunConnectorResult };
+export { GunAdvancedPlugin };

@@ -13,8 +13,9 @@ export {
 // Export connector function
 export { shogunConnector };
 
-// Export plugin
-export { GunAdvancedPlugin };
+// Export all types
+export * from './types/index.js';
 
 // Export specific connector types for backward compatibility
 export { ShogunConnectorOptions, ShogunConnectorResult };
+export { GunAdvancedPlugin };

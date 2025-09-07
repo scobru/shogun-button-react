@@ -5,5 +5,6 @@ import { GunAdvancedPlugin } from './plugins/GunAdvancedPlugin.js';
 export { ShogunButton, ShogunButtonProvider, useShogun };
 // Export connector function
 export { shogunConnector };
-// Export plugin
+// Export all types
+export * from './types/index.js';
 export { GunAdvancedPlugin };
