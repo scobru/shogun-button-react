@@ -27,48 +27,35 @@ yarn add shogun-button-react
 
 ```tsx
 import React from "react";
-import {
-  ShogunButton,
-  ShogunButtonProvider,
-  shogunConnector,
-} from "shogun-button-react";
+import { ShogunButton, ShogunButtonProvider, shogunConnector } from "shogun-button-react";
 import "shogun-button-react/styles.css";
 
 function App() {
-  const { sdk, options } = shogunConnector({
+  const { core, options } = shogunConnector({
     appName: "My Awesome App",
-    appDescription: "A decentralized application with Shogun authentication",
-    appUrl: "https://myapp.com",
-    appIcon: "https://myapp.com/icon.png",
     // Enable specific authentication methods
     showMetamask: true,
     showWebauthn: true,
     showNostr: true,
     showOauth: true,
+    // Optional peers
+    peers: [
+      "https://gun-manhattan.herokuapp.com/gun"
+    ],
   });
 
   return (
     <ShogunButtonProvider
-      sdk={sdk}
+      core={core}
       options={options}
       onLoginSuccess={(data) => {
-        console.log("🎉 Login successful!", data);
-        // Handle successful login
-        // data.userPub - User's public key
-        // data.username - Display name
-        // data.authMethod - Authentication method used
+        console.log("Login successful!", data);
       }}
       onSignupSuccess={(data) => {
-        console.log("🎊 Account created successfully!", data);
-        // Handle successful account creation
+        console.log("Account created successfully!", data);
       }}
       onError={(error) => {
-        console.error("❌ Authentication error:", error);
-        // Handle authentication errors
-      }}
-      onLogout={() => {
-        console.log("👋 User logged out");
-        // Handle logout events
+        console.error("Authentication error:", error);
       }}
     >
       <div className="app">
@@ -76,9 +63,7 @@ function App() {
           <h1>Welcome to My Awesome App</h1>
           <ShogunButton />
         </header>
-        <main>
-          {/* Your app content */}
-        </main>
+        <main>{/* Your app content */}</main>
       </div>
     </ShogunButtonProvider>
   );
@@ -92,47 +77,35 @@ export default App;
 ### Custom Authentication Options
 
 ```tsx
-const { sdk, options } = shogunConnector({
+const { core, options } = shogunConnector({
   appName: "My App",
-  
-  // Customize which authentication methods to show
-  showMetamask: true,      // Enable MetaMask login
-  showWebauthn: true,      // Enable WebAuthn (biometric/security keys)
-  showNostr: true,         // Enable Nostr wallet connection
-  showOauth: true,         // Enable OAuth providers
-  
+
+  // Toggle authentication methods in the UI
+  showMetamask: true,
+  showWebauthn: true,
+  showNostr: true,
+  showOauth: true,
+
   // Network configuration
   peers: [
-    "https://gun-manhattan.herokuapp.com/gun",
-    "https://gun-us.herokuapp.com/gun"
+    "https://gun-manhattan.herokuapp.com/gun"
   ],
-  
-  // OAuth provider configuration
+
+  // OAuth provider configuration (optional)
   oauth: {
     providers: {
       google: {
         clientId: "your-google-client-id",
-        clientSecret: "your-google-client-secret",
-        redirectUri: "https://myapp.com/auth/callback"
-      },
-      github: {
-        clientId: "your-github-client-id",
         redirectUri: "https://myapp.com/auth/callback"
       }
     }
   },
-  
-  // Advanced plugin configuration
+
+  // Gun Advanced Plugin configuration
   enableGunDebug: true,
   enableConnectionMonitoring: true,
   defaultPageSize: 20,
   connectionTimeout: 10000,
-  
-  // Logging configuration
-  logging: {
-    enabled: true,
-    level: "info" // "error" | "warning" | "info" | "debug"
-  }
 });
 ```
 
@@ -146,12 +119,11 @@ The provider component that supplies Shogun context to your application.
 
 | Name | Type | Description | Required |
 |------|------|-------------|----------|
-| `sdk` | `ShogunCore` | Shogun SDK instance created by `shogunConnector` | ✅ |
+| `core` | `ShogunCore` | Shogun SDK instance created by `shogunConnector` | ✅ |
 | `options` | `ShogunConnectorOptions` | Configuration options | ✅ |
 | `onLoginSuccess` | `(data: AuthData) => void` | Callback fired on successful login | ❌ |
 | `onSignupSuccess` | `(data: AuthData) => void` | Callback fired on successful signup | ❌ |
 | `onError` | `(error: string) => void` | Callback fired when an error occurs | ❌ |
-| `onLogout` | `() => void` | Callback fired when user logs out | ❌ |
 
 #### AuthData Interface
 
@@ -189,26 +161,26 @@ function UserProfile() {
     isLoggedIn,
     userPub,
     username,
-    
+
     // Authentication methods
     login,
     signUp,
     logout,
-    
+
     // Plugin management
     hasPlugin,
     getPlugin,
-    
+
     // Account management
     exportGunPair,
     importGunPair,
-    
+
     // Data operations
     observe,
     put,
     get,
     remove,
-    
+
     // Advanced Gun hooks
     useGunState,
     useGunCollection,
@@ -302,12 +274,8 @@ function UserProfile() {
       </div>
       
       <div className="actions">
-        <button onClick={handleExportAccount}>
-          🔒 Export Account
-        </button>
-        <button onClick={logout}>
-          🚪 Logout
-        </button>
+        <button onClick={handleExportAccount}>Export Account</button>
+        <button onClick={logout}>Logout</button>
       </div>
     </div>
   );
@@ -509,29 +477,20 @@ Customize the appearance using CSS variables:
 interface ShogunConnectorOptions {
   // App information
   appName: string;
-  appDescription?: string;
-  appUrl?: string;
-  appIcon?: string;
-  
+
   // Feature toggles
   showMetamask?: boolean;
   showWebauthn?: boolean;
   showNostr?: boolean;
   showOauth?: boolean;
   darkMode?: boolean;
-  
+
   // Network configuration
-  websocketSecure?: boolean;
-  providerUrl?: string | null;
   peers?: string[];
   authToken?: string;
   gunInstance?: IGunInstance<any>;
-  
-  // Advanced options
-  logging?: {
-    enabled: boolean;
-    level: "error" | "warning" | "info" | "debug";
-  };
+
+  // Timeouts and provider configs
   timeouts?: {
     login?: number;
     signup?: number;
@@ -540,11 +499,11 @@ interface ShogunConnectorOptions {
   oauth?: {
     providers: Record<string, {
       clientId: string;
-      clientSecret?: string;
       redirectUri?: string;
-    }>
+      clientSecret?: string;
+    }>;
   };
-  
+
   // Gun Advanced Plugin configuration
   enableGunDebug?: boolean;
   enableConnectionMonitoring?: boolean;
@@ -558,8 +517,10 @@ interface ShogunConnectorOptions {
 
 ```typescript
 interface ShogunConnectorResult {
-  sdk: ShogunCore;
+  core: ShogunCore;
   options: ShogunConnectorOptions;
+  setProvider: (provider: any) => boolean;
+  getCurrentProviderUrl: () => string | null;
   registerPlugin: (plugin: any) => boolean;
   hasPlugin: (name: string) => boolean;
   gunPlugin: GunAdvancedPlugin;

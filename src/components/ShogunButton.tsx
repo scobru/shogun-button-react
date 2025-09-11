@@ -9,8 +9,6 @@ import { ShogunCore } from "shogun-core";
 import { Observable } from "rxjs";
 import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 
-import "../types/index.js"; // Import type file to extend definitions
-
 import "../styles/index.css";
 
 // Interface for plugin hooks
@@ -1000,9 +998,22 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           );
           if (result && result.success) {
             if (core?.db) {
-              await core.db.setPasswordHint(
-                formHint,
-              );
+              try {
+                const res = await core.db.setPasswordHintWithSecurity(
+                  formUsername,
+                  formPassword,
+                  formHint,
+                  [formSecurityQuestion],
+                  [formSecurityAnswer]
+                );
+                if (!res?.success) {
+                  // Fallback to legacy hint storage to avoid losing the hint
+                  await core.db.setPasswordHint(formHint);
+                }
+              } catch {
+                // Last-resort fallback
+                await core.db.setPasswordHint(formHint);
+              }
             }
             setModalIsOpen(false);
           } else if (result && result.error) {

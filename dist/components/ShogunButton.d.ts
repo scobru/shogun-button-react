@@ -2,7 +2,6 @@ import React from "react";
 import { ShogunCore } from "shogun-core";
 import { Observable } from "rxjs";
 import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
-import "../types/index.js";
 import "../styles/index.css";
 type ShogunContextType = {
     core: ShogunCore | null;

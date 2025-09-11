@@ -1,7 +1,6 @@
 import React, { useContext, useState, createContext, useEffect, useRef, } from "react";
 import { Observable } from "rxjs";
 import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
-import "../types/index.js"; // Import type file to extend definitions
 import "../styles/index.css";
 // Default context
 const defaultShogunContext = {
@@ -625,7 +624,17 @@ export const ShogunButton = (() => {
                     const result = await signUp("password", formUsername, formPassword, formPasswordConfirm);
                     if (result && result.success) {
                         if (core === null || core === void 0 ? void 0 : core.db) {
-                            await core.db.setPasswordHint(formHint);
+                            try {
+                                const res = await core.db.setPasswordHintWithSecurity(formUsername, formPassword, formHint, [formSecurityQuestion], [formSecurityAnswer]);
+                                if (!(res === null || res === void 0 ? void 0 : res.success)) {
+                                    // Fallback to legacy hint storage to avoid losing the hint
+                                    await core.db.setPasswordHint(formHint);
+                                }
+                            }
+                            catch {
+                                // Last-resort fallback
+                                await core.db.setPasswordHint(formHint);
+                            }
                         }
                         setModalIsOpen(false);
                     }
