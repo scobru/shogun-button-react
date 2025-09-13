@@ -1638,6 +1638,11 @@ public-encrypt@^4.0.3:
     randombytes "^2.0.1"
     safe-buffer "^5.1.2"
 
+punycode@^1.4.1:
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/punycode/-/punycode-1.4.1.tgz#c0d5a63b2718800ad8e1eb0fa5269c84dd41845e"
+  integrity sha512-jmYNElW7yvO7TV33CjSmvSiE2yco3bV2czu/OzDKdMNVZQWfxCblURLhf+47syQRBntjfLdd/H0egrzIG+oaFQ==
+
 pvtsutils@^1.3.5, pvtsutils@^1.3.6:
   version "1.3.6"
   resolved "https://registry.yarnpkg.com/pvtsutils/-/pvtsutils-1.3.6.tgz#ec46e34db7422b9e4fdc5490578c1883657d6001"
@@ -1650,7 +1655,7 @@ pvutils@^1.1.3:
   resolved "https://registry.yarnpkg.com/pvutils/-/pvutils-1.1.3.tgz#f35fc1d27e7cd3dfbd39c0826d173e806a03f5a3"
   integrity sha512-pMpnA0qRdFp32b1sJl1wOJNxZLQ2cbQx+k6tjNtZ8CpvVhNqEPRgivZ2WOUev2YMajecdH7ctUPDvEe87nariQ==
 
-qs@^6.14.0:
+qs@^6.12.3, qs@^6.14.0:
   version "6.14.0"
   resolved "https://registry.yarnpkg.com/qs/-/qs-6.14.0.tgz#c63fa40680d2c5c941412a0e899c89af60c0a930"
   integrity sha512-YWWTjgABSKcvs/nWBi9PycY/JiPJqOD4JA6o9Sej2AtvSGarXxKC3OQSk4pAarbdQlKAh5D4FCQkJNkW+GAn3w==
@@ -1846,10 +1851,10 @@ shebang-regex@^3.0.0:
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-3.0.0.tgz#ae16f1644d873ecad843b0307b143362d4c42172"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
-shogun-core@^1.10.5:
-  version "1.10.5"
-  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-1.10.5.tgz#c25f75bd00b63a25d78e3e8fae84ad4303a5d0f6"
-  integrity sha512-AzB7vbYeAzZ+022ZKat+CF5VAhCDnVwtl7UF12Y7Kf9/yGATcUJU/wlazDVp2kXCyoWpBmC9CpJjrDBTxoQ/Zw==
+shogun-core@^1.10.6:
+  version "1.10.6"
+  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-1.10.6.tgz#10e2e2fd327b3d6fe3a37d75b2a5593f8d4b29ae"
+  integrity sha512-zw46srxN4652nZzE1JCroEjGz2BQWzQxI6COj1eYGSqPdPQfNlVwdeuhFFa/1D9ox429+KDsAc/OqRZveakILA==
   dependencies:
     "@noble/curves" "^1.9.1"
     ajv "^8.17.1"
@@ -1865,6 +1870,7 @@ shogun-core@^1.10.5:
     paillier-bigint "^3.4.3"
     qs "^6.14.0"
     rxjs "^7.8.2"
+    url "^0.11.4"
     uuid "^11.1.0"
     vm-browserify "^1.1.2"
     ws "^8.18.3"
@@ -2098,6 +2104,14 @@ update-browserslist-db@^1.1.3:
   dependencies:
     escalade "^3.2.0"
     picocolors "^1.1.1"
+
+url@^0.11.4:
+  version "0.11.4"
+  resolved "https://registry.yarnpkg.com/url/-/url-0.11.4.tgz#adca77b3562d56b72746e76b330b7f27b6721f3c"
+  integrity sha512-oCwdVC7mTuWiPyjLUz/COz5TLk6wgp0RCsN+wHZ2Ekneac9w8uuV0njcbbie2ME+Vs+d6duwmYuR3HgQXs1fOg==
+  dependencies:
+    punycode "^1.4.1"
+    qs "^6.12.3"
 
 util-deprecate@^1.0.1, util-deprecate@^1.0.2, util-deprecate@~1.0.1:
   version "1.0.2"
