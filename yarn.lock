@@ -1049,10 +1049,9 @@ graceful-fs@^4.1.2, graceful-fs@^4.2.11, graceful-fs@^4.2.4:
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.11.tgz#4183e4e8bf08bb6e05bbb2f7d2e0c8f712ca40e3"
   integrity sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==
 
-gun@^0.2020.1240:
-  version "0.2020.1241"
-  resolved "https://registry.yarnpkg.com/gun/-/gun-0.2020.1241.tgz#a43de6faf046d2a9b89d1b532a9346b88a90f1ee"
-  integrity sha512-rmGqLuJj4fAuZ/0lddCvXHbENPkEnBOBYpq+kXHrwQ5RdNtQ5p0Io99lD1qUXMFmtwNacQ/iqo3VTmjmMyAYZg==
+"gun@git+https://github.com/amark/gun.git":
+  version "0.2020.1239"
+  resolved "git+https://github.com/amark/gun.git#58d0318f3dc0f512cf717fdcdb233da2177d73ca"
   dependencies:
     ws "^7.2.1"
   optionalDependencies:
@@ -1851,10 +1850,9 @@ shebang-regex@^3.0.0:
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-3.0.0.tgz#ae16f1644d873ecad843b0307b143362d4c42172"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
-shogun-core@^1.11.2:
+"shogun-core@git+https://github.com/scobru/shogun-core.git":
   version "1.11.2"
-  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-1.11.2.tgz#7967ff937b33d761496ffdbf87ace0fecf607b85"
-  integrity sha512-70K/tBe4lVmTsZbdWht2b9F2X9Zzo+UlAQkfCoYp1CpvUDeoDItuTRqK6OxWWXDn/mL2q5VuJpNqeFWx0TBnFQ==
+  resolved "git+https://github.com/scobru/shogun-core.git#30e6189b46642db5be8f60053a724b05574cf5b4"
   dependencies:
     "@noble/curves" "^1.9.1"
     ajv "^8.17.1"
@@ -1864,7 +1862,7 @@ shogun-core@^1.11.2:
     constants-browserify "^1.0.0"
     crypto-browserify "^3.12.0"
     ethers "^6.13.5"
-    gun "^0.2020.1240"
+    gun "git+https://github.com/amark/gun.git"
     keccak256 "^1.0.6"
     nostr-tools "^2.15.0"
     paillier-bigint "^3.4.3"
