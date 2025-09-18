@@ -6,7 +6,7 @@
     "declarationDir": "dist",
     "jsx": "react",
     "outDir": "dist",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -15,9 +15,10 @@
     "strict": false,
     "preserveSymlinks": true,
     "typeRoots": ["./node_modules/@types", "./src/types"],
+    "baseUrl": ".",
     "paths": {
-      "shogun-core": ["./node_modules/shogun-core", "./src/types/shogun-sdk.d.ts"],
-      "react": ["./node_modules/react", "../shogun-music-app/node_modules/react"]
+      "shogun-core": ["./node_modules/shogun-core/dist/types"],
+      "react": ["./node_modules/react"]
     },
     "resolveJsonModule": true,
     "noEmit": false
