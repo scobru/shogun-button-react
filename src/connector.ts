@@ -1,5 +1,5 @@
 import { ShogunCore } from "shogun-core";
-import { ShogunConnectorOptions, ShogunConnectorResult } from "./types/connector-options";
+import { ShogunConnectorOptions, ShogunConnectorResult } from "./interfaces/connector-options";
 import { GunAdvancedPlugin } from "./plugins/GunAdvancedPlugin";
 
 export function shogunConnector(

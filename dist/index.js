@@ -6,5 +6,5 @@ export { ShogunButton, ShogunButtonProvider, useShogun };
 // Export connector function
 export { shogunConnector };
 // Export all types
-export * from './types/connector-options';
+export * from './interfaces/connector-options';
 export { GunAdvancedPlugin };

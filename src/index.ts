@@ -1,5 +1,5 @@
 import { ShogunButton, ShogunButtonProvider, useShogun } from './components/ShogunButton';
-import { ShogunConnectorOptions, ShogunConnectorResult } from './types/connector-options';
+import { ShogunConnectorOptions, ShogunConnectorResult } from './interfaces/connector-options';
 import { shogunConnector } from './connector';
 import { GunAdvancedPlugin } from './plugins/GunAdvancedPlugin';
 
@@ -14,7 +14,7 @@ export {
 export { shogunConnector };
 
 // Export all types
-export * from './types/connector-options';
+export * from './interfaces/connector-options';
 
 // Export specific connector types for backward compatibility
 export { ShogunConnectorOptions, ShogunConnectorResult };

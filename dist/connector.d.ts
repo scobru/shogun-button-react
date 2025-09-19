@@ -1,2 +1,2 @@
-import { ShogunConnectorOptions, ShogunConnectorResult } from "./types/connector-options";
+import { ShogunConnectorOptions, ShogunConnectorResult } from "./interfaces/connector-options";
 export declare function shogunConnector(options: ShogunConnectorOptions): ShogunConnectorResult;
