@@ -11,12 +11,7 @@ export interface ShogunConnectorOptions {
     showOauth?: boolean;
     darkMode?: boolean;
     gunInstance?: GunInstance;
-    gunOptions?: {
-        peers?: string[];
-        authToken?: string;
-        scope?: string;
-        [key: string]: any;
-    };
+    gunOptions?: any;
     timeouts?: {
         login?: number;
         signup?: number;
