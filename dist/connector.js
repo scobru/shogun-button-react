@@ -2,13 +2,8 @@ import { ShogunCore } from "shogun-core";
 import { GunAdvancedPlugin } from "./plugins/GunAdvancedPlugin";
 export function shogunConnector(options) {
     const { gunOptions, appName, timeouts, oauth, webauthn, nostr, web3, showOauth, showWebauthn, showNostr, showMetamask, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
-    // Ensure gunOptions has default values to prevent undefined errors
-    const defaultGunOptions = {
-        peers: ["https://gun-manhattan.herokuapp.com/gun"],
-        ...gunOptions
-    };
     const core = new ShogunCore({
-        gunOptions: defaultGunOptions,
+        gunOptions,
         oauth,
         webauthn,
         nostr,

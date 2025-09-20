@@ -26,14 +26,10 @@ export function shogunConnector(
     ...restOptions
   } = options;
 
-  // Ensure gunOptions has default values to prevent undefined errors
-  const defaultGunOptions = {
-    peers: ["https://gun-manhattan.herokuapp.com/gun"],
-    ...gunOptions
-  };
+  
 
   const core = new ShogunCore({
-    gunOptions: defaultGunOptions,
+    gunOptions,
     oauth,
     webauthn,
     nostr,
