@@ -1,7 +1,8 @@
 import { ShogunButton, ShogunButtonProvider, useShogun } from './components/ShogunButton';
 import { ShogunConnectorOptions, ShogunConnectorResult } from './interfaces/connector-options';
-import { shogunConnector } from './connector';
+import { shogunConnector  } from './connector';
 import { GunAdvancedPlugin } from './plugins/GunAdvancedPlugin';
+
 
 // Export components
 export { 

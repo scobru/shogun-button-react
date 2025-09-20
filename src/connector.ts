@@ -40,7 +40,7 @@ export function shogunConnector(
     radisk,
     authToken,
     timeouts,
-  });
+  }) as ShogunCore;
 
   const setProvider = (provider: any): boolean => {
     if (!core) {
@@ -111,7 +111,7 @@ export function shogunConnector(
       defaultPageSize,
       connectionTimeout,
       debounceInterval,
-    });
+    }) as GunAdvancedPlugin;
     
     registerPlugin(gunPlugin);
   }
