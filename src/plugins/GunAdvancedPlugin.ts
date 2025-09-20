@@ -559,7 +559,7 @@ export class GunAdvancedPlugin extends BasePlugin {
     });
   }
 
-  get(path: string) {
+  get(path: string): any {
     if (!this.core?.gun || !this.core.isLoggedIn()) return null;
     return this.core.gun.get(path);
   }

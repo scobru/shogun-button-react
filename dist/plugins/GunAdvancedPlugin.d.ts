@@ -69,7 +69,7 @@ export declare class GunAdvancedPlugin extends BasePlugin {
         key: string;
     };
     put(path: string, data: any): Promise<void>;
-    get(path: string): import("gun").IGunChain<any, import("shogun-core").IGunInstance<any>, import("shogun-core").IGunInstance<any>, string>;
+    get(path: string): any;
     remove(path: string): Promise<void>;
     cleanup(): void;
     getStats(): {

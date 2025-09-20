@@ -16,10 +16,12 @@ export interface ShogunConnectorOptions {
   showOauth?: boolean;
   darkMode?: boolean;
 
-  // GunDB configuration
-  peers?: string[];
-  authToken?: string;
-  gunInstance?: GunInstance;
+  gunOptions?: {
+    peers?: string[];
+    authToken?: string;
+    scope?: string;
+    [key: string]: any;
+  };
 
   timeouts?: {
     login?: number;
@@ -45,8 +47,6 @@ export interface ShogunConnectorOptions {
   web3?: {
     enabled?: boolean;
   };
-  localStorage?: boolean;
-  radisk?: boolean;
   enableGunDebug?: boolean;
   enableConnectionMonitoring?: boolean;
   defaultPageSize?: number;

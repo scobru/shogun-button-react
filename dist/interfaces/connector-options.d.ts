@@ -1,4 +1,4 @@
-import { ShogunCore, GunInstance } from "shogun-core";
+import { ShogunCore } from "shogun-core";
 import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 export interface ShogunConnectorOptions {
     appName: string;
@@ -10,9 +10,12 @@ export interface ShogunConnectorOptions {
     showNostr?: boolean;
     showOauth?: boolean;
     darkMode?: boolean;
-    peers?: string[];
-    authToken?: string;
-    gunInstance?: GunInstance;
+    gunOptions?: {
+        peers?: string[];
+        authToken?: string;
+        scope?: string;
+        [key: string]: any;
+    };
     timeouts?: {
         login?: number;
         signup?: number;
@@ -34,8 +37,6 @@ export interface ShogunConnectorOptions {
     web3?: {
         enabled?: boolean;
     };
-    localStorage?: boolean;
-    radisk?: boolean;
     enableGunDebug?: boolean;
     enableConnectionMonitoring?: boolean;
     defaultPageSize?: number;
