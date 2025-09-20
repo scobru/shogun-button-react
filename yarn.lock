@@ -1846,7 +1846,7 @@ shebang-regex@^3.0.0:
 
 "shogun-core@git+https://github.com/scobru/shogun-core.git":
   version "3.0.5"
-  resolved "git+https://github.com/scobru/shogun-core.git#d5ddf5d3119a5fd4886cb6a99e53f666b33bb735"
+  resolved "git+https://github.com/scobru/shogun-core.git#b266d282b20c83219e61cc57bb69c274c96e7c31"
   dependencies:
     "@noble/curves" "^1.9.1"
     assert "^2.1.0"
