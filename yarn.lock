@@ -1420,9 +1420,9 @@ noms@0.0.0:
     readable-stream "~1.0.31"
 
 nostr-tools@^2.15.0:
-  version "2.16.2"
-  resolved "https://registry.yarnpkg.com/nostr-tools/-/nostr-tools-2.16.2.tgz#eca1e0ed24428afcdd74708c6fd7f42ed8194101"
-  integrity sha512-ZxH9EbSt5ypURZj2TGNJxZd0Omb5ag5KZSu8IyJMCdLyg2KKz+2GA0sP/cSawCQEkyviIN4eRT4G2gB/t9lMRw==
+  version "2.17.0"
+  resolved "https://registry.yarnpkg.com/nostr-tools/-/nostr-tools-2.17.0.tgz#ae357479b957ff897ae404761d5cd88f8064d713"
+  integrity sha512-lrvHM7cSaGhz7F0YuBvgHMoU2s8/KuThihDoOYk8w5gpVHTy0DeUCAgCN8uLGeuSl5MAWekJr9Dkfo5HClqO9w==
   dependencies:
     "@noble/ciphers" "^0.5.1"
     "@noble/curves" "1.2.0"
@@ -1846,7 +1846,7 @@ shebang-regex@^3.0.0:
 
 "shogun-core@git+https://github.com/scobru/shogun-core.git":
   version "3.0.5"
-  resolved "git+https://github.com/scobru/shogun-core.git#ac0194d2567f414fa996c291cc4bbf285536860b"
+  resolved "git+https://github.com/scobru/shogun-core.git#d5ddf5d3119a5fd4886cb6a99e53f666b33bb735"
   dependencies:
     "@noble/curves" "^1.9.1"
     assert "^2.1.0"
