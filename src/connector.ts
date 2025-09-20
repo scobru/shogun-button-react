@@ -30,15 +30,17 @@ export function shogunConnector(
   } = options;
 
   const core = new ShogunCore({
-    peers,
-    scope: appName,
+    gunOptions: {
+      peers,
+      scope: appName,
+      authToken,
+      localStorage,
+      radisk,
+    },
     oauth,
     webauthn,
     nostr,
     web3,
-    localStorage,
-    radisk,
-    authToken,
     timeouts,
   }) as ShogunCore;
 

@@ -1,4 +1,4 @@
-import { ShogunCore, IGunInstance } from "shogun-core";
+import { ShogunCore, GunInstance } from "shogun-core";
 import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 
 
@@ -16,9 +16,10 @@ export interface ShogunConnectorOptions {
   showOauth?: boolean;
   darkMode?: boolean;
 
+  // GunDB configuration
   peers?: string[];
   authToken?: string;
-  gunInstance?: IGunInstance<any>;
+  gunInstance?: GunInstance;
 
   timeouts?: {
     login?: number;
@@ -46,7 +47,6 @@ export interface ShogunConnectorOptions {
   };
   localStorage?: boolean;
   radisk?: boolean;
-  // Configurazione plugin Gun avanzato
   enableGunDebug?: boolean;
   enableConnectionMonitoring?: boolean;
   defaultPageSize?: number;
@@ -56,7 +56,7 @@ export interface ShogunConnectorOptions {
 
 // Definisco un nuovo tipo per l'oggetto ritornato dal connettore
 export interface ShogunConnectorResult {
-  core: ShogunCore;
+  core: ShogunCore ;
   options: ShogunConnectorOptions;
 
   // Helper methods
@@ -66,6 +66,5 @@ export interface ShogunConnectorResult {
   // Nuovi metodi per la gestione dei plugin
   registerPlugin: (plugin: any) => boolean;
   hasPlugin: (name: string) => boolean;
-  gunPlugin: GunAdvancedPlugin; // GunAdvancedPlugin
-
+  gunPlugin: GunAdvancedPlugin; 
 }
