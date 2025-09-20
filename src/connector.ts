@@ -6,6 +6,7 @@ export function shogunConnector(
   options: ShogunConnectorOptions
 ): ShogunConnectorResult {
   const {
+    gunInstance,
     gunOptions,
     appName,
     timeouts,
@@ -29,7 +30,8 @@ export function shogunConnector(
   
 
   const core = new ShogunCore({
-    gunOptions,
+    gunOptions: gunOptions || undefined,
+    gunInstance: gunInstance || undefined,
     oauth,
     webauthn,
     nostr,
