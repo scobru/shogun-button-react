@@ -6,7 +6,7 @@ export function shogunConnector(
   options: ShogunConnectorOptions
 ): ShogunConnectorResult {
   const {
-    peers = ["https://gun-manhattan.herokuapp.com/gun"],
+    peers = [""],
     appName,
     timeouts,
     oauth,
