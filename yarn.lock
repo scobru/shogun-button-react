@@ -1844,9 +1844,10 @@ shebang-regex@^3.0.0:
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-3.0.0.tgz#ae16f1644d873ecad843b0307b143362d4c42172"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
-"shogun-core@git+https://github.com/scobru/shogun-core.git":
-  version "3.0.5"
-  resolved "git+https://github.com/scobru/shogun-core.git#b266d282b20c83219e61cc57bb69c274c96e7c31"
+shogun-core@^3.0.9:
+  version "3.0.9"
+  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-3.0.9.tgz#bbce30db3f7ae5d59af6ec51961b15d7ba2adaa5"
+  integrity sha512-4eyXyKRAZtkyv39xuj5O2rTC8QUHqLd1SP2TWl/kIl8uyuCabPulNusyyReR/LCC73dwbXG7aRResn4MFWOgcA==
   dependencies:
     "@noble/curves" "^1.9.1"
     assert "^2.1.0"
