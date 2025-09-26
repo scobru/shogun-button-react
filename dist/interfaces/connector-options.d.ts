@@ -1,4 +1,4 @@
-import { ShogunCore, GunInstance } from "shogun-core";
+import { ShogunCore, IGunInstance } from "shogun-core";
 import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 export interface ShogunConnectorOptions {
     appName: string;
@@ -10,7 +10,7 @@ export interface ShogunConnectorOptions {
     showNostr?: boolean;
     showOauth?: boolean;
     darkMode?: boolean;
-    gunInstance?: GunInstance;
+    gunInstance?: IGunInstance;
     gunOptions?: any;
     timeouts?: {
         login?: number;
