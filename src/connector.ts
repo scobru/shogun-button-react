@@ -10,14 +10,14 @@ export function shogunConnector(
     gunOptions,
     appName,
     timeouts,
-    oauth,
     webauthn,
     nostr,
     web3,
-    showOauth,
+    zkproof,
     showWebauthn,
     showNostr,
     showMetamask,
+    showZkProof,
     darkMode,
     enableGunDebug = true,
     enableConnectionMonitoring = true,
@@ -32,10 +32,10 @@ export function shogunConnector(
   const core = new ShogunCore({
     gunOptions: gunOptions || undefined,
     gunInstance: gunInstance || undefined,
-    oauth,
     webauthn,
     nostr,
     web3,
+    zkproof,
     timeouts,
   }) as ShogunCore;
 

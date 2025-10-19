@@ -116,13 +116,14 @@ type ShogunButtonProviderProps = {
     userPub: string;
     username: string;
     password?: string;
-    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "oauth";
+    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof";
   }) => void;
   onSignupSuccess?: (data: {
     userPub: string;
     username: string;
     password?: string;
-    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "oauth";
+    seedPhrase?: string;
+    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof";
   }) => void;
   onError?: (error: string) => void;
 };
@@ -249,16 +250,17 @@ export function ShogunButtonProvider({
           username = pubkey;
           result = await nostr.login(pubkey);
           break;
-        case "oauth":
-          const oauth: any = core.getPlugin("oauth");
-          if (!oauth) throw new Error("OAuth plugin not available");
-          const provider = args[0] || "google";
-          result = await oauth.login(provider);
-          authMethod = "oauth";
-
-          if (result.redirectUrl) {
-            return result;
+        case "zkproof":
+          const trapdoor = args[0];
+          if (!trapdoor || typeof trapdoor !== "string") {
+            throw new Error("Invalid trapdoor provided");
           }
+          const zkproof: any = core.getPlugin("zkproof");
+          if (!zkproof) throw new Error("ZK-Proof plugin not available");
+          const zkLoginResult: any = await zkproof.login(trapdoor);
+          result = zkLoginResult;
+          username = zkLoginResult.username || zkLoginResult.alias || `zk_${(zkLoginResult.userPub || "").slice(0, 16)}`;
+          authMethod = "zkproof";
           break;
         default:
           throw new Error("Unsupported login method");
@@ -339,16 +341,14 @@ export function ShogunButtonProvider({
           username = pubkey;
           result = await nostr.signUp(pubkey);
           break;
-        case "oauth":
-          const oauth: any = core.getPlugin("oauth");
-          if (!oauth) throw new Error("OAuth plugin not available");
-          const provider = args[0] || "google";
-          result = await oauth.signUp(provider);
-          authMethod = "oauth";
-
-          if (result.redirectUrl) {
-            return result;
-          }
+        case "zkproof":
+          const zkproofPlugin: any = core.getPlugin("zkproof");
+          if (!zkproofPlugin) throw new Error("ZK-Proof plugin not available");
+          const seed = args[0]; // Optional seed
+          const zkSignupResult: any = await zkproofPlugin.signUp(seed);
+          result = zkSignupResult;
+          username = zkSignupResult.username || zkSignupResult.alias || `zk_${(zkSignupResult.userPub || "").slice(0, 16)}`;
+          authMethod = "zkproof";
           break;
         default:
           throw new Error("Unsupported signup method");
@@ -366,6 +366,7 @@ export function ShogunButtonProvider({
         onSignupSuccess?.({
           userPub: userPub,
           username: displayName,
+          seedPhrase: (result as any).seedPhrase, // Include seedPhrase/trapdoor for ZK-Proof
           authMethod: authMethod as any,
         });
       } else {
@@ -672,33 +673,6 @@ const KeyIcon = () => (
   </svg>
 );
 
-const GoogleIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path
-      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-      fill="#4285F4"
-    />
-    <path
-      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      fill="#34A853"
-    />
-    <path
-      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-      fill="#FBBC05"
-    />
-    <path
-      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      fill="#EA4335"
-    />
-  </svg>
-);
-
 const NostrIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -821,6 +795,24 @@ const ImportIcon = () => (
   </svg>
 );
 
+const ZkProofIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+    <path d="M2 17l10 5 10-5"></path>
+    <path d="M2 12l10 5 10-5"></path>
+  </svg>
+);
+
 const ExportIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -872,6 +864,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       | "export"
       | "import"
       | "webauthn-username"
+      | "zkproof-login"
+      | "zkproof-signup-result"
     >("options");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -883,6 +877,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [exportedPair, setExportedPair] = useState("");
     const [showCopySuccess, setShowCopySuccess] = useState(false);
     const [showImportSuccess, setShowImportSuccess] = useState(false);
+    const [zkTrapdoor, setZkTrapdoor] = useState("");
+    const [zkGeneratedTrapdoor, setZkGeneratedTrapdoor] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Handle click outside to close dropdown
@@ -1041,7 +1037,56 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     const handleNostrAuth = () => handleAuth("nostr");
 
-    const handleOAuth = (provider: string) => handleAuth("oauth", provider);
+    const handleZkProofAuth = () => {
+      if (!core?.hasPlugin("zkproof")) {
+        setError("ZK-Proof plugin not available");
+        return;
+      }
+      
+      if (formMode === "login") {
+        setAuthView("zkproof-login");
+      } else {
+        // For signup, directly call signUp and show trapdoor
+        handleZkProofSignup();
+      }
+    };
+
+    const handleZkProofLogin = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        if (!zkTrapdoor.trim()) {
+          throw new Error("Please enter your trapdoor");
+        }
+        
+        await handleAuth("zkproof", zkTrapdoor);
+        setModalIsOpen(false);
+      } catch (e: any) {
+        setError(e.message || "ZK-Proof login failed");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleZkProofSignup = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        const result = await signUp("zkproof");
+        
+        if (result && result.success && result.seedPhrase) {
+          // Show the trapdoor to the user - CRITICAL for account recovery!
+          setZkGeneratedTrapdoor(result.seedPhrase);
+          setAuthView("zkproof-signup-result");
+        } else if (result && !result.success) {
+          throw new Error(result.error || "ZK-Proof signup failed");
+        }
+      } catch (e: any) {
+        setError(e.message || "ZK-Proof signup failed");
+      } finally {
+        setLoading(false);
+      }
+    };
 
     const handleRecover = async () => {
       setError("");
@@ -1131,6 +1176,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setShowCopySuccess(false);
       setShowImportSuccess(false);
       setRecoveredHint("");
+      setZkTrapdoor("");
+      setZkGeneratedTrapdoor("");
     };
 
     const openModal = () => {
@@ -1198,18 +1245,18 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </div>
         )}
 
-        {options.showOauth !== false && core?.hasPlugin("oauth") && (
+        {options.showZkProof !== false && core?.hasPlugin("zkproof") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
-              className="shogun-auth-option-button shogun-google-button"
-              onClick={() => handleAuth("oauth", "google")}
+              className="shogun-auth-option-button"
+              onClick={handleZkProofAuth}
               disabled={loading}
             >
-              <GoogleIcon />
+              <ZkProofIcon />
               {formMode === "login"
-                ? "Login with Google"
-                : "Signup with Google"}
+                ? "Login with ZK-Proof"
+                : "Signup with ZK-Proof"}
             </button>
           </div>
         )}
@@ -1628,6 +1675,165 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       </div>
     );
 
+    const renderZkProofLoginForm = () => (
+      <div className="shogun-auth-form">
+        <h3>Login with ZK-Proof</h3>
+        <div
+          style={{
+            backgroundColor: "#f0f9ff",
+            padding: "12px",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            border: "1px solid #0ea5e9",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#0c4a6e",
+              margin: "0",
+              fontWeight: "500",
+            }}
+          >
+            🔒 Anonymous Authentication
+          </p>
+          <p
+            style={{ fontSize: "13px", color: "#075985", margin: "4px 0 0 0" }}
+          >
+            Enter your trapdoor (recovery phrase) to login anonymously using Zero-Knowledge Proofs. Your identity remains private.
+          </p>
+        </div>
+        <div className="shogun-form-group">
+          <label htmlFor="zkTrapdoor">
+            <KeyIcon />
+            <span>Trapdoor / Recovery Phrase</span>
+          </label>
+          <textarea
+            id="zkTrapdoor"
+            value={zkTrapdoor}
+            onChange={(e) => setZkTrapdoor(e.target.value)}
+            disabled={loading}
+            placeholder="Enter your trapdoor..."
+            rows={4}
+            style={{
+              fontFamily: "monospace",
+              fontSize: "12px",
+              width: "100%",
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          />
+        </div>
+        <button
+          type="button"
+          className="shogun-submit-button"
+          onClick={handleZkProofLogin}
+          disabled={loading || !zkTrapdoor.trim()}
+        >
+          {loading ? "Processing..." : "Login Anonymously"}
+        </button>
+        <div className="shogun-form-footer">
+          <button
+            className="shogun-toggle-mode"
+            onClick={() => setAuthView("options")}
+            disabled={loading}
+          >
+            Back to Login Options
+          </button>
+        </div>
+      </div>
+    );
+
+    const renderZkProofSignupResult = () => (
+      <div className="shogun-auth-form">
+        <h3>ZK-Proof Account Created!</h3>
+        <div
+          style={{
+            backgroundColor: "#fef3c7",
+            padding: "12px",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            border: "1px solid #f59e0b",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#92400e",
+              margin: "0",
+              fontWeight: "500",
+            }}
+          >
+            ⚠️ CRITICAL: Save Your Trapdoor!
+          </p>
+          <p
+            style={{ fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" }}
+          >
+            This is your ONLY way to recover your anonymous account. Save it in a secure location. If you lose it, you will lose access to your account permanently.
+          </p>
+        </div>
+        <div className="shogun-form-group">
+          <label>Your Trapdoor (Recovery Phrase):</label>
+          <textarea
+            value={zkGeneratedTrapdoor}
+            readOnly
+            rows={4}
+            style={{
+              fontFamily: "monospace",
+              fontSize: "12px",
+              width: "100%",
+              padding: "8px",
+              border: "2px solid #f59e0b",
+              borderRadius: "4px",
+              backgroundColor: "#fffbeb",
+            }}
+          />
+          <button
+            type="button"
+            className="shogun-submit-button"
+            style={{ marginTop: "8px" }}
+            onClick={async () => {
+              if (navigator.clipboard) {
+                await navigator.clipboard.writeText(zkGeneratedTrapdoor);
+                setShowCopySuccess(true);
+                setTimeout(() => setShowCopySuccess(false), 3000);
+              }
+            }}
+          >
+            {showCopySuccess ? "✅ Copied!" : "📋 Copy Trapdoor"}
+          </button>
+          {!navigator.clipboard && (
+            <p style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>
+              ⚠️ Please manually copy the trapdoor above.
+            </p>
+          )}
+        </div>
+        <div
+          style={{
+            backgroundColor: "#dcfce7",
+            color: "#166534",
+            padding: "12px",
+            borderRadius: "8px",
+            marginTop: "16px",
+            fontSize: "14px",
+            border: "1px solid #22c55e",
+            textAlign: "center",
+          }}
+        >
+          ✅ You're now logged in anonymously!
+        </div>
+        <button
+          type="button"
+          className="shogun-submit-button"
+          style={{ marginTop: "16px" }}
+          onClick={() => setModalIsOpen(false)}
+        >
+          Close and Start Using App
+        </button>
+      </div>
+    );
+
     const renderImportForm = () => (
       <div className="shogun-auth-form">
         <h3>Import Gun Pair</h3>
@@ -1760,9 +1966,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                           ? "Import Gun Pair"
                           : authView === "webauthn-username"
                             ? "WebAuthn"
-                            : formMode === "login"
-                              ? "Login"
-                              : "Sign Up"}
+                            : authView === "zkproof-login"
+                              ? "ZK-Proof Login"
+                              : authView === "zkproof-signup-result"
+                                ? "ZK-Proof Account"
+                                : formMode === "login"
+                                  ? "Login"
+                                  : "Sign Up"}
                 </h2>
                 <button
                   className="shogun-close-button"
@@ -1811,6 +2021,9 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 {authView === "import" && renderImportForm()}
                 {authView === "webauthn-username" &&
                   renderWebAuthnUsernameForm()}
+                {authView === "zkproof-login" && renderZkProofLoginForm()}
+                {authView === "zkproof-signup-result" &&
+                  renderZkProofSignupResult()}
               </div>
             </div>
           </div>

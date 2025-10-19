@@ -140,16 +140,18 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                     username = pubkey;
                     result = await nostr.login(pubkey);
                     break;
-                case "oauth":
-                    const oauth = core.getPlugin("oauth");
-                    if (!oauth)
-                        throw new Error("OAuth plugin not available");
-                    const provider = args[0] || "google";
-                    result = await oauth.login(provider);
-                    authMethod = "oauth";
-                    if (result.redirectUrl) {
-                        return result;
+                case "zkproof":
+                    const trapdoor = args[0];
+                    if (!trapdoor || typeof trapdoor !== "string") {
+                        throw new Error("Invalid trapdoor provided");
                     }
+                    const zkproof = core.getPlugin("zkproof");
+                    if (!zkproof)
+                        throw new Error("ZK-Proof plugin not available");
+                    const zkLoginResult = await zkproof.login(trapdoor);
+                    result = zkLoginResult;
+                    username = zkLoginResult.username || zkLoginResult.alias || `zk_${(zkLoginResult.userPub || "").slice(0, 16)}`;
+                    authMethod = "zkproof";
                     break;
                 default:
                     throw new Error("Unsupported login method");
@@ -226,16 +228,15 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                     username = pubkey;
                     result = await nostr.signUp(pubkey);
                     break;
-                case "oauth":
-                    const oauth = core.getPlugin("oauth");
-                    if (!oauth)
-                        throw new Error("OAuth plugin not available");
-                    const provider = args[0] || "google";
-                    result = await oauth.signUp(provider);
-                    authMethod = "oauth";
-                    if (result.redirectUrl) {
-                        return result;
-                    }
+                case "zkproof":
+                    const zkproofPlugin = core.getPlugin("zkproof");
+                    if (!zkproofPlugin)
+                        throw new Error("ZK-Proof plugin not available");
+                    const seed = args[0]; // Optional seed
+                    const zkSignupResult = await zkproofPlugin.signUp(seed);
+                    result = zkSignupResult;
+                    username = zkSignupResult.username || zkSignupResult.alias || `zk_${(zkSignupResult.userPub || "").slice(0, 16)}`;
+                    authMethod = "zkproof";
                     break;
                 default:
                     throw new Error("Unsupported signup method");
@@ -249,6 +250,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                 onSignupSuccess === null || onSignupSuccess === void 0 ? void 0 : onSignupSuccess({
                     userPub: userPub,
                     username: displayName,
+                    seedPhrase: result.seedPhrase, // Include seedPhrase/trapdoor for ZK-Proof
                     authMethod: authMethod,
                 });
             }
@@ -489,11 +491,6 @@ const KeyIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/20
     React.createElement("circle", { cx: "7.5", cy: "15.5", r: "5.5" }),
     React.createElement("path", { d: "m21 2-9.6 9.6" }),
     React.createElement("path", { d: "m15.5 7.5 3 3L22 7l-3-3" })));
-const GoogleIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "currentColor" },
-    React.createElement("path", { d: "M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z", fill: "#4285F4" }),
-    React.createElement("path", { d: "M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z", fill: "#34A853" }),
-    React.createElement("path", { d: "M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z", fill: "#FBBC05" }),
-    React.createElement("path", { d: "M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z", fill: "#EA4335" })));
 const NostrIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
     React.createElement("path", { d: "M19.5 4.5 15 9l-3-3-4.5 4.5L9 12l-1.5 1.5L12 18l4.5-4.5L15 12l1.5-1.5L21 6l-1.5-1.5Z" }),
     React.createElement("path", { d: "M12 12 6 6l-1.5 1.5L9 12l-4.5 4.5L6 18l6-6Z" })));
@@ -518,6 +515,10 @@ const ImportIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org
     React.createElement("polyline", { points: "14,2 14,8 20,8" }),
     React.createElement("line", { x1: "16", y1: "13", x2: "8", y2: "13" }),
     React.createElement("line", { x1: "12", y1: "17", x2: "12", y2: "9" })));
+const ZkProofIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+    React.createElement("path", { d: "M12 2L2 7l10 5 10-5-10-5z" }),
+    React.createElement("path", { d: "M2 17l10 5 10-5" }),
+    React.createElement("path", { d: "M2 12l10 5 10-5" })));
 const ExportIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
     React.createElement("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
     React.createElement("polyline", { points: "14,2 14,8 20,8" }),
@@ -547,6 +548,8 @@ export const ShogunButton = (() => {
         const [exportedPair, setExportedPair] = useState("");
         const [showCopySuccess, setShowCopySuccess] = useState(false);
         const [showImportSuccess, setShowImportSuccess] = useState(false);
+        const [zkTrapdoor, setZkTrapdoor] = useState("");
+        const [zkGeneratedTrapdoor, setZkGeneratedTrapdoor] = useState("");
         const dropdownRef = useRef(null);
         // Handle click outside to close dropdown
         useEffect(() => {
@@ -662,7 +665,57 @@ export const ShogunButton = (() => {
             setAuthView("webauthn-username");
         };
         const handleNostrAuth = () => handleAuth("nostr");
-        const handleOAuth = (provider) => handleAuth("oauth", provider);
+        const handleZkProofAuth = () => {
+            if (!(core === null || core === void 0 ? void 0 : core.hasPlugin("zkproof"))) {
+                setError("ZK-Proof plugin not available");
+                return;
+            }
+            if (formMode === "login") {
+                setAuthView("zkproof-login");
+            }
+            else {
+                // For signup, directly call signUp and show trapdoor
+                handleZkProofSignup();
+            }
+        };
+        const handleZkProofLogin = async () => {
+            setError("");
+            setLoading(true);
+            try {
+                if (!zkTrapdoor.trim()) {
+                    throw new Error("Please enter your trapdoor");
+                }
+                await handleAuth("zkproof", zkTrapdoor);
+                setModalIsOpen(false);
+            }
+            catch (e) {
+                setError(e.message || "ZK-Proof login failed");
+            }
+            finally {
+                setLoading(false);
+            }
+        };
+        const handleZkProofSignup = async () => {
+            setError("");
+            setLoading(true);
+            try {
+                const result = await signUp("zkproof");
+                if (result && result.success && result.seedPhrase) {
+                    // Show the trapdoor to the user - CRITICAL for account recovery!
+                    setZkGeneratedTrapdoor(result.seedPhrase);
+                    setAuthView("zkproof-signup-result");
+                }
+                else if (result && !result.success) {
+                    throw new Error(result.error || "ZK-Proof signup failed");
+                }
+            }
+            catch (e) {
+                setError(e.message || "ZK-Proof signup failed");
+            }
+            finally {
+                setLoading(false);
+            }
+        };
         const handleRecover = async () => {
             setError("");
             setLoading(true);
@@ -751,6 +804,8 @@ export const ShogunButton = (() => {
             setShowCopySuccess(false);
             setShowImportSuccess(false);
             setRecoveredHint("");
+            setZkTrapdoor("");
+            setZkGeneratedTrapdoor("");
         };
         const openModal = () => {
             resetForm();
@@ -783,12 +838,12 @@ export const ShogunButton = (() => {
                 React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => handleAuth("nostr"), disabled: loading },
                     React.createElement(NostrIcon, null),
                     formMode === "login" ? "Login with Nostr" : "Signup with Nostr"))),
-            options.showOauth !== false && (core === null || core === void 0 ? void 0 : core.hasPlugin("oauth")) && (React.createElement("div", { className: "shogun-auth-option-group" },
-                React.createElement("button", { type: "button", className: "shogun-auth-option-button shogun-google-button", onClick: () => handleAuth("oauth", "google"), disabled: loading },
-                    React.createElement(GoogleIcon, null),
+            options.showZkProof !== false && (core === null || core === void 0 ? void 0 : core.hasPlugin("zkproof")) && (React.createElement("div", { className: "shogun-auth-option-group" },
+                React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: handleZkProofAuth, disabled: loading },
+                    React.createElement(ZkProofIcon, null),
                     formMode === "login"
-                        ? "Login with Google"
-                        : "Signup with Google"))),
+                        ? "Login with ZK-Proof"
+                        : "Signup with ZK-Proof"))),
             React.createElement("div", { className: "shogun-divider" },
                 React.createElement("span", null, "or")),
             React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => setAuthView("password"), disabled: loading },
@@ -952,6 +1007,83 @@ export const ShogunButton = (() => {
                             setExportedPair("");
                         }
                     }, disabled: loading }, "Back"))));
+        const renderZkProofLoginForm = () => (React.createElement("div", { className: "shogun-auth-form" },
+            React.createElement("h3", null, "Login with ZK-Proof"),
+            React.createElement("div", { style: {
+                    backgroundColor: "#f0f9ff",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                    border: "1px solid #0ea5e9",
+                } },
+                React.createElement("p", { style: {
+                        fontSize: "14px",
+                        color: "#0c4a6e",
+                        margin: "0",
+                        fontWeight: "500",
+                    } }, "\uD83D\uDD12 Anonymous Authentication"),
+                React.createElement("p", { style: { fontSize: "13px", color: "#075985", margin: "4px 0 0 0" } }, "Enter your trapdoor (recovery phrase) to login anonymously using Zero-Knowledge Proofs. Your identity remains private.")),
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", { htmlFor: "zkTrapdoor" },
+                    React.createElement(KeyIcon, null),
+                    React.createElement("span", null, "Trapdoor / Recovery Phrase")),
+                React.createElement("textarea", { id: "zkTrapdoor", value: zkTrapdoor, onChange: (e) => setZkTrapdoor(e.target.value), disabled: loading, placeholder: "Enter your trapdoor...", rows: 4, style: {
+                        fontFamily: "monospace",
+                        fontSize: "12px",
+                        width: "100%",
+                        padding: "8px",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                    } })),
+            React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleZkProofLogin, disabled: loading || !zkTrapdoor.trim() }, loading ? "Processing..." : "Login Anonymously"),
+            React.createElement("div", { className: "shogun-form-footer" },
+                React.createElement("button", { className: "shogun-toggle-mode", onClick: () => setAuthView("options"), disabled: loading }, "Back to Login Options"))));
+        const renderZkProofSignupResult = () => (React.createElement("div", { className: "shogun-auth-form" },
+            React.createElement("h3", null, "ZK-Proof Account Created!"),
+            React.createElement("div", { style: {
+                    backgroundColor: "#fef3c7",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    marginBottom: "16px",
+                    border: "1px solid #f59e0b",
+                } },
+                React.createElement("p", { style: {
+                        fontSize: "14px",
+                        color: "#92400e",
+                        margin: "0",
+                        fontWeight: "500",
+                    } }, "\u26A0\uFE0F CRITICAL: Save Your Trapdoor!"),
+                React.createElement("p", { style: { fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" } }, "This is your ONLY way to recover your anonymous account. Save it in a secure location. If you lose it, you will lose access to your account permanently.")),
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", null, "Your Trapdoor (Recovery Phrase):"),
+                React.createElement("textarea", { value: zkGeneratedTrapdoor, readOnly: true, rows: 4, style: {
+                        fontFamily: "monospace",
+                        fontSize: "12px",
+                        width: "100%",
+                        padding: "8px",
+                        border: "2px solid #f59e0b",
+                        borderRadius: "4px",
+                        backgroundColor: "#fffbeb",
+                    } }),
+                React.createElement("button", { type: "button", className: "shogun-submit-button", style: { marginTop: "8px" }, onClick: async () => {
+                        if (navigator.clipboard) {
+                            await navigator.clipboard.writeText(zkGeneratedTrapdoor);
+                            setShowCopySuccess(true);
+                            setTimeout(() => setShowCopySuccess(false), 3000);
+                        }
+                    } }, showCopySuccess ? "✅ Copied!" : "📋 Copy Trapdoor"),
+                !navigator.clipboard && (React.createElement("p", { style: { fontSize: "12px", color: "#666", marginTop: "8px" } }, "\u26A0\uFE0F Please manually copy the trapdoor above."))),
+            React.createElement("div", { style: {
+                    backgroundColor: "#dcfce7",
+                    color: "#166534",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    marginTop: "16px",
+                    fontSize: "14px",
+                    border: "1px solid #22c55e",
+                    textAlign: "center",
+                } }, "\u2705 You're now logged in anonymously!"),
+            React.createElement("button", { type: "button", className: "shogun-submit-button", style: { marginTop: "16px" }, onClick: () => setModalIsOpen(false) }, "Close and Start Using App")));
         const renderImportForm = () => (React.createElement("div", { className: "shogun-auth-form" },
             React.createElement("h3", null, "Import Gun Pair"),
             React.createElement("div", { style: {
@@ -1024,9 +1156,13 @@ export const ShogunButton = (() => {
                                         ? "Import Gun Pair"
                                         : authView === "webauthn-username"
                                             ? "WebAuthn"
-                                            : formMode === "login"
-                                                ? "Login"
-                                                : "Sign Up"),
+                                            : authView === "zkproof-login"
+                                                ? "ZK-Proof Login"
+                                                : authView === "zkproof-signup-result"
+                                                    ? "ZK-Proof Account"
+                                                    : formMode === "login"
+                                                        ? "Login"
+                                                        : "Sign Up"),
                         React.createElement("button", { className: "shogun-close-button", onClick: closeModal, "aria-label": "Close" },
                             React.createElement(CloseIcon, null))),
                     React.createElement("div", { className: "shogun-modal-content" },
@@ -1045,7 +1181,10 @@ export const ShogunButton = (() => {
                         authView === "export" && renderExportForm(),
                         authView === "import" && renderImportForm(),
                         authView === "webauthn-username" &&
-                            renderWebAuthnUsernameForm()))))));
+                            renderWebAuthnUsernameForm(),
+                        authView === "zkproof-login" && renderZkProofLoginForm(),
+                        authView === "zkproof-signup-result" &&
+                            renderZkProofSignupResult()))))));
     };
     Button.displayName = "ShogunButton";
     return Object.assign(Button, {

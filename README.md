@@ -2,25 +2,43 @@
 
 A comprehensive React component library for seamless integration of Shogun authentication into your applications. This library provides a simple yet powerful way to add multi-method authentication, account management, and real-time data synchronization to your React applications.
 
+> **Version 4.0.0** - Compatible with shogun-core ^4.0.0
+
 ## ✨ Features
 
 - 🚀 **Easy Integration** - Simple setup with minimal configuration
 - 🎨 **Customizable UI** - Modern, responsive design with dark mode support
-- 🔒 **Multi-Authentication** - Support for Password, MetaMask, WebAuthn, Nostr, and OAuth
+- 🔒 **Multi-Authentication** - Support for Password, MetaMask, WebAuthn, Nostr, and ZK-Proof
 - 🔑 **Account Management** - Export/import Gun pairs for account backup and recovery
 - 📱 **Responsive Design** - Works seamlessly across all device sizes
 - 🌍 **TypeScript Support** - Full type safety and IntelliSense support
 - 🔌 **Plugin System** - Advanced Gun operations with custom hooks
 - 📊 **Real-time Data** - Reactive data synchronization with RxJS observables
 
+## 📦 Requirements
+
+- **React**: ^18.0.0
+- **shogun-core**: ^4.0.0
+- **Node.js**: ≥18
+
 ## 🚀 Quick Start
 
 ### Installation
 
 ```bash
-npm install shogun-button-react
+npm install shogun-button-react shogun-core
 # or
-yarn add shogun-button-react
+yarn add shogun-button-react shogun-core
+```
+
+### Updating from 3.x
+
+If you're upgrading from version 3.x:
+
+```bash
+yarn upgrade shogun-button-react shogun-core
+# or
+npm update shogun-button-react shogun-core
 ```
 
 ### Basic Usage
@@ -37,7 +55,7 @@ function App() {
     showMetamask: true,
     showWebauthn: true,
     showNostr: true,
-    showOauth: true,
+    showZkProof: true,
     // Optional peers
     peers: [
       "https://gun-manhattan.herokuapp.com/gun"
@@ -84,21 +102,17 @@ const { core, options } = shogunConnector({
   showMetamask: true,
   showWebauthn: true,
   showNostr: true,
-  showOauth: true,
+  showZkProof: true,
 
   // Network configuration
   peers: [
     "https://gun-manhattan.herokuapp.com/gun"
   ],
 
-  // OAuth provider configuration (optional)
-  oauth: {
-    providers: {
-      google: {
-        clientId: "your-google-client-id",
-        redirectUri: "https://myapp.com/auth/callback"
-      }
-    }
+  // ZK-Proof configuration
+  zkproof: {
+    enabled: true,
+    defaultGroupId: "my-app-users",
   },
 
   // Gun Advanced Plugin configuration
@@ -132,7 +146,8 @@ interface AuthData {
   userPub: string;           // User's public key
   username: string;          // Display name
   password?: string;         // Password (if applicable)
-  authMethod?: "password" | "web3" | "webauthn" | "nostr" | "oauth" | "pair";
+  seedPhrase?: string;       // Seed phrase/trapdoor (for ZK-Proof)
+  authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof" | "pair";
 }
 ```
 
@@ -220,6 +235,31 @@ function UserProfile() {
       }
     } catch (error) {
       console.error("WebAuthn login failed:", error);
+    }
+  };
+
+  const handleZkProofSignup = async () => {
+    try {
+      const result = await signUp("zkproof");
+      if (result.success && result.seedPhrase) {
+        console.log("ZK-Proof signup successful!");
+        console.log("SAVE THIS TRAPDOOR:", result.seedPhrase);
+        // CRITICAL: User must save the trapdoor for account recovery
+      }
+    } catch (error) {
+      console.error("ZK-Proof signup failed:", error);
+    }
+  };
+
+  const handleZkProofLogin = async () => {
+    try {
+      const trapdoor = "user-saved-trapdoor-here";
+      const result = await login("zkproof", trapdoor);
+      if (result.success) {
+        console.log("ZK-Proof anonymous login successful!");
+      }
+    } catch (error) {
+      console.error("ZK-Proof login failed:", error);
     }
   };
 
@@ -367,6 +407,84 @@ function UserSettings() {
 }
 ```
 
+### ZK-Proof Anonymous Authentication
+
+ZK-Proof (Zero-Knowledge Proof) authentication provides complete anonymity using Semaphore protocol. Users can authenticate without revealing their identity.
+
+```tsx
+function ZkProofExample() {
+  const { login, signUp } = useShogun();
+  const [trapdoor, setTrapdoor] = useState("");
+
+  // Signup: Creates anonymous identity and returns trapdoor
+  const handleSignup = async () => {
+    try {
+      const result = await signUp("zkproof");
+      
+      if (result.success && result.seedPhrase) {
+        // CRITICAL: User MUST save this trapdoor!
+        // It's the ONLY way to recover the anonymous account
+        console.log("Your trapdoor (save securely):", result.seedPhrase);
+        
+        // Recommend user to:
+        // 1. Write it down on paper
+        // 2. Store in password manager
+        // 3. Keep multiple secure copies
+        alert(`Save this trapdoor securely:\n\n${result.seedPhrase}\n\nYou'll need it to login on other devices!`);
+      }
+    } catch (error) {
+      console.error("ZK-Proof signup failed:", error);
+    }
+  };
+
+  // Login: Use saved trapdoor to restore anonymous identity
+  const handleLogin = async () => {
+    try {
+      const result = await login("zkproof", trapdoor);
+      
+      if (result.success) {
+        console.log("Logged in anonymously!");
+        console.log("Identity commitment:", result.userPub);
+      }
+    } catch (error) {
+      console.error("ZK-Proof login failed:", error);
+    }
+  };
+
+  return (
+    <div>
+      <h3>Anonymous Authentication with ZK-Proof</h3>
+      
+      <div>
+        <button onClick={handleSignup}>
+          Create Anonymous Identity
+        </button>
+      </div>
+
+      <div>
+        <input
+          type="text"
+          value={trapdoor}
+          onChange={(e) => setTrapdoor(e.target.value)}
+          placeholder="Enter your trapdoor to login"
+        />
+        <button onClick={handleLogin}>
+          Login Anonymously
+        </button>
+      </div>
+    </div>
+  );
+}
+```
+
+**Important Notes about ZK-Proof:**
+
+- **Trapdoor is Critical**: The trapdoor is like a master password - without it, the account is permanently lost
+- **No Recovery**: Unlike traditional auth, there's no "forgot password" - trapdoor loss means permanent account loss
+- **Complete Anonymity**: Your identity remains private even from the application
+- **Multi-Device Support**: Use the same trapdoor on different devices
+- **Privacy-Preserving**: Uses Semaphore protocol for zero-knowledge proofs
+
 ### Connection Monitoring
 
 ```tsx
@@ -482,7 +600,6 @@ interface ShogunConnectorOptions {
   showMetamask?: boolean;
   showWebauthn?: boolean;
   showNostr?: boolean;
-  showOauth?: boolean;
   darkMode?: boolean;
 
   // Network configuration
@@ -495,13 +612,6 @@ interface ShogunConnectorOptions {
     login?: number;
     signup?: number;
     operation?: number;
-  };
-  oauth?: {
-    providers: Record<string, {
-      clientId: string;
-      redirectUri?: string;
-      clientSecret?: string;
-    }>;
   };
 
   // Gun Advanced Plugin configuration

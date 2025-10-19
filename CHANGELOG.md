@@ -1,6 +1,76 @@
 # Changelog
 
-## Version 1.3.4 (Latest)
+## Version 4.0.0 (Latest)
+
+### 💥 Breaking Changes
+- **OAuth Removed**: Removed OAuth authentication support following removal from shogun-core
+  - Removed `showOauth` option from `ShogunConnectorOptions`
+  - Removed `oauth` configuration from connector options
+  - Removed OAuth login/signup methods from button component
+  - Removed Google OAuth icon and UI elements
+  - Updated `authMethod` type to exclude "oauth"
+
+### ✨ New Features
+- **ZK-Proof Authentication**: Added support for anonymous authentication using Zero-Knowledge Proofs
+  - New `showZkProof` option to enable/disable ZK-Proof in UI
+  - `zkproof` configuration for customizing ZK-Proof settings
+  - Login with trapdoor (recovery phrase)
+  - Signup generates new anonymous identity with trapdoor
+  - Complete anonymity using Semaphore protocol
+  - Multi-device support with same trapdoor
+  - Added ZK-Proof icon and UI components
+  - Added `authMethod: "zkproof"` support
+  - Added `seedPhrase` field to `AuthData` interface for trapdoor backup
+
+### ⬆️ Dependencies Update
+- **shogun-core**: Updated from `^3.3.8` to `^4.0.0`
+- **rxjs**: Updated from `^7.8.1` to `^7.8.2` (aligned with shogun-core 4.0.0)
+
+### 🔄 Migration Guide
+If you were using OAuth authentication:
+- Remove `showOauth` property from your `shogunConnector` configuration
+- Remove `oauth` provider configuration
+- Use alternative authentication methods: Password, MetaMask, WebAuthn, or Nostr
+
+For updating from version 3.x:
+- Update dependencies: `yarn upgrade shogun-button-react shogun-core`
+- No API changes required - all existing functionality is maintained
+- Verify compatibility with shogun-core 4.0.0 features
+- New ZK-Proof authentication available (opt-in via `showZkProof: true`)
+
+### 📝 New Configuration Options
+
+```typescript
+const { core, options } = shogunConnector({
+  appName: "My App",
+  showZkProof: true,  // Enable ZK-Proof authentication
+  zkproof: {
+    enabled: true,
+    defaultGroupId: "my-app-users",
+  },
+});
+```
+
+### 🔐 ZK-Proof Authentication Flow
+
+**Signup:**
+```typescript
+const result = await signUp("zkproof");
+if (result.success && result.seedPhrase) {
+  // User MUST save the seedPhrase (trapdoor)
+  console.log("Save this trapdoor:", result.seedPhrase);
+}
+```
+
+**Login:**
+```typescript
+const result = await login("zkproof", savedTrapdoor);
+if (result.success) {
+  console.log("Logged in anonymously!");
+}
+```
+
+## Version 1.3.4
 
 ### 🐛 Bug Fixes
 - **Export Gun Pair Fix**: Fixed issue where "Export Pair" option was not accessible from user dropdown - now works correctly without requiring disconnect

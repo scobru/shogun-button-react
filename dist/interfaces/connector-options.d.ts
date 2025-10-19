@@ -8,7 +8,7 @@ export interface ShogunConnectorOptions {
     showMetamask?: boolean;
     showWebauthn?: boolean;
     showNostr?: boolean;
-    showOauth?: boolean;
+    showZkProof?: boolean;
     darkMode?: boolean;
     gunInstance?: IGunInstance;
     gunOptions?: any;
@@ -16,13 +16,6 @@ export interface ShogunConnectorOptions {
         login?: number;
         signup?: number;
         operation?: number;
-    };
-    oauth?: {
-        providers: Record<string, {
-            clientId: string;
-            clientSecret?: string;
-            redirectUri?: string;
-        }>;
     };
     webauthn?: {
         enabled?: boolean;
@@ -32,6 +25,10 @@ export interface ShogunConnectorOptions {
     };
     web3?: {
         enabled?: boolean;
+    };
+    zkproof?: {
+        enabled?: boolean;
+        defaultGroupId?: string;
     };
     enableGunDebug?: boolean;
     enableConnectionMonitoring?: boolean;

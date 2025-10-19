@@ -1,14 +1,14 @@
 import { ShogunCore } from "shogun-core";
 import { GunAdvancedPlugin } from "./plugins/GunAdvancedPlugin";
 export function shogunConnector(options) {
-    const { gunInstance, gunOptions, appName, timeouts, oauth, webauthn, nostr, web3, showOauth, showWebauthn, showNostr, showMetamask, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
+    const { gunInstance, gunOptions, appName, timeouts, webauthn, nostr, web3, zkproof, showWebauthn, showNostr, showMetamask, showZkProof, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
     const core = new ShogunCore({
         gunOptions: gunOptions || undefined,
         gunInstance: gunInstance || undefined,
-        oauth,
         webauthn,
         nostr,
         web3,
+        zkproof,
         timeouts,
     });
     const setProvider = (provider) => {
