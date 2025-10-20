@@ -34,9 +34,31 @@ module.exports = {
         use: 'ts-loader',
         exclude: /node_modules/,
       },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
+      },
     ],
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js'],
+    extensions: ['.tsx', '.ts', '.js', '.mjs'],
+    fallback: {
+      buffer: require.resolve('buffer/'),
+      stream: require.resolve('stream-browserify'),
+      crypto: require.resolve('crypto-browserify'),
+      process: require.resolve('process/browser.js'),
+      util: require.resolve('util/'),
+      assert: require.resolve('assert/'),
+      os: false,
+      path: false,
+      fs: false,
+    },
+    fullySpecified: false, // Disable fully specified ESM resolution
   },
+  plugins: [
+    new (require('webpack')).ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+      process: 'process/browser.js',
+    }),
+  ],
 }; 
