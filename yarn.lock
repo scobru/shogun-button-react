@@ -2304,7 +2304,7 @@ ripemd160@^2.0.0, ripemd160@^2.0.1:
     hash-base "^3.0.0"
     inherits "^2.0.1"
 
-rxjs@^7.8.1, rxjs@^7.8.2:
+rxjs@^7.8.2:
   version "7.8.2"
   resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-7.8.2.tgz#955bc473ed8af11a002a2be52071bf475638607b"
   integrity sha512-dhKf903U/PQZY6boNNtAGdWbG85WAbjT/1xYoZIC7FAY0yWapOBQVsVrDl58W86//e1VpMNBtRV4MaXfdMySFA==
@@ -2419,10 +2419,10 @@ shogun-core@^3.3.8:
     uuid "^11.1.0"
     vm-browserify "^1.1.2"
 
-shogun-core@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-4.0.0.tgz#8cf5a10078992f7eafa586111af24ccc17f90f47"
-  integrity sha512-npPme8xY4nFFj6FItyfyBEbf6+BGvxkFNnmh+mf/j/mjGONXlHP1Rp4sUW4s6H/xIF1eDSHIwYJwBuXRZHiTvw==
+shogun-core@^4.0.7:
+  version "4.0.7"
+  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-4.0.7.tgz#53d366ed7aca89ce529b3e45ff7be575acf08b73"
+  integrity sha512-LrnXlQEsqVwziC05lqs+D/H1fQ2iUk5S67hOaShBM5/w1BtP45Gd1CUkK3dexX6NIuI5XNt2QjHrtTRO7QjWMA==
   dependencies:
     "@noble/curves" "^1.9.1"
     "@noble/hashes" "^1.5.0"
