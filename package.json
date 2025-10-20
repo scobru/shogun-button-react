@@ -1,7 +1,7 @@
 {
   "name": "shogun-button-react",
   "description": "Shogun connector button",
-  "version": "4.0.8",
+  "version": "4.1.0",
   "files": [
     "dist",
     "src/styles/index.css"
@@ -25,16 +25,24 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc && copyfiles -u 1 \"src/styles/index.css\" dist",
+    "build": "tsc && webpack --mode production && copyfiles -u 1 \"src/styles/index.css\" dist",
+    "build:tsc": "tsc",
+    "build:webpack": "webpack --mode production",
     "dev": "tsc --watch",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "npm run build"
   },
   "dependencies": {
+    "assert": "^2.1.0",
+    "buffer": "^6.0.3",
+    "crypto-browserify": "^3.12.1",
     "ethers": "^6.13.5",
     "prettier": "^3.5.3",
+    "process": "^0.11.10",
     "rxjs": "^7.8.2",
-    "shogun-core": "^4.0.8"
+    "shogun-core": "^4.1.0",
+    "stream-browserify": "^3.0.0",
+    "util": "^0.12.5"
   },
   "peerDependencies": {
     "react": "^18.0.0",
