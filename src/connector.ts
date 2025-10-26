@@ -4,9 +4,9 @@ import {
   ShogunConnectorResult,
 } from "./interfaces/connector-options";
 
-export function shogunConnector(
+export async function shogunConnector(
   options: ShogunConnectorOptions
-): ShogunConnectorResult {
+): Promise<ShogunConnectorResult> {
   const {
     gunInstance,
     gunOptions,
@@ -49,6 +49,15 @@ export function shogunConnector(
       zkproof,
       timeouts,
     }) as ShogunCore;
+  }
+
+  // Wait for core to initialize (plugins registration, etc.)
+  try {
+    if (typeof (core as any).initialize === 'function') {
+      await (core as any).initialize();
+    }
+  } catch (error) {
+    console.error("Error initializing ShogunCore:", error);
   }
 
   const setProvider = (provider: any): boolean => {

@@ -1,5 +1,5 @@
 import { ShogunCore } from "shogun-core";
-export function shogunConnector(options) {
+export async function shogunConnector(options) {
     const { gunInstance, gunOptions, appName, timeouts, webauthn, nostr, web3, zkproof, showWebauthn, showNostr, showMetamask, showZkProof, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
     let core = null;
     if (gunInstance !== undefined) {
@@ -21,6 +21,15 @@ export function shogunConnector(options) {
             zkproof,
             timeouts,
         });
+    }
+    // Wait for core to initialize (plugins registration, etc.)
+    try {
+        if (typeof core.initialize === 'function') {
+            await core.initialize();
+        }
+    }
+    catch (error) {
+        console.error("Error initializing ShogunCore:", error);
     }
     const setProvider = (provider) => {
         var _a;

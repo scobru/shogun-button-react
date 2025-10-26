@@ -75,7 +75,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             switch (method) {
                 case "password":
                     username = args[0];
+                    console.log(`[DEBUG] ShogunButton: Calling core.login for username: ${username}`);
                     result = await core.login(args[0], args[1]);
+                    console.log(`[DEBUG] ShogunButton: core.login result:`, result);
                     break;
                 case "pair":
                     // New pair authentication method
@@ -188,7 +190,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                     if (args[1] !== args[2]) {
                         throw new Error("Passwords do not match");
                     }
+                    console.log(`[DEBUG] ShogunButton: Calling core.signUp for username: ${username}`);
                     result = await core.signUp(args[0], args[1]);
+                    console.log(`[DEBUG] ShogunButton: core.signUp result:`, result);
                     break;
                 case "webauthn":
                     username = args[0];
