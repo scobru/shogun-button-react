@@ -1,7 +1,7 @@
 {
   "name": "shogun-button-react",
   "description": "Shogun connector button",
-  "version": "4.2.1",
+  "version": "4.2.2",
   "files": [
     "dist",
     "src/styles/index.css"
