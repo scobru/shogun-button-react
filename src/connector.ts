@@ -1,6 +1,5 @@
 import { ShogunCore } from "shogun-core";
 import { ShogunConnectorOptions, ShogunConnectorResult } from "./interfaces/connector-options";
-import { GunAdvancedPlugin } from "./plugins/GunAdvancedPlugin";
 
 export function shogunConnector(
   options: ShogunConnectorOptions
@@ -99,24 +98,7 @@ export function shogunConnector(
     return core ? core.hasPlugin(name) : false;
   };
 
-  // Registra automaticamente il plugin Gun avanzato
-  let gunPlugin: GunAdvancedPlugin | null = null;
-  if (core) {
-    gunPlugin = new GunAdvancedPlugin(core, {
-      enableDebug: enableGunDebug,
-      enableConnectionMonitoring,
-      defaultPageSize,
-      connectionTimeout,
-      debounceInterval,
-    }) as GunAdvancedPlugin;
-    
-    registerPlugin(gunPlugin);
-  }
-
-  // Ensure gunPlugin is always available
-  if (!gunPlugin) {
-    throw new Error("Failed to initialize GunAdvancedPlugin");
-  }
+  // Plugin registration removed - GunAdvancedPlugin no longer available
 
   return {
     core,
@@ -125,6 +107,6 @@ export function shogunConnector(
     getCurrentProviderUrl,
     registerPlugin,
     hasPlugin,
-    gunPlugin,
+    gunPlugin: null,
   };
 } 

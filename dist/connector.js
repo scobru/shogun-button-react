@@ -1,5 +1,4 @@
 import { ShogunCore } from "shogun-core";
-import { GunAdvancedPlugin } from "./plugins/GunAdvancedPlugin";
 export function shogunConnector(options) {
     const { gunInstance, gunOptions, appName, timeouts, webauthn, nostr, web3, zkproof, showWebauthn, showNostr, showMetamask, showZkProof, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
     const core = new ShogunCore({
@@ -72,22 +71,7 @@ export function shogunConnector(options) {
     const hasPlugin = (name) => {
         return core ? core.hasPlugin(name) : false;
     };
-    // Registra automaticamente il plugin Gun avanzato
-    let gunPlugin = null;
-    if (core) {
-        gunPlugin = new GunAdvancedPlugin(core, {
-            enableDebug: enableGunDebug,
-            enableConnectionMonitoring,
-            defaultPageSize,
-            connectionTimeout,
-            debounceInterval,
-        });
-        registerPlugin(gunPlugin);
-    }
-    // Ensure gunPlugin is always available
-    if (!gunPlugin) {
-        throw new Error("Failed to initialize GunAdvancedPlugin");
-    }
+    // Plugin registration removed - GunAdvancedPlugin no longer available
     return {
         core,
         options,
@@ -95,6 +79,6 @@ export function shogunConnector(options) {
         getCurrentProviderUrl,
         registerPlugin,
         hasPlugin,
-        gunPlugin,
+        gunPlugin: null,
     };
 }

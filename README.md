@@ -633,7 +633,7 @@ interface ShogunConnectorResult {
   getCurrentProviderUrl: () => string | null;
   registerPlugin: (plugin: any) => boolean;
   hasPlugin: (name: string) => boolean;
-  gunPlugin: GunAdvancedPlugin;
+  gunPlugin: null;
 }
 ```
 

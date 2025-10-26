@@ -1,5 +1,4 @@
 import { ShogunCore, IGunInstance } from "shogun-core";
-import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 export interface ShogunConnectorOptions {
     appName: string;
     appDescription?: string;
@@ -43,5 +42,5 @@ export interface ShogunConnectorResult {
     getCurrentProviderUrl: () => string | null;
     registerPlugin: (plugin: any) => boolean;
     hasPlugin: (name: string) => boolean;
-    gunPlugin: GunAdvancedPlugin;
+    gunPlugin: null;
 }

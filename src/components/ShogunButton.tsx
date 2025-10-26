@@ -7,7 +7,6 @@ import React, {
 } from "react";
 import { ShogunCore } from "shogun-core";
 import { Observable } from "rxjs";
-import { GunAdvancedPlugin } from "../plugins/GunAdvancedPlugin";
 
 import "../styles/index.css";
 
@@ -52,21 +51,8 @@ type ShogunContextType = {
   exportGunPair: (password?: string) => Promise<string>;
   importGunPair: (pairData: string, password?: string) => Promise<boolean>;
 
-  gunPlugin: GunAdvancedPlugin | null;
+  gunPlugin: null;
 
-  // Hook del plugin
-  useGunState: <T>(path: string, defaultValue?: T) => any;
-  useGunCollection: <T>(path: string, options?: any) => any;
-  useGunConnection: (path: string) => {
-    isConnected: boolean;
-    lastSeen: Date | null;
-    error: string | null;
-  };
-  useGunDebug: (path: string, enabled?: boolean) => void;
-  useGunRealtime: <T>(
-    path: string,
-    callback?: (data: T, key: string) => void
-  ) => { data: T | null; key: string | null };
 
   // Metodi di utilità
   put: (path: string, data: any) => Promise<void>;
@@ -91,11 +77,6 @@ const defaultShogunContext: ShogunContextType = {
   exportGunPair: async () => "",
   importGunPair: async () => false,
   gunPlugin: null,
-  useGunState: () => ({}),
-  useGunCollection: () => ({}),
-  useGunConnection: () => ({ isConnected: false, lastSeen: null, error: null }),
-  useGunDebug: () => {},
-  useGunRealtime: () => ({ data: null, key: null }),
   put: async () => {},
   get: () => null,
   remove: async () => {},
@@ -510,32 +491,12 @@ export function ShogunButtonProvider({
     }
   };
 
-  // Inizializza il plugin
-  const gunPlugin = React.useMemo(() => {
-    if (!core) return null;
-    return new GunAdvancedPlugin(core, {
-      enableDebug: options.enableGunDebug !== false,
-      enableConnectionMonitoring: options.enableConnectionMonitoring !== false,
-      defaultPageSize: options.defaultPageSize || 20,
-      connectionTimeout: options.connectionTimeout || 10000,
-      debounceInterval: options.debounceInterval || 100,
-    });
-  }, [core, options]);
+  // Plugin initialization removed - GunAdvancedPlugin no longer available
+  const gunPlugin = null;
 
-  // Effetto per pulizia del plugin
-  React.useEffect(() => {
-    return () => {
-      if (gunPlugin) {
-        gunPlugin.cleanup();
-      }
-    };
-  }, [gunPlugin]);
 
-  // Crea gli hook del plugin
-  const pluginHooks: PluginHooks = React.useMemo(() => {
-    if (!gunPlugin) return {};
-    return gunPlugin.createHooks();
-  }, [gunPlugin]);
+  // Plugin hooks removed - GunAdvancedPlugin no longer available
+  const pluginHooks: PluginHooks = {};
 
   // Create a properly typed context value
   const contextValue: ShogunContextType = React.useMemo(
@@ -555,53 +516,28 @@ export function ShogunButtonProvider({
       importGunPair,
       setProvider,
       gunPlugin,
-      // Ensure all required hooks are present with proper fallbacks
-      useGunState:
-        pluginHooks.useGunState ||
-        (() => ({
-          data: null,
-          isLoading: false,
-          error: null,
-          update: async () => {},
-          set: async () => {},
-          remove: async () => {},
-          refresh: () => {},
-        })),
-      useGunCollection:
-        pluginHooks.useGunCollection ||
-        (() => ({
-          items: [],
-          currentPage: 0,
-          totalPages: 0,
-          hasNextPage: false,
-          hasPrevPage: false,
-          nextPage: () => {},
-          prevPage: () => {},
-          goToPage: () => {},
-          isLoading: false,
-          error: null,
-          refresh: () => {},
-          addItem: async () => {},
-          updateItem: async () => {},
-          removeItem: async () => {},
-        })),
-      useGunConnection:
-        pluginHooks.useGunConnection ||
-        (() => ({
-          isConnected: false,
-          lastSeen: null,
-          error: null,
-        })),
-      useGunDebug: pluginHooks.useGunDebug || (() => {}),
-      useGunRealtime:
-        pluginHooks.useGunRealtime ||
-        (() => ({
-          data: null,
-          key: null,
-        })),
-      put: gunPlugin?.put.bind(gunPlugin) || (async () => {}),
-      get: gunPlugin?.get.bind(gunPlugin) || (() => null),
-      remove: gunPlugin?.remove.bind(gunPlugin) || (async () => {}),
+      put: async (path: string, data: any) => {
+        if (!core?.gun) throw new Error('Gun instance not available');
+        return new Promise((resolve, reject) => {
+          core.gun.get(path).put(data, (ack: any) => {
+            if (ack.err) reject(new Error(ack.err));
+            else resolve();
+          });
+        });
+      },
+      get: (path: string) => {
+        if (!core?.gun) return null;
+        return core.gun.get(path);
+      },
+      remove: async (path: string) => {
+        if (!core?.gun) throw new Error('Gun instance not available');
+        return new Promise((resolve, reject) => {
+          core.gun.get(path).put(null, (ack: any) => {
+            if (ack.err) reject(new Error(ack.err));
+            else resolve();
+          });
+        });
+      },
     }),
     [
       core,
