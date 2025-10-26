@@ -1,5 +1,8 @@
 import { ShogunCore } from "shogun-core";
-import { ShogunConnectorOptions, ShogunConnectorResult } from "./interfaces/connector-options";
+import {
+  ShogunConnectorOptions,
+  ShogunConnectorResult,
+} from "./interfaces/connector-options";
 
 export function shogunConnector(
   options: ShogunConnectorOptions
@@ -26,17 +29,27 @@ export function shogunConnector(
     ...restOptions
   } = options;
 
-  
+  let core: ShogunCore | null = null;
 
-  const core = new ShogunCore({
-    gunOptions: gunOptions || undefined,
-    gunInstance: gunInstance || undefined,
-    webauthn,
-    nostr,
-    web3,
-    zkproof,
-    timeouts,
-  }) as ShogunCore;
+  if (gunInstance !== undefined) {
+    core = new ShogunCore({
+      gunInstance: gunInstance,
+      webauthn,
+      nostr,
+      web3,
+      zkproof,
+      timeouts,
+    }) as ShogunCore;
+  } else {
+    core = new ShogunCore({
+      gunOptions: gunOptions,
+      webauthn,
+      nostr,
+      web3,
+      zkproof,
+      timeouts,
+    }) as ShogunCore;
+  }
 
   const setProvider = (provider: any): boolean => {
     if (!core) {
@@ -73,8 +86,9 @@ export function shogunConnector(
   const getCurrentProviderUrl = (): string | null => {
     const gun: any = (core as any)?.db?.gun || (core as any)?.gun;
     try {
-      const peersObj = gun && gun.back ? gun.back('opt.peers') : undefined;
-      const urls = peersObj && typeof peersObj === 'object' ? Object.keys(peersObj) : [];
+      const peersObj = gun && gun.back ? gun.back("opt.peers") : undefined;
+      const urls =
+        peersObj && typeof peersObj === "object" ? Object.keys(peersObj) : [];
       return urls.length > 0 ? urls[0] : null;
     } catch {
       return null;
@@ -109,4 +123,4 @@ export function shogunConnector(
     hasPlugin,
     gunPlugin: null,
   };
-} 
+}

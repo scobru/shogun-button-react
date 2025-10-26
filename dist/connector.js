@@ -1,15 +1,27 @@
 import { ShogunCore } from "shogun-core";
 export function shogunConnector(options) {
     const { gunInstance, gunOptions, appName, timeouts, webauthn, nostr, web3, zkproof, showWebauthn, showNostr, showMetamask, showZkProof, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
-    const core = new ShogunCore({
-        gunOptions: gunOptions || undefined,
-        gunInstance: gunInstance || undefined,
-        webauthn,
-        nostr,
-        web3,
-        zkproof,
-        timeouts,
-    });
+    let core = null;
+    if (gunInstance !== undefined) {
+        core = new ShogunCore({
+            gunInstance: gunInstance,
+            webauthn,
+            nostr,
+            web3,
+            zkproof,
+            timeouts,
+        });
+    }
+    else {
+        core = new ShogunCore({
+            gunOptions: gunOptions,
+            webauthn,
+            nostr,
+            web3,
+            zkproof,
+            timeouts,
+        });
+    }
     const setProvider = (provider) => {
         var _a;
         if (!core) {
@@ -47,8 +59,8 @@ export function shogunConnector(options) {
         var _a;
         const gun = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.gun) || (core === null || core === void 0 ? void 0 : core.gun);
         try {
-            const peersObj = gun && gun.back ? gun.back('opt.peers') : undefined;
-            const urls = peersObj && typeof peersObj === 'object' ? Object.keys(peersObj) : [];
+            const peersObj = gun && gun.back ? gun.back("opt.peers") : undefined;
+            const urls = peersObj && typeof peersObj === "object" ? Object.keys(peersObj) : [];
             return urls.length > 0 ? urls[0] : null;
         }
         catch {
