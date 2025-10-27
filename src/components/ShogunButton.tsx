@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { ShogunCore } from "shogun-core";
+import { ShogunCore, WebauthnPlugin } from "shogun-core";
 import { Observable } from "rxjs";
 
 import "../styles/index.css";
@@ -294,7 +294,9 @@ export function ShogunButtonProvider({
           console.log(`[DEBUG] ShogunButton: core object:`, core);
           console.log(`[DEBUG] ShogunButton: core.signUp exists:`, typeof core?.signUp);
           try {
+            console.log(`[DEBUG] ShogunButton: About to call core.signUp...`);
             result = await core.signUp(args[0], args[1]);
+            console.log(`[DEBUG] ShogunButton: core.signUp completed successfully`);
             console.log(`[DEBUG] ShogunButton: core.signUp result:`, result);
           } catch (error) {
             console.error(`[DEBUG] ShogunButton: core.signUp error:`, error);
@@ -303,9 +305,9 @@ export function ShogunButtonProvider({
           break;
         case "webauthn":
           username = args[0];
-          const webauthn: any = core.getPlugin("webauthn");
+          const webauthn: WebauthnPlugin = core.getPlugin("webauthn");
           if (!webauthn) throw new Error("WebAuthn plugin not available");
-          result = await webauthn.signUp(username);
+          result = await webauthn.signUp(username, { generateSeedPhrase: true });
           break;
         case "web3":
           const web3: any = core.getPlugin("web3");
