@@ -291,8 +291,15 @@ export function ShogunButtonProvider({
             throw new Error("Passwords do not match");
           }
           console.log(`[DEBUG] ShogunButton: Calling core.signUp for username: ${username}`);
-          result = await core.signUp(args[0], args[1]);
-          console.log(`[DEBUG] ShogunButton: core.signUp result:`, result);
+          console.log(`[DEBUG] ShogunButton: core object:`, core);
+          console.log(`[DEBUG] ShogunButton: core.signUp exists:`, typeof core?.signUp);
+          try {
+            result = await core.signUp(args[0], args[1]);
+            console.log(`[DEBUG] ShogunButton: core.signUp result:`, result);
+          } catch (error) {
+            console.error(`[DEBUG] ShogunButton: core.signUp error:`, error);
+            throw error;
+          }
           break;
         case "webauthn":
           username = args[0];
@@ -897,13 +904,16 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     // Event handlers
     const handleAuth = async (method: string, ...args: any[]) => {
+      console.log(`[DEBUG] handleAuth called with method: ${method}, formMode: ${formMode}, args:`, args);
       setError("");
       setLoading(true);
 
       try {
         // Use formMode to determine whether to call login or signUp
         const action = formMode === "login" ? login : signUp;
+        console.log(`[DEBUG] handleAuth calling action: ${action.name}, method: ${method}`);
         const result = await action(method, ...args);
+        console.log(`[DEBUG] handleAuth result:`, result);
 
         if (result && !result.success && result.error) {
           setError(result.error);
@@ -921,6 +931,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
+      console.log(`[DEBUG] handleSubmit called, formMode: ${formMode}, username: ${formUsername}`);
       setError("");
       setLoading(true);
 
@@ -965,8 +976,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       }
     };
 
-    const handleWeb3Auth = () => handleAuth("web3");
-
     const handleWebAuthnAuth = () => {
       if (!core?.hasPlugin("webauthn")) {
         setError("WebAuthn is not supported in your browser");
@@ -974,8 +983,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       }
       setAuthView("webauthn-username");
     };
-
-    const handleNostrAuth = () => handleAuth("nostr");
 
     const handleZkProofAuth = () => {
       if (!core?.hasPlugin("zkproof")) {

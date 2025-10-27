@@ -24,12 +24,12 @@ export async function shogunConnector(options) {
     }
     // Wait for core to initialize (plugins registration, etc.)
     try {
-        if (typeof core.initialize === 'function') {
-            await core.initialize();
-        }
+        await core.initialize();
+        console.log(`[DEBUG] ShogunConnector: ShogunCore initialized`);
     }
     catch (error) {
         console.error("Error initializing ShogunCore:", error);
+        console.error(`[DEBUG] ShogunConnector: Error initializing ShogunCore: ${error}`);
     }
     const setProvider = (provider) => {
         var _a;
