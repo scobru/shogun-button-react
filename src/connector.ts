@@ -10,6 +10,7 @@ export async function shogunConnector(
   const {
     gunInstance,
     gunOptions,
+    transport,
     appName,
     timeouts,
     webauthn,
@@ -31,7 +32,19 @@ export async function shogunConnector(
 
   let core: ShogunCore | null = null;
 
-  if (gunInstance !== undefined) {
+  // Priority: transport > gunInstance > gunOptions
+  if (transport !== undefined) {
+    // Use new transport layer configuration
+    core = new ShogunCore({
+      transport: transport,
+      webauthn,
+      nostr,
+      web3,
+      zkproof,
+      timeouts,
+    }) as ShogunCore;
+  } else if (gunInstance !== undefined) {
+    // Use existing Gun instance (backward compatibility)
     core = new ShogunCore({
       gunInstance: gunInstance,
       webauthn,
@@ -41,6 +54,7 @@ export async function shogunConnector(
       timeouts,
     }) as ShogunCore;
   } else {
+    // Use Gun options (backward compatibility)
     core = new ShogunCore({
       gunOptions: gunOptions,
       webauthn,

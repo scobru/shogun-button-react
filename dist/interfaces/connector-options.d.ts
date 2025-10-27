@@ -1,4 +1,9 @@
 import { ShogunCore, IGunInstance } from "shogun-core";
+export interface TransportConfig {
+    type: "gun" | "sqlite" | "postgresql" | "mongodb" | "custom";
+    options?: any;
+    customTransport?: any;
+}
 export interface ShogunConnectorOptions {
     appName: string;
     appDescription?: string;
@@ -11,6 +16,7 @@ export interface ShogunConnectorOptions {
     darkMode?: boolean;
     gunInstance?: IGunInstance;
     gunOptions?: any;
+    transport?: TransportConfig;
     timeouts?: {
         login?: number;
         signup?: number;

@@ -1,8 +1,21 @@
 import { ShogunCore } from "shogun-core";
 export async function shogunConnector(options) {
-    const { gunInstance, gunOptions, appName, timeouts, webauthn, nostr, web3, zkproof, showWebauthn, showNostr, showMetamask, showZkProof, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
+    const { gunInstance, gunOptions, transport, appName, timeouts, webauthn, nostr, web3, zkproof, showWebauthn, showNostr, showMetamask, showZkProof, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, ...restOptions } = options;
     let core = null;
-    if (gunInstance !== undefined) {
+    // Priority: transport > gunInstance > gunOptions
+    if (transport !== undefined) {
+        // Use new transport layer configuration
+        core = new ShogunCore({
+            transport: transport,
+            webauthn,
+            nostr,
+            web3,
+            zkproof,
+            timeouts,
+        });
+    }
+    else if (gunInstance !== undefined) {
+        // Use existing Gun instance (backward compatibility)
         core = new ShogunCore({
             gunInstance: gunInstance,
             webauthn,
@@ -13,6 +26,7 @@ export async function shogunConnector(options) {
         });
     }
     else {
+        // Use Gun options (backward compatibility)
         core = new ShogunCore({
             gunOptions: gunOptions,
             webauthn,

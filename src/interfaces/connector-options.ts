@@ -1,5 +1,12 @@
 import { ShogunCore, IGunInstance } from "shogun-core";
 
+// Transport layer configuration interface
+export interface TransportConfig {
+  type: "gun" | "sqlite" | "postgresql" | "mongodb" | "custom";
+  options?: any;
+  customTransport?: any;
+}
+
 
 export interface ShogunConnectorOptions {
   // App information
@@ -18,6 +25,9 @@ export interface ShogunConnectorOptions {
   gunInstance?: IGunInstance;
 
   gunOptions?: any;
+
+  // Transport layer configuration (new in v5.0.0)
+  transport?: TransportConfig;
 
   timeouts?: {
     login?: number;

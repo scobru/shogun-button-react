@@ -2,7 +2,7 @@
 
 A comprehensive React component library for seamless integration of Shogun authentication into your applications. This library provides a simple yet powerful way to add multi-method authentication, account management, and real-time data synchronization to your React applications.
 
-> **Version 4.0.0** - Compatible with shogun-core ^4.0.0
+> **Version 4.4.0** - Compatible with shogun-core ^5.0.0
 
 ## ✨ Features
 
@@ -14,11 +14,13 @@ A comprehensive React component library for seamless integration of Shogun authe
 - 🌍 **TypeScript Support** - Full type safety and IntelliSense support
 - 🔌 **Plugin System** - Advanced Gun operations with custom hooks
 - 📊 **Real-time Data** - Reactive data synchronization with RxJS observables
+- ✅ **Robust Foundation** - Built on shogun-core v5.0.0 with 99.86% test coverage
+- 🗄️ **Flexible Storage** - Support for GunDB, SQLite, PostgreSQL, MongoDB via TransportLayer
 
 ## 📦 Requirements
 
 - **React**: ^18.0.0
-- **shogun-core**: ^4.0.0
+- **shogun-core**: ^5.0.0
 - **Node.js**: ≥18
 
 ## 🚀 Quick Start
@@ -104,7 +106,7 @@ const { core, options } = shogunConnector({
   showNostr: true,
   showZkProof: true,
 
-  // Network configuration
+  // Network configuration (backward compatible)
   peers: [
     "https://gun-manhattan.herokuapp.com/gun"
   ],
@@ -120,6 +122,51 @@ const { core, options } = shogunConnector({
   enableConnectionMonitoring: true,
   defaultPageSize: 20,
   connectionTimeout: 10000,
+});
+```
+
+### Advanced Transport Layer Configuration (New in v5.0.0)
+
+```tsx
+const { core, options } = shogunConnector({
+  appName: "My App",
+
+  // Use new transport layer system
+  transport: {
+    type: "gun", // or "sqlite", "postgresql", "mongodb", "custom"
+    options: {
+      peers: ["https://gun-manhattan.herokuapp.com/gun"],
+      // Additional transport-specific options
+    }
+  },
+
+  // Alternative: Use SQLite for local development
+  transport: {
+    type: "sqlite",
+    options: {
+      filename: "./my-app.db",
+      // SQLite-specific options
+    }
+  },
+
+  // Alternative: Use PostgreSQL for production
+  transport: {
+    type: "postgresql",
+    options: {
+      host: "localhost",
+      port: 5432,
+      database: "myapp",
+      username: "user",
+      password: "password",
+      // PostgreSQL-specific options
+    }
+  },
+
+  // Authentication methods
+  showMetamask: true,
+  showWebauthn: true,
+  showNostr: true,
+  showZkProof: true,
 });
 ```
 
@@ -602,10 +649,18 @@ interface ShogunConnectorOptions {
   showNostr?: boolean;
   darkMode?: boolean;
 
-  // Network configuration
+  // Network configuration (backward compatible)
   peers?: string[];
   authToken?: string;
   gunInstance?: IGunInstance<any>;
+  gunOptions?: any;
+
+  // Transport layer configuration (new in v5.0.0)
+  transport?: {
+    type: "gun" | "sqlite" | "postgresql" | "mongodb" | "custom";
+    options?: any;
+    customTransport?: any;
+  };
 
   // Timeouts and provider configs
   timeouts?: {
