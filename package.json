@@ -1,7 +1,7 @@
 {
   "name": "shogun-button-react",
   "description": "Shogun connector button",
-  "version": "6.0.9",
+  "version": "6.0.10",
   "files": [
     "dist",
     "src/styles/index.css"
@@ -20,7 +20,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
+      "import": "./dist/index.esm.js",
       "default": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
@@ -29,7 +29,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc && webpack --mode production && copyfiles -u 1 \"src/styles/index.css\" dist",
+    "build": "tsc && webpack --mode production && copyfiles -u 1 \"src/styles/index.css\" dist && node scripts/make-esm.mjs",
     "build:tsc": "tsc",
     "build:webpack": "webpack --mode production",
     "dev": "tsc --watch",
