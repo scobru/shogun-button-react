@@ -1,4 +1,4 @@
-import { ShogunCore } from "shogun-core";
+import { ShogunCore, Gun, quickStart } from "shogun-core";
 import {
   ShogunConnectorOptions,
   ShogunConnectorResult,
@@ -10,7 +10,6 @@ export async function shogunConnector(
   const {
     gunInstance,
     gunOptions,
-    transport,
     appName,
     timeouts,
     webauthn,
@@ -27,54 +26,66 @@ export async function shogunConnector(
     defaultPageSize = 20,
     connectionTimeout = 10000,
     debounceInterval = 100,
+    useQuickStart = false,
     ...restOptions
   } = options;
 
   let core: ShogunCore | null = null;
+  let gun: any = null;
 
-  // Priority: transport > gunInstance > gunOptions
-  if (transport !== undefined) {
-    // Use new transport layer configuration
-    core = new ShogunCore({
-      transport: transport,
-      webauthn,
-      nostr,
-      web3,
-      zkproof,
-      timeouts,
-    }) as ShogunCore;
-  } else if (gunInstance !== undefined) {
-    // Use existing Gun instance (backward compatibility)
-    core = new ShogunCore({
-      gunInstance: gunInstance,
-      webauthn,
-      nostr,
-      web3,
-      zkproof,
-      timeouts,
-    }) as ShogunCore;
+  // Create Gun instance if not provided
+  if (!gunInstance) {
+    if (gunOptions) {
+      gun = Gun(gunOptions);
+    } else {
+      // Default Gun configuration
+      gun = Gun({
+        peers: ["https://shogunnode.scobrudot.dev/gun"],
+        radisk: false,
+        localStorage: false,
+      });
+    }
   } else {
-    // Use Gun options (backward compatibility)
-    core = new ShogunCore({
-      gunOptions: gunOptions,
-      webauthn,
-      nostr,
-      web3,
-      zkproof,
-      timeouts,
-    }) as ShogunCore;
+    gun = gunInstance;
   }
 
-  // Wait for core to initialize (plugins registration, etc.)
-  try {
-    await core.initialize();
-    console.log(`[DEBUG] ShogunConnector: ShogunCore initialized`);
-  } catch (error) {
-    console.error("Error initializing ShogunCore:", error);
-    console.error(
-      `[DEBUG] ShogunConnector: Error initializing ShogunCore: ${error}`
-    );
+  // Use quickStart for simplified API if requested
+  if (useQuickStart) {
+    const quickStartInstance = quickStart(gun, appName || "shogun-app");
+    await quickStartInstance.init();
+    
+    return {
+      core: quickStartInstance as any, // Type assertion for compatibility
+      options,
+      setProvider: () => false, // Not applicable for quickStart
+      getCurrentProviderUrl: () => null,
+      registerPlugin: () => false,
+      hasPlugin: () => false,
+      gunPlugin: null,
+    };
   }
+
+  // Create ShogunCore with gunInstance (required in v2.0.0)
+  core = new ShogunCore({
+    gunInstance: gun,
+    webauthn: webauthn?.enabled ? {
+      enabled: true,
+      rpName: appName || "Shogun App",
+      rpId: typeof window !== "undefined" ? window.location.hostname : "localhost",
+    } : undefined,
+    web3: web3?.enabled ? { enabled: true } : undefined,
+    nostr: nostr?.enabled ? { enabled: true } : undefined,
+    zkproof: zkproof?.enabled ? {
+      enabled: true,
+      defaultGroupId: zkproof.defaultGroupId || "shogun-users",
+    } : undefined,
+    timeouts,
+    silent: false, // Enable console logs for debugging
+  });
+
+  // Note: ShogunCore v2.0.0 initializes automatically in constructor
+  // No need to call initialize() separately
+  console.log(`[DEBUG] ShogunConnector: ShogunCore initialized with gunInstance`);
 
   const setProvider = (provider: any): boolean => {
     if (!core) {

@@ -2,7 +2,7 @@
 
 A comprehensive React component library for seamless integration of Shogun authentication into your applications. This library provides a simple yet powerful way to add multi-method authentication, account management, and real-time data synchronization to your React applications.
 
-> **Version 4.4.0** - Compatible with shogun-core ^5.0.0
+> **Version 5.0.0** - Compatible with shogun-core ^2.0.0
 
 ## ✨ Features
 
@@ -20,7 +20,7 @@ A comprehensive React component library for seamless integration of Shogun authe
 ## 📦 Requirements
 
 - **React**: ^18.0.0
-- **shogun-core**: ^5.0.0
+- **shogun-core**: ^2.0.0
 - **Node.js**: ≥18
 
 ## 🚀 Quick Start

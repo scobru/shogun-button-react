@@ -1,9 +1,4 @@
 import { ShogunCore, IGunInstance } from "shogun-core";
-export interface TransportConfig {
-    type: "gun" | "sqlite" | "postgresql" | "mongodb" | "custom";
-    options?: any;
-    customTransport?: any;
-}
 export interface ShogunConnectorOptions {
     appName: string;
     appDescription?: string;
@@ -16,7 +11,7 @@ export interface ShogunConnectorOptions {
     darkMode?: boolean;
     gunInstance?: IGunInstance;
     gunOptions?: any;
-    transport?: TransportConfig;
+    useQuickStart?: boolean;
     timeouts?: {
         login?: number;
         signup?: number;
@@ -24,6 +19,8 @@ export interface ShogunConnectorOptions {
     };
     webauthn?: {
         enabled?: boolean;
+        rpName?: string;
+        rpId?: string;
     };
     nostr?: {
         enabled?: boolean;
@@ -34,6 +31,8 @@ export interface ShogunConnectorOptions {
     zkproof?: {
         enabled?: boolean;
         defaultGroupId?: string;
+        deterministic?: boolean;
+        minEntropy?: number;
     };
     enableGunDebug?: boolean;
     enableConnectionMonitoring?: boolean;

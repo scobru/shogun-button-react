@@ -1,9 +1,9 @@
 import React from "react";
-import { ShogunCore } from "shogun-core";
+import { ShogunCore, QuickStart } from "shogun-core";
 import { Observable } from "rxjs";
 import "../styles/index.css";
 type ShogunContextType = {
-    core: ShogunCore | null;
+    core: ShogunCore | QuickStart | null;
     options: any;
     isLoggedIn: boolean;
     userPub: string | null;
@@ -25,7 +25,7 @@ type ShogunContextType = {
 export declare const useShogun: () => ShogunContextType;
 type ShogunButtonProviderProps = {
     children: React.ReactNode;
-    core: ShogunCore;
+    core: ShogunCore | QuickStart;
     options: any;
     onLoginSuccess?: (data: {
         userPub: string;

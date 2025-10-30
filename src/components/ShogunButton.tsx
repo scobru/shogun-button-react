@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { ShogunCore, WebauthnPlugin } from "shogun-core";
+import { ShogunCore, WebauthnPlugin, QuickStart } from "shogun-core";
 import { Observable } from "rxjs";
 
 import "../styles/index.css";
@@ -29,9 +29,19 @@ interface AuthResult {
   redirectUrl?: string;
 }
 
+// Helper type to check if core is ShogunCore
+function isShogunCore(core: any): core is ShogunCore {
+  return core && typeof core.isLoggedIn === 'function' && typeof core.gun !== 'undefined';
+}
+
+// Helper type to check if core is QuickStart
+function isQuickStart(core: any): core is QuickStart {
+  return core && typeof core.api !== 'undefined' && typeof core.database !== 'undefined';
+}
+
 // Context type for ShogunProvider
 type ShogunContextType = {
-  core: ShogunCore | null;
+  core: ShogunCore | QuickStart | null;
   options: any; // Allow any options for flexibility
   isLoggedIn: boolean;
   userPub: string | null;
@@ -52,7 +62,6 @@ type ShogunContextType = {
   importGunPair: (pairData: string, password?: string) => Promise<boolean>;
 
   gunPlugin: null;
-
 
   // Metodi di utilità
   put: (path: string, data: any) => Promise<void>;
@@ -91,7 +100,7 @@ export const useShogun = () => useContext(ShogunContext);
 // Props for the provider component
 type ShogunButtonProviderProps = {
   children: React.ReactNode;
-  core: ShogunCore;
+  core: ShogunCore | QuickStart;
   options: any;
   onLoginSuccess?: (data: {
     userPub: string;
@@ -128,13 +137,29 @@ export function ShogunButtonProvider({
     if (!core) return;
 
     // Verifichiamo se l'utente è già loggato all'inizializzazione
-    if (core.isLoggedIn()) {
-      const pub = core.gun.user()?.is?.pub;
-      if (pub) {
-        setIsLoggedIn(true);
-        setUserPub(pub);
-        setUsername(pub.slice(0, 8) + "...");
+    let isLoggedIn = false;
+    let pub: string | null = null;
+
+    if (isShogunCore(core)) {
+      isLoggedIn = core.isLoggedIn();
+      if (isLoggedIn) {
+        pub = core.gun.user()?.is?.pub;
       }
+    } else if (isQuickStart(core)) {
+      // QuickStart doesn't have built-in login state, so we check sessionStorage
+      const pair = sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair");
+      isLoggedIn = !!pair;
+      if (isLoggedIn) {
+        // Try to get user info from the database
+        const userData = core.database.getCurrentUser();
+        pub = userData?.pub || null;
+      }
+    }
+
+    if (isLoggedIn && pub) {
+      setIsLoggedIn(true);
+      setUserPub(pub);
+      setUsername(pub.slice(0, 8) + "...");
     }
 
     // Poiché il metodo 'on' non esiste su ShogunCore,
@@ -169,7 +194,16 @@ export function ShogunButtonProvider({
         case "password":
           username = args[0];
           console.log(`[DEBUG] ShogunButton: Calling core.login for username: ${username}`);
-          result = await core.login(args[0], args[1]);
+          
+          if (isShogunCore(core)) {
+            result = await core.login(args[0], args[1]);
+          } else if (isQuickStart(core)) {
+            // Use QuickStart database directly
+            result = await core.database.login(args[0], args[1]);
+          } else {
+            throw new Error("Unsupported core type");
+          }
+          
           console.log(`[DEBUG] ShogunButton: core.login result:`, result);
           break;
         case "pair":
@@ -179,78 +213,101 @@ export function ShogunButtonProvider({
             throw new Error("Invalid pair data provided");
           }
 
-          result = await new Promise((resolve, reject) => {
-            core.gun.user().auth(pair, (ack: any) => {
-              if (ack.err) {
-                reject(new Error(`Pair authentication failed: ${ack.err}`));
-                return;
-              }
+          if (isShogunCore(core)) {
+            result = await new Promise((resolve, reject) => {
+              core.gun.user().auth(pair, (ack: any) => {
+                if (ack.err) {
+                  reject(new Error(`Pair authentication failed: ${ack.err}`));
+                  return;
+                }
 
-              const pub = ack.pub || pair.pub;
-              const alias = ack.alias || `user_${pub?.substring(0, 8)}`;
+                const pub = ack.pub || pair.pub;
+                const alias = ack.alias || `user_${pub?.substring(0, 8)}`;
 
-              resolve({
-                success: true,
-                userPub: pub,
-                alias: alias,
-                method: "pair",
-              } as AuthResult);
+                resolve({
+                  success: true,
+                  userPub: pub,
+                  alias: alias,
+                  method: "pair",
+                } as AuthResult);
+              });
             });
-          });
+          } else {
+            throw new Error("Pair authentication not supported with QuickStart");
+          }
 
           username = (result as any).alias;
           authMethod = "pair";
           break;
         case "webauthn":
           username = args[0];
-          const webauthn: any = core.getPlugin("webauthn");
-          if (!webauthn) throw new Error("WebAuthn plugin not available");
-          result = await webauthn.login(username);
+          if (isShogunCore(core)) {
+            const webauthn: any = core.getPlugin("webauthn");
+            if (!webauthn) throw new Error("WebAuthn plugin not available");
+            result = await webauthn.login(username);
+          } else {
+            throw new Error("WebAuthn not supported with QuickStart");
+          }
           break;
         case "web3":
-          const web3: any = core.getPlugin("web3");
-          if (!web3) throw new Error("Web3 plugin not available");
-          const connectionResult = await web3.connectMetaMask();
-          if (!connectionResult.success || !connectionResult.address) {
-            throw new Error(
-              connectionResult.error || "Failed to connect wallet."
-            );
+          if (isShogunCore(core)) {
+            const web3: any = core.getPlugin("web3");
+            if (!web3) throw new Error("Web3 plugin not available");
+            const connectionResult = await web3.connectMetaMask();
+            if (!connectionResult.success || !connectionResult.address) {
+              throw new Error(
+                connectionResult.error || "Failed to connect wallet."
+              );
+            }
+            username = connectionResult.address;
+            result = await web3.login(connectionResult.address);
+          } else {
+            throw new Error("Web3 not supported with QuickStart");
           }
-          username = connectionResult.address;
-          result = await web3.login(connectionResult.address);
           break;
         case "nostr":
-          const nostr: any = core.getPlugin("nostr");
-          if (!nostr) throw new Error("Nostr plugin not available");
-          const nostrResult = await nostr.connectBitcoinWallet();
-          if (!nostrResult || !nostrResult.success) {
-            throw new Error(
-              nostrResult?.error || "Connessione al wallet Bitcoin fallita"
-            );
+          if (isShogunCore(core)) {
+            const nostr: any = core.getPlugin("nostr");
+            if (!nostr) throw new Error("Nostr plugin not available");
+            const nostrResult = await nostr.connectBitcoinWallet();
+            if (!nostrResult || !nostrResult.success) {
+              throw new Error(
+                nostrResult?.error || "Connessione al wallet Bitcoin fallita"
+              );
+            }
+            const pubkey = nostrResult.address;
+            if (!pubkey) throw new Error("Nessuna chiave pubblica ottenuta");
+            username = pubkey;
+            result = await nostr.login(pubkey);
+          } else {
+            throw new Error("Nostr not supported with QuickStart");
           }
-          const pubkey = nostrResult.address;
-          if (!pubkey) throw new Error("Nessuna chiave pubblica ottenuta");
-          username = pubkey;
-          result = await nostr.login(pubkey);
           break;
         case "zkproof":
           const trapdoor = args[0];
           if (!trapdoor || typeof trapdoor !== "string") {
             throw new Error("Invalid trapdoor provided");
           }
-          const zkproof: any = core.getPlugin("zkproof");
-          if (!zkproof) throw new Error("ZK-Proof plugin not available");
-          const zkLoginResult: any = await zkproof.login(trapdoor);
-          result = zkLoginResult;
-          username = zkLoginResult.username || zkLoginResult.alias || `zk_${(zkLoginResult.userPub || "").slice(0, 16)}`;
-          authMethod = "zkproof";
+          if (isShogunCore(core)) {
+            const zkproof: any = core.getPlugin("zkproof");
+            if (!zkproof) throw new Error("ZK-Proof plugin not available");
+            const zkLoginResult: any = await zkproof.login(trapdoor);
+            result = zkLoginResult;
+            username = zkLoginResult.username || zkLoginResult.alias || `zk_${(zkLoginResult.userPub || "").slice(0, 16)}`;
+            authMethod = "zkproof";
+          } else {
+            throw new Error("ZK-Proof not supported with QuickStart");
+          }
           break;
         default:
           throw new Error("Unsupported login method");
       }
 
       if (result.success) {
-        const userPub = result.userPub || core.gun.user()?.is?.pub || "";
+        let userPub = result.userPub || "";
+        if (!userPub && isShogunCore(core)) {
+          userPub = core.gun.user()?.is?.pub || "";
+        }
         const displayName =
           result.alias || username || userPub.slice(0, 8) + "...";
 
@@ -292,10 +349,17 @@ export function ShogunButtonProvider({
           }
           console.log(`[DEBUG] ShogunButton: Calling core.signUp for username: ${username}`);
           console.log(`[DEBUG] ShogunButton: core object:`, core);
-          console.log(`[DEBUG] ShogunButton: core.signUp exists:`, typeof core?.signUp);
           try {
             console.log(`[DEBUG] ShogunButton: About to call core.signUp...`);
-            result = await core.signUp(args[0], args[1]);
+            
+            if (isShogunCore(core)) {
+              result = await core.signUp(args[0], args[1]);
+            } else if (isQuickStart(core)) {
+              result = await core.database.signUp(args[0], args[1]);
+            } else {
+              throw new Error("Unsupported core type");
+            }
+            
             console.log(`[DEBUG] ShogunButton: core.signUp completed successfully`);
             console.log(`[DEBUG] ShogunButton: core.signUp result:`, result);
           } catch (error) {
@@ -305,51 +369,70 @@ export function ShogunButtonProvider({
           break;
         case "webauthn":
           username = args[0];
-          const webauthn: WebauthnPlugin = core.getPlugin("webauthn");
-          if (!webauthn) throw new Error("WebAuthn plugin not available");
-          result = await webauthn.signUp(username, { generateSeedPhrase: true });
+          if (isShogunCore(core)) {
+            const webauthn: WebauthnPlugin = core.getPlugin("webauthn");
+            if (!webauthn) throw new Error("WebAuthn plugin not available");
+            result = await webauthn.signUp(username, { generateSeedPhrase: true });
+          } else {
+            throw new Error("WebAuthn not supported with QuickStart");
+          }
           break;
         case "web3":
-          const web3: any = core.getPlugin("web3");
-          if (!web3) throw new Error("Web3 plugin not available");
-          const connectionResult = await web3.connectMetaMask();
-          if (!connectionResult.success || !connectionResult.address) {
-            throw new Error(
-              connectionResult.error || "Failed to connect wallet."
-            );
+          if (isShogunCore(core)) {
+            const web3: any = core.getPlugin("web3");
+            if (!web3) throw new Error("Web3 plugin not available");
+            const connectionResult = await web3.connectMetaMask();
+            if (!connectionResult.success || !connectionResult.address) {
+              throw new Error(
+                connectionResult.error || "Failed to connect wallet."
+              );
+            }
+            username = connectionResult.address;
+            result = await web3.signUp(connectionResult.address);
+          } else {
+            throw new Error("Web3 not supported with QuickStart");
           }
-          username = connectionResult.address;
-          result = await web3.signUp(connectionResult.address);
           break;
         case "nostr":
-          const nostr: any = core.getPlugin("nostr");
-          if (!nostr) throw new Error("Nostr plugin not available");
-          const nostrResult = await nostr.connectBitcoinWallet();
-          if (!nostrResult || !nostrResult.success) {
-            throw new Error(
-              nostrResult?.error || "Connessione al wallet Bitcoin fallita"
-            );
+          if (isShogunCore(core)) {
+            const nostr: any = core.getPlugin("nostr");
+            if (!nostr) throw new Error("Nostr plugin not available");
+            const nostrResult = await nostr.connectBitcoinWallet();
+            if (!nostrResult || !nostrResult.success) {
+              throw new Error(
+                nostrResult?.error || "Connessione al wallet Bitcoin fallita"
+              );
+            }
+            const pubkey = nostrResult.address;
+            if (!pubkey) throw new Error("Nessuna chiave pubblica ottenuta");
+            username = pubkey;
+            result = await nostr.signUp(pubkey);
+          } else {
+            throw new Error("Nostr not supported with QuickStart");
           }
-          const pubkey = nostrResult.address;
-          if (!pubkey) throw new Error("Nessuna chiave pubblica ottenuta");
-          username = pubkey;
-          result = await nostr.signUp(pubkey);
           break;
         case "zkproof":
-          const zkproofPlugin: any = core.getPlugin("zkproof");
-          if (!zkproofPlugin) throw new Error("ZK-Proof plugin not available");
-          const seed = args[0]; // Optional seed
-          const zkSignupResult: any = await zkproofPlugin.signUp(seed);
-          result = zkSignupResult;
-          username = zkSignupResult.username || zkSignupResult.alias || `zk_${(zkSignupResult.userPub || "").slice(0, 16)}`;
-          authMethod = "zkproof";
+          if (isShogunCore(core)) {
+            const zkproofPlugin: any = core.getPlugin("zkproof");
+            if (!zkproofPlugin) throw new Error("ZK-Proof plugin not available");
+            const seed = args[0]; // Optional seed
+            const zkSignupResult: any = await zkproofPlugin.signUp(seed);
+            result = zkSignupResult;
+            username = zkSignupResult.username || zkSignupResult.alias || `zk_${(zkSignupResult.userPub || "").slice(0, 16)}`;
+            authMethod = "zkproof";
+          } else {
+            throw new Error("ZK-Proof not supported with QuickStart");
+          }
           break;
         default:
           throw new Error("Unsupported signup method");
       }
 
       if (result.success) {
-        const userPub = result.userPub || core.gun.user()?.is?.pub || "";
+        let userPub = result.userPub || "";
+        if (!userPub && isShogunCore(core)) {
+          userPub = core.gun.user()?.is?.pub || "";
+        }
         const displayName =
           result.alias || username || userPub.slice(0, 8) + "...";
 
@@ -375,13 +458,18 @@ export function ShogunButtonProvider({
 
   // Logout
   const logout = () => {
-    core.logout();
+    if (isShogunCore(core)) {
+      core.logout();
+    } else if (isQuickStart(core)) {
+      // QuickStart doesn't have built-in logout, so we clear session storage
+      sessionStorage.removeItem("gun/pair");
+      sessionStorage.removeItem("gun/session");
+      sessionStorage.removeItem("pair");
+    }
+    
     setIsLoggedIn(false);
     setUserPub(null);
     setUsername(null);
-    sessionStorage.removeItem("gun/pair");
-    sessionStorage.removeItem("gun/session");
-    sessionStorage.removeItem("pair");
   };
 
   // Implementazione del metodo setProvider
@@ -419,11 +507,23 @@ export function ShogunButtonProvider({
   };
 
   const hasPlugin = (name: string): boolean => {
-    return core ? core.hasPlugin(name) : false;
+    if (isShogunCore(core)) {
+      return core.hasPlugin(name);
+    } else if (isQuickStart(core)) {
+      // QuickStart doesn't have plugins
+      return false;
+    }
+    return false;
   };
 
   const getPlugin = <T,>(name: string): T | undefined => {
-    return core ? core.getPlugin<T>(name) : undefined;
+    if (isShogunCore(core)) {
+      return core.getPlugin<T>(name);
+    } else if (isQuickStart(core)) {
+      // QuickStart doesn't have plugins
+      return undefined;
+    }
+    return undefined;
   };
 
   // Export Gun pair functionality
@@ -530,26 +630,56 @@ export function ShogunButtonProvider({
       setProvider,
       gunPlugin,
       put: async (path: string, data: any) => {
-        if (!core?.gun) throw new Error('Gun instance not available');
-        return new Promise((resolve, reject) => {
-          core.gun.get(path).put(data, (ack: any) => {
-            if (ack.err) reject(new Error(ack.err));
-            else resolve();
+        if (isShogunCore(core)) {
+          if (!core.gun) throw new Error('Gun instance not available');
+          return new Promise((resolve, reject) => {
+            core.gun.get(path).put(data, (ack: any) => {
+              if (ack.err) reject(new Error(ack.err));
+              else resolve();
+            });
           });
-        });
+        } else if (isQuickStart(core)) {
+          if (!core.database.gun) throw new Error('Gun instance not available');
+          return new Promise((resolve, reject) => {
+            core.database.gun.get(path).put(data, (ack: any) => {
+              if (ack.err) reject(new Error(ack.err));
+              else resolve();
+            });
+          });
+        } else {
+          throw new Error('Core not available');
+        }
       },
       get: (path: string) => {
-        if (!core?.gun) return null;
-        return core.gun.get(path);
+        if (isShogunCore(core)) {
+          if (!core.gun) return null;
+          return core.gun.get(path);
+        } else if (isQuickStart(core)) {
+          if (!core.database.gun) return null;
+          return core.database.gun.get(path);
+        }
+        return null;
       },
       remove: async (path: string) => {
-        if (!core?.gun) throw new Error('Gun instance not available');
-        return new Promise((resolve, reject) => {
-          core.gun.get(path).put(null, (ack: any) => {
-            if (ack.err) reject(new Error(ack.err));
-            else resolve();
+        if (isShogunCore(core)) {
+          if (!core.gun) throw new Error('Gun instance not available');
+          return new Promise((resolve, reject) => {
+            core.gun.get(path).put(null, (ack: any) => {
+              if (ack.err) reject(new Error(ack.err));
+              else resolve();
+            });
           });
-        });
+        } else if (isQuickStart(core)) {
+          if (!core.database.gun) throw new Error('Gun instance not available');
+          return new Promise((resolve, reject) => {
+            core.database.gun.get(path).put(null, (ack: any) => {
+              if (ack.err) reject(new Error(ack.err));
+              else resolve();
+            });
+          });
+        } else {
+          throw new Error('Core not available');
+        }
       },
     }),
     [
@@ -794,6 +924,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       options,
       exportGunPair,
       importGunPair,
+      hasPlugin,
     } = useShogun();
 
     // Form states
@@ -946,7 +1077,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             formPasswordConfirm
           );
           if (result && result.success) {
-            if (core?.db) {
+            if (isShogunCore(core) && core.db) {
               try {
                 const res = await core.db.setPasswordHintWithSecurity(
                   formUsername,
@@ -979,7 +1110,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     };
 
     const handleWebAuthnAuth = () => {
-      if (!core?.hasPlugin("webauthn")) {
+      if (!hasPlugin("webauthn")) {
         setError("WebAuthn is not supported in your browser");
         return;
       }
@@ -987,7 +1118,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     };
 
     const handleZkProofAuth = () => {
-      if (!core?.hasPlugin("zkproof")) {
+      if (!hasPlugin("zkproof")) {
         setError("ZK-Proof plugin not available");
         return;
       }
@@ -1041,17 +1172,18 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setError("");
       setLoading(true);
       try {
-        if (!core?.db) {
-          throw new Error("SDK not ready");
-        }
-        const result = await core.db.forgotPassword(formUsername, [
-          formSecurityAnswer,
-        ]);
-        if (result.success && result.hint) {
-          setRecoveredHint(result.hint);
-          setAuthView("showHint");
+        if (isShogunCore(core) && core.db) {
+          const result = await core.db.forgotPassword(formUsername, [
+            formSecurityAnswer,
+          ]);
+          if (result.success && result.hint) {
+            setRecoveredHint(result.hint);
+            setAuthView("showHint");
+          } else {
+            setError(result.error || "Could not recover hint.");
+          }
         } else {
-          setError(result.error || "Could not recover hint.");
+          setError("Password recovery not supported with QuickStart");
         }
       } catch (e: any) {
         setError(e.message || "An unexpected error occurred.");
@@ -1148,7 +1280,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     // Add buttons for both login and signup for alternative auth methods
     const renderAuthOptions = () => (
       <div className="shogun-auth-options">
-        {options.showMetamask !== false && core?.hasPlugin("web3") && (
+        {options.showMetamask !== false && hasPlugin("web3") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -1164,7 +1296,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </div>
         )}
 
-        {options.showWebauthn !== false && core?.hasPlugin("webauthn") && (
+        {options.showWebauthn !== false && hasPlugin("webauthn") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -1180,7 +1312,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </div>
         )}
 
-        {options.showNostr !== false && core?.hasPlugin("nostr") && (
+        {options.showNostr !== false && hasPlugin("nostr") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"
@@ -1194,7 +1326,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </div>
         )}
 
-        {options.showZkProof !== false && core?.hasPlugin("zkproof") && (
+        {options.showZkProof !== false && hasPlugin("zkproof") && (
           <div className="shogun-auth-option-group">
             <button
               type="button"

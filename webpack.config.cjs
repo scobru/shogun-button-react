@@ -46,6 +46,7 @@ module.exports = {
       buffer: require.resolve('buffer/'),
       stream: require.resolve('stream-browserify'),
       crypto: require.resolve('crypto-browserify'),
+      vm: require.resolve('vm-browserify'),
       process: require.resolve('process/browser.js'),
       util: require.resolve('util/'),
       assert: require.resolve('assert/'),

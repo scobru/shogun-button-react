@@ -1,13 +1,5 @@
 import { ShogunCore, IGunInstance } from "shogun-core";
 
-// Transport layer configuration interface
-export interface TransportConfig {
-  type: "gun" | "sqlite" | "postgresql" | "mongodb" | "custom";
-  options?: any;
-  customTransport?: any;
-}
-
-
 export interface ShogunConnectorOptions {
   // App information
   appName: string;
@@ -15,27 +7,32 @@ export interface ShogunConnectorOptions {
   appUrl?: string;
   appIcon?: string;
 
-  // Feature toggles
+  // Feature toggles for UI
   showMetamask?: boolean;
   showWebauthn?: boolean;
   showNostr?: boolean;
   showZkProof?: boolean;
   darkMode?: boolean;
 
+  // Gun instance configuration
   gunInstance?: IGunInstance;
-
   gunOptions?: any;
 
-  // Transport layer configuration (new in v5.0.0)
-  transport?: TransportConfig;
+  // Use simplified quickStart API instead of full ShogunCore
+  useQuickStart?: boolean;
 
+  // Timeouts
   timeouts?: {
     login?: number;
     signup?: number;
     operation?: number;
   };
+
+  // Plugin configurations (matching ShogunCoreConfig)
   webauthn?: {
     enabled?: boolean;
+    rpName?: string;
+    rpId?: string;
   };
   nostr?: {
     enabled?: boolean;
@@ -46,7 +43,11 @@ export interface ShogunConnectorOptions {
   zkproof?: {
     enabled?: boolean;
     defaultGroupId?: string;
+    deterministic?: boolean;
+    minEntropy?: number;
   };
+
+  // Legacy options (kept for backward compatibility)
   enableGunDebug?: boolean;
   enableConnectionMonitoring?: boolean;
   defaultPageSize?: number;
