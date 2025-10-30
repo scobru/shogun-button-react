@@ -1,7 +1,7 @@
 {
   "name": "shogun-button-react",
   "description": "Shogun connector button",
-  "version": "6.0.7",
+  "version": "6.0.8",
   "files": [
     "dist",
     "src/styles/index.css"
@@ -20,7 +20,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.js",
       "default": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
