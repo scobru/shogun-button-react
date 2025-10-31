@@ -1,7 +1,7 @@
 {
   "name": "shogun-button-react",
   "description": "Shogun connector button",
-  "version": "6.1.1",
+  "version": "6.2.0",
   "files": [
     "dist",
     "src/styles/index.css"
@@ -45,7 +45,7 @@
     "prettier": "^3.5.3",
     "process": "^0.11.10",
     "rxjs": "^7.8.2",
-    "shogun-core": "^6.1.1",
+    "shogun-core": "^6.2.0",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5"
   },
