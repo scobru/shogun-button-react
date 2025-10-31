@@ -10,8 +10,12 @@ export interface ShogunConnectorOptions {
     showZkProof?: boolean;
     darkMode?: boolean;
     gunInstance?: IGunInstance;
-    gunOptions?: any;
-    useQuickStart?: boolean;
+    crypto?: {
+        autoGenerateOnAuth?: boolean;
+    };
+    postAuth?: {
+        enabled?: boolean;
+    };
     timeouts?: {
         login?: number;
         signup?: number;

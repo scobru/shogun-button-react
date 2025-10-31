@@ -1241,9 +1241,10 @@ graceful-fs@^4.1.2, graceful-fs@^4.2.11, graceful-fs@^4.2.4:
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.2.11.tgz#4183e4e8bf08bb6e05bbb2f7d2e0c8f712ca40e3"
   integrity sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==
 
-"gun@git+https://github.com/amark/gun.git":
-  version "0.2020.1239"
-  resolved "git+https://github.com/amark/gun.git#58d0318f3dc0f512cf717fdcdb233da2177d73ca"
+gun@^0.2020.1241:
+  version "0.2020.1241"
+  resolved "https://registry.yarnpkg.com/gun/-/gun-0.2020.1241.tgz#a43de6faf046d2a9b89d1b532a9346b88a90f1ee"
+  integrity sha512-rmGqLuJj4fAuZ/0lddCvXHbENPkEnBOBYpq+kXHrwQ5RdNtQ5p0Io99lD1qUXMFmtwNacQ/iqo3VTmjmMyAYZg==
   dependencies:
     ws "^7.2.1"
   optionalDependencies:
@@ -2001,10 +2002,10 @@ shebang-regex@^3.0.0:
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-3.0.0.tgz#ae16f1644d873ecad843b0307b143362d4c42172"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
-shogun-core@^6.0.1:
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-6.0.1.tgz#053c80f5b117d1d3174718aa234859aeaab86a0c"
-  integrity sha512-EWZg/mk0xinOshEifAVGibhWdw9lkc1gKiYuawyyoB3PvLDXMyczL489PMhTZZf7rIKh6qgKzMGzeNLvP9JW3g==
+shogun-core@^6.2.1:
+  version "6.2.1"
+  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-6.2.1.tgz#a33a6da954454a68a38a42047264d2c4a3fa87bb"
+  integrity sha512-p6dEu8RhGmSTdaEGq9fvKVpFxEFQCuvDmF+Hbjph9KaLozc4LCWuiGWLNhJ1wUjUYjPrPVU8YGyMmOgrYTdGkQ==
   dependencies:
     "@hpke/chacha20poly1305" "^1.7.1"
     "@hpke/hybridkem-x-wing" "^0.6.1"
@@ -2021,8 +2022,9 @@ shogun-core@^6.0.1:
     buffer "^6.0.3"
     constants-browserify "^1.0.0"
     crypto-browserify "^3.12.0"
+    elliptic "^6.6.1"
     ethers "^6.13.5"
-    gun "git+https://github.com/amark/gun.git"
+    gun "^0.2020.1241"
     nostr-tools "^2.15.0"
     openpgp "^6.2.2"
     rxjs "^7.8.2"

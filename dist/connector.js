@@ -1,39 +1,9 @@
-import { ShogunCore, Gun, quickStart } from "shogun-core";
+import { ShogunCore } from "shogun-core";
 export async function shogunConnector(options) {
-    const { gunInstance, gunOptions, appName, timeouts, webauthn, nostr, web3, zkproof, showWebauthn, showNostr, showMetamask, showZkProof, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, useQuickStart = false, ...restOptions } = options;
+    const { gunInstance, appName, timeouts, webauthn, nostr, web3, zkproof, showWebauthn, showNostr, showMetamask, showZkProof, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, crypto, ...restOptions } = options;
     let core = null;
     let gun = null;
-    // Create Gun instance if not provided
-    if (!gunInstance) {
-        if (gunOptions) {
-            gun = Gun(gunOptions);
-        }
-        else {
-            // Default Gun configuration
-            gun = Gun({
-                peers: ["https://shogunnode.scobrudot.dev/gun"],
-                radisk: false,
-                localStorage: false,
-            });
-        }
-    }
-    else {
-        gun = gunInstance;
-    }
-    // Use quickStart for simplified API if requested
-    if (useQuickStart) {
-        const quickStartInstance = quickStart(gun, appName || "shogun-app");
-        await quickStartInstance.init();
-        return {
-            core: quickStartInstance, // Type assertion for compatibility
-            options,
-            setProvider: () => false, // Not applicable for quickStart
-            getCurrentProviderUrl: () => null,
-            registerPlugin: () => false,
-            hasPlugin: () => false,
-            gunPlugin: null,
-        };
-    }
+    gun = gunInstance;
     // Create ShogunCore with gunInstance (required in v2.0.0)
     core = new ShogunCore({
         gunInstance: gun,

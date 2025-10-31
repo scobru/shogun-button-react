@@ -5,7 +5,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { ShogunCore, WebauthnPlugin, QuickStart } from "shogun-core";
+import { ShogunCore, WebauthnPlugin } from "shogun-core";
 import { Observable } from "rxjs";
 
 import "../styles/index.css";
@@ -34,14 +34,9 @@ function isShogunCore(core: any): core is ShogunCore {
   return core && typeof core.isLoggedIn === 'function' && typeof core.gun !== 'undefined';
 }
 
-// Helper type to check if core is QuickStart
-function isQuickStart(core: any): core is QuickStart {
-  return core && typeof core.api !== 'undefined' && typeof core.database !== 'undefined';
-}
-
 // Context type for ShogunProvider
 type ShogunContextType = {
-  core: ShogunCore | QuickStart | null;
+  core: ShogunCore | null;
   options: any; // Allow any options for flexibility
   isLoggedIn: boolean;
   userPub: string | null;
@@ -100,7 +95,7 @@ export const useShogun = () => useContext(ShogunContext);
 // Props for the provider component
 type ShogunButtonProviderProps = {
   children: React.ReactNode;
-  core: ShogunCore | QuickStart;
+  core: ShogunCore;
   options: any;
   onLoginSuccess?: (data: {
     userPub: string;
@@ -145,15 +140,6 @@ export function ShogunButtonProvider({
       if (isLoggedIn) {
         pub = core.gun.user()?.is?.pub;
       }
-    } else if (isQuickStart(core)) {
-      // QuickStart doesn't have built-in login state, so we check sessionStorage
-      const pair = sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair");
-      isLoggedIn = !!pair;
-      if (isLoggedIn) {
-        // Try to get user info from the database
-        const userData = core.database.getCurrentUser();
-        pub = userData?.pub || null;
-      }
     }
 
     if (isLoggedIn && pub) {
@@ -197,9 +183,6 @@ export function ShogunButtonProvider({
           
           if (isShogunCore(core)) {
             result = await core.login(args[0], args[1]);
-          } else if (isQuickStart(core)) {
-            // Use QuickStart database directly
-            result = await core.database.login(args[0], args[1]);
           } else {
             throw new Error("Unsupported core type");
           }
@@ -233,7 +216,7 @@ export function ShogunButtonProvider({
               });
             });
           } else {
-            throw new Error("Pair authentication not supported with QuickStart");
+            throw new Error("Pair authentication requires ShogunCore");
           }
 
           username = (result as any).alias;
@@ -246,7 +229,7 @@ export function ShogunButtonProvider({
             if (!webauthn) throw new Error("WebAuthn plugin not available");
             result = await webauthn.login(username);
           } else {
-            throw new Error("WebAuthn not supported with QuickStart");
+            throw new Error("WebAuthn requires ShogunCore");
           }
           break;
         case "web3":
@@ -262,7 +245,7 @@ export function ShogunButtonProvider({
             username = connectionResult.address;
             result = await web3.login(connectionResult.address);
           } else {
-            throw new Error("Web3 not supported with QuickStart");
+            throw new Error("Web3 requires ShogunCore");
           }
           break;
         case "nostr":
@@ -280,7 +263,7 @@ export function ShogunButtonProvider({
             username = pubkey;
             result = await nostr.login(pubkey);
           } else {
-            throw new Error("Nostr not supported with QuickStart");
+            throw new Error("Nostr requires ShogunCore");
           }
           break;
         case "zkproof":
@@ -296,7 +279,7 @@ export function ShogunButtonProvider({
             username = zkLoginResult.username || zkLoginResult.alias || `zk_${(zkLoginResult.userPub || "").slice(0, 16)}`;
             authMethod = "zkproof";
           } else {
-            throw new Error("ZK-Proof not supported with QuickStart");
+            throw new Error("ZK-Proof requires ShogunCore");
           }
           break;
         default:
@@ -354,8 +337,6 @@ export function ShogunButtonProvider({
             
             if (isShogunCore(core)) {
               result = await core.signUp(args[0], args[1]);
-            } else if (isQuickStart(core)) {
-              result = await core.database.signUp(args[0], args[1]);
             } else {
               throw new Error("Unsupported core type");
             }
@@ -374,7 +355,7 @@ export function ShogunButtonProvider({
             if (!webauthn) throw new Error("WebAuthn plugin not available");
             result = await webauthn.signUp(username, { generateSeedPhrase: true });
           } else {
-            throw new Error("WebAuthn not supported with QuickStart");
+            throw new Error("WebAuthn requires ShogunCore");
           }
           break;
         case "web3":
@@ -390,7 +371,7 @@ export function ShogunButtonProvider({
             username = connectionResult.address;
             result = await web3.signUp(connectionResult.address);
           } else {
-            throw new Error("Web3 not supported with QuickStart");
+            throw new Error("Web3 requires ShogunCore");
           }
           break;
         case "nostr":
@@ -408,7 +389,7 @@ export function ShogunButtonProvider({
             username = pubkey;
             result = await nostr.signUp(pubkey);
           } else {
-            throw new Error("Nostr not supported with QuickStart");
+            throw new Error("Nostr requires ShogunCore");
           }
           break;
         case "zkproof":
@@ -421,7 +402,7 @@ export function ShogunButtonProvider({
             username = zkSignupResult.username || zkSignupResult.alias || `zk_${(zkSignupResult.userPub || "").slice(0, 16)}`;
             authMethod = "zkproof";
           } else {
-            throw new Error("ZK-Proof not supported with QuickStart");
+            throw new Error("ZK-Proof requires ShogunCore");
           }
           break;
         default:
@@ -460,11 +441,6 @@ export function ShogunButtonProvider({
   const logout = () => {
     if (isShogunCore(core)) {
       core.logout();
-    } else if (isQuickStart(core)) {
-      // QuickStart doesn't have built-in logout, so we clear session storage
-      sessionStorage.removeItem("gun/pair");
-      sessionStorage.removeItem("gun/session");
-      sessionStorage.removeItem("pair");
     }
     
     setIsLoggedIn(false);
@@ -509,9 +485,6 @@ export function ShogunButtonProvider({
   const hasPlugin = (name: string): boolean => {
     if (isShogunCore(core)) {
       return core.hasPlugin(name);
-    } else if (isQuickStart(core)) {
-      // QuickStart doesn't have plugins
-      return false;
     }
     return false;
   };
@@ -519,9 +492,6 @@ export function ShogunButtonProvider({
   const getPlugin = <T,>(name: string): T | undefined => {
     if (isShogunCore(core)) {
       return core.getPlugin<T>(name);
-    } else if (isQuickStart(core)) {
-      // QuickStart doesn't have plugins
-      return undefined;
     }
     return undefined;
   };
@@ -638,14 +608,6 @@ export function ShogunButtonProvider({
               else resolve();
             });
           });
-        } else if (isQuickStart(core)) {
-          if (!core.database.gun) throw new Error('Gun instance not available');
-          return new Promise((resolve, reject) => {
-            core.database.gun.get(path).put(data, (ack: any) => {
-              if (ack.err) reject(new Error(ack.err));
-              else resolve();
-            });
-          });
         } else {
           throw new Error('Core not available');
         }
@@ -654,9 +616,6 @@ export function ShogunButtonProvider({
         if (isShogunCore(core)) {
           if (!core.gun) return null;
           return core.gun.get(path);
-        } else if (isQuickStart(core)) {
-          if (!core.database.gun) return null;
-          return core.database.gun.get(path);
         }
         return null;
       },
@@ -665,14 +624,6 @@ export function ShogunButtonProvider({
           if (!core.gun) throw new Error('Gun instance not available');
           return new Promise((resolve, reject) => {
             core.gun.get(path).put(null, (ack: any) => {
-              if (ack.err) reject(new Error(ack.err));
-              else resolve();
-            });
-          });
-        } else if (isQuickStart(core)) {
-          if (!core.database.gun) throw new Error('Gun instance not available');
-          return new Promise((resolve, reject) => {
-            core.database.gun.get(path).put(null, (ack: any) => {
               if (ack.err) reject(new Error(ack.err));
               else resolve();
             });
@@ -1077,22 +1028,23 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             formPasswordConfirm
           );
           if (result && result.success) {
-            if (isShogunCore(core) && core.db) {
+            // Password hint functionality has been removed from shogun-core
+            // Users should store hints manually in their own data structures if needed
+            if (isShogunCore(core) && core.db && formHint) {
               try {
-                const res = await core.db.setPasswordHintWithSecurity(
-                  formUsername,
-                  formPassword,
-                  formHint,
-                  [formSecurityQuestion],
-                  [formSecurityAnswer]
-                );
-                if (!res?.success) {
-                  // Fallback to legacy hint storage to avoid losing the hint
-                  await core.db.setPasswordHint(formHint);
+                // Store hint manually in user data
+                const user = core.gun.user();
+                if (user && user.is) {
+                  core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
+                  if (formSecurityAnswer) {
+                    core.db.gun.get('users').get(formUsername).get('security').put({
+                      question: formSecurityQuestion,
+                      answer: formSecurityAnswer
+                    });
+                  }
                 }
-              } catch {
-                // Last-resort fallback
-                await core.db.setPasswordHint(formHint);
+              } catch (error) {
+                console.warn('Failed to store password hint:', error);
               }
             }
             setModalIsOpen(false);
@@ -1173,17 +1125,36 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setLoading(true);
       try {
         if (isShogunCore(core) && core.db) {
-          const result = await core.db.forgotPassword(formUsername, [
-            formSecurityAnswer,
-          ]);
-          if (result.success && result.hint) {
-            setRecoveredHint(result.hint);
-            setAuthView("showHint");
-          } else {
-            setError(result.error || "Could not recover hint.");
+          // Password recovery functionality has been removed from shogun-core
+          // Users should implement their own recovery logic using Gun's get operations
+          try {
+            const hintNode = await new Promise<string | null>((resolve) => {
+              core.db.gun.get('users').get(formUsername).get('hint').once((hint: any) => {
+                resolve(hint || null);
+              });
+            });
+
+            const securityNode = await new Promise<any>((resolve) => {
+              core.db.gun.get('users').get(formUsername).get('security').once((security: any) => {
+                resolve(security || null);
+              });
+            });
+
+            if (securityNode && securityNode.answer === formSecurityAnswer) {
+              if (hintNode) {
+                setRecoveredHint(hintNode);
+                setAuthView("showHint");
+              } else {
+                setError("No hint found for this user.");
+              }
+            } else {
+              setError("Security answer is incorrect.");
+            }
+          } catch (error: any) {
+            setError(error.message || "Could not recover hint.");
           }
         } else {
-          setError("Password recovery not supported with QuickStart");
+          setError("Password recovery requires ShogunCore");
         }
       } catch (e: any) {
         setError(e.message || "An unexpected error occurred.");

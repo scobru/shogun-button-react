@@ -83,3 +83,5 @@
  * @copyright Chen, Yi-Cyuan 2015-2018
  * @license MIT
  */
+
+//!opt && console.log("WHAT IS T?", JSON.stringify(t).length);

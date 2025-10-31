@@ -16,10 +16,14 @@ export interface ShogunConnectorOptions {
 
   // Gun instance configuration
   gunInstance?: IGunInstance;
-  gunOptions?: any;
+  
+  crypto?: {
+    autoGenerateOnAuth?: boolean;
+  };
 
-  // Use simplified quickStart API instead of full ShogunCore
-  useQuickStart?: boolean;
+  postAuth?: {
+    enabled?: boolean;
+  };
 
   // Timeouts
   timeouts?: {

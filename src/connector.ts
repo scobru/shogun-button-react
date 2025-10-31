@@ -1,4 +1,4 @@
-import { ShogunCore, Gun, quickStart } from "shogun-core";
+import { ShogunCore } from "shogun-core";
 import {
   ShogunConnectorOptions,
   ShogunConnectorResult,
@@ -9,7 +9,6 @@ export async function shogunConnector(
 ): Promise<ShogunConnectorResult> {
   const {
     gunInstance,
-    gunOptions,
     appName,
     timeouts,
     webauthn,
@@ -26,44 +25,14 @@ export async function shogunConnector(
     defaultPageSize = 20,
     connectionTimeout = 10000,
     debounceInterval = 100,
-    useQuickStart = false,
+    crypto,
     ...restOptions
   } = options;
 
   let core: ShogunCore | null = null;
   let gun: any = null;
 
-  // Create Gun instance if not provided
-  if (!gunInstance) {
-    if (gunOptions) {
-      gun = Gun(gunOptions);
-    } else {
-      // Default Gun configuration
-      gun = Gun({
-        peers: ["https://shogunnode.scobrudot.dev/gun"],
-        radisk: false,
-        localStorage: false,
-      });
-    }
-  } else {
-    gun = gunInstance;
-  }
-
-  // Use quickStart for simplified API if requested
-  if (useQuickStart) {
-    const quickStartInstance = quickStart(gun, appName || "shogun-app");
-    await quickStartInstance.init();
-    
-    return {
-      core: quickStartInstance as any, // Type assertion for compatibility
-      options,
-      setProvider: () => false, // Not applicable for quickStart
-      getCurrentProviderUrl: () => null,
-      registerPlugin: () => false,
-      hasPlugin: () => false,
-      gunPlugin: null,
-    };
-  }
+  gun = gunInstance;
 
   // Create ShogunCore with gunInstance (required in v2.0.0)
   core = new ShogunCore({
