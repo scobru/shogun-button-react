@@ -21,6 +21,8 @@ type ShogunContextType = {
     put: (path: string, data: any) => Promise<void>;
     get: (path: string) => any;
     remove: (path: string) => Promise<void>;
+    completePendingSignup: () => void;
+    hasPendingSignup: boolean;
 };
 export declare const useShogun: () => ShogunContextType;
 type ShogunButtonProviderProps = {

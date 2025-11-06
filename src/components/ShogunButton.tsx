@@ -62,6 +62,8 @@ type ShogunContextType = {
   put: (path: string, data: any) => Promise<void>;
   get: (path: string) => any;
   remove: (path: string) => Promise<void>;
+  completePendingSignup: () => void;
+  hasPendingSignup: boolean;
 };
 
 // Default context
@@ -84,6 +86,8 @@ const defaultShogunContext: ShogunContextType = {
   put: async () => {},
   get: () => null,
   remove: async () => {},
+  completePendingSignup: () => {},
+  hasPendingSignup: false,
 };
 
 // Create context using React's createContext directly
@@ -126,6 +130,13 @@ export function ShogunButtonProvider({
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userPub, setUserPub] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [pendingSignupData, setPendingSignupData] = useState<{
+    userPub: string;
+    username: string;
+    password?: string;
+    seedPhrase?: string;
+    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof";
+  } | null>(null);
 
   // Effetto per gestire l'inizializzazione e pulizia
   useEffect(() => {
@@ -420,13 +431,18 @@ export function ShogunButtonProvider({
         setIsLoggedIn(true);
         setUserPub(userPub);
         setUsername(displayName);
-
-        onSignupSuccess?.({
+        const signupPayload = {
           userPub: userPub,
           username: displayName,
-          seedPhrase: (result as any).seedPhrase, // Include seedPhrase/trapdoor for ZK-Proof
+          seedPhrase: (result as any).seedPhrase,
           authMethod: authMethod as any,
-        });
+        };
+
+        if (authMethod === "zkproof" && onSignupSuccess) {
+          setPendingSignupData(signupPayload);
+        } else {
+          onSignupSuccess?.(signupPayload);
+        }
       } else {
         onError?.(result.error);
       }
@@ -446,6 +462,7 @@ export function ShogunButtonProvider({
     setIsLoggedIn(false);
     setUserPub(null);
     setUsername(null);
+    setPendingSignupData(null);
   };
 
   // Implementazione del metodo setProvider
@@ -581,6 +598,14 @@ export function ShogunButtonProvider({
   // Plugin hooks removed - GunAdvancedPlugin no longer available
   const pluginHooks: PluginHooks = {};
 
+  const completePendingSignup = React.useCallback(() => {
+    if (pendingSignupData) {
+      const dataToEmit = pendingSignupData;
+      setPendingSignupData(null);
+      onSignupSuccess?.(dataToEmit);
+    }
+  }, [pendingSignupData, onSignupSuccess]);
+
   // Create a properly typed context value
   const contextValue: ShogunContextType = React.useMemo(
     () => ({
@@ -599,6 +624,8 @@ export function ShogunButtonProvider({
       importGunPair,
       setProvider,
       gunPlugin,
+      completePendingSignup,
+      hasPendingSignup: Boolean(pendingSignupData),
       put: async (path: string, data: any) => {
         if (isShogunCore(core)) {
           if (!core.gun) throw new Error('Gun instance not available');
@@ -649,6 +676,8 @@ export function ShogunButtonProvider({
       importGunPair,
       gunPlugin,
       pluginHooks,
+      pendingSignupData,
+      completePendingSignup,
     ]
   );
 
@@ -876,6 +905,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       exportGunPair,
       importGunPair,
       hasPlugin,
+      completePendingSignup,
+      hasPendingSignup,
     } = useShogun();
 
     // Form states
@@ -895,6 +926,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       | "export"
       | "import"
       | "webauthn-username"
+      | "webauthn-signup-result"
       | "zkproof-login"
       | "zkproof-signup-result"
     >("options");
@@ -910,7 +942,9 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [showImportSuccess, setShowImportSuccess] = useState(false);
     const [zkTrapdoor, setZkTrapdoor] = useState("");
     const [zkGeneratedTrapdoor, setZkGeneratedTrapdoor] = useState("");
+    const [webauthnSeedPhrase, setWebauthnSeedPhrase] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [pendingZkConfirmation, setPendingZkConfirmation] = useState(false);
 
     // Handle click outside to close dropdown
     useEffect(() => {
@@ -1004,7 +1038,20 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         } else if (result && result.redirectUrl) {
           window.location.href = result.redirectUrl;
         } else {
-          setModalIsOpen(false);
+          const shouldShowWebauthnSeed =
+            formMode === "signup" &&
+            method === "webauthn" &&
+            result &&
+            result.success &&
+            (result as any).seedPhrase;
+
+          if (shouldShowWebauthnSeed) {
+            setWebauthnSeedPhrase((result as any).seedPhrase);
+            setShowCopySuccess(false);
+            setAuthView("webauthn-signup-result");
+          } else {
+            setModalIsOpen(false);
+          }
         }
       } catch (e: any) {
         setError(e.message || "An unexpected error occurred.");
@@ -1110,6 +1157,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           // Show the trapdoor to the user - CRITICAL for account recovery!
           setZkGeneratedTrapdoor(result.seedPhrase);
           setAuthView("zkproof-signup-result");
+          setPendingZkConfirmation(true);
         } else if (result && !result.success) {
           throw new Error(result.error || "ZK-Proof signup failed");
         }
@@ -1230,6 +1278,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setRecoveredHint("");
       setZkTrapdoor("");
       setZkGeneratedTrapdoor("");
+      setWebauthnSeedPhrase("");
+      setPendingZkConfirmation(false);
     };
 
     const openModal = () => {
@@ -1239,6 +1289,20 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     };
 
     const closeModal = () => {
+      if (pendingZkConfirmation || hasPendingSignup) {
+        setError(
+          "Please save your trapdoor and confirm before leaving this screen.",
+        );
+        return;
+      }
+      setModalIsOpen(false);
+    };
+
+    const finalizeZkProofSignup = () => {
+      completePendingSignup();
+      setError("");
+      setPendingZkConfirmation(false);
+      setAuthView("options");
       setModalIsOpen(false);
     };
 
@@ -1797,6 +1861,96 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       </div>
     );
 
+    const renderWebauthnSignupResult = () => (
+      <div className="shogun-auth-form">
+        <h3>WebAuthn Account Created!</h3>
+        <div
+          style={{
+            backgroundColor: "#fef3c7",
+            padding: "12px",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            border: "1px solid #f59e0b",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#92400e",
+              margin: "0",
+              fontWeight: "500",
+            }}
+          >
+            ⚠️ Important: Save Your Recovery Code
+          </p>
+          <p
+            style={{ fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" }}
+          >
+            This seed phrase lets you add new devices or recover your WebAuthn account. Keep it private and store it securely.
+          </p>
+        </div>
+        <div className="shogun-form-group">
+          <label>Your WebAuthn Recovery Code (Seed Phrase):</label>
+          <textarea
+            value={webauthnSeedPhrase}
+            readOnly
+            rows={4}
+            style={{
+              fontFamily: "monospace",
+              fontSize: "12px",
+              width: "100%",
+              padding: "8px",
+              border: "2px solid #f59e0b",
+              borderRadius: "4px",
+              backgroundColor: "#fffbeb",
+            }}
+          />
+          <button
+            type="button"
+            className="shogun-submit-button"
+            style={{ marginTop: "8px" }}
+            onClick={async () => {
+              if (navigator.clipboard && webauthnSeedPhrase) {
+                await navigator.clipboard.writeText(webauthnSeedPhrase);
+                setShowCopySuccess(true);
+                setTimeout(() => setShowCopySuccess(false), 3000);
+              }
+            }}
+            disabled={!webauthnSeedPhrase}
+          >
+            {showCopySuccess ? "✅ Copied!" : "📋 Copy Recovery Code"}
+          </button>
+          {!navigator.clipboard && (
+            <p style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>
+              ⚠️ Please manually copy the code above for safekeeping.
+            </p>
+          )}
+        </div>
+        <div
+          style={{
+            backgroundColor: "#dcfce7",
+            color: "#166534",
+            padding: "12px",
+            borderRadius: "8px",
+            marginTop: "16px",
+            fontSize: "14px",
+            border: "1px solid #22c55e",
+            textAlign: "center",
+          }}
+        >
+          ✅ You're now logged in with WebAuthn!
+        </div>
+        <button
+          type="button"
+          className="shogun-submit-button"
+          style={{ marginTop: "16px" }}
+          onClick={finalizeZkProofSignup}
+        >
+          Close and Start Using App
+        </button>
+      </div>
+    );
+
     const renderZkProofSignupResult = () => (
       <div className="shogun-auth-form">
         <h3>ZK-Proof Account Created!</h3>
@@ -1879,7 +2033,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           type="button"
           className="shogun-submit-button"
           style={{ marginTop: "16px" }}
-          onClick={() => setModalIsOpen(false)}
+          onClick={finalizeZkProofSignup}
         >
           Close and Start Using App
         </button>
@@ -2004,7 +2158,18 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         </button>
 
         {modalIsOpen && (
-          <div className="shogun-modal-overlay" onClick={closeModal}>
+          <div
+            className="shogun-modal-overlay"
+            onClick={() => {
+              if (pendingZkConfirmation || hasPendingSignup) {
+                setError(
+                  "Please copy your trapdoor and press Continue before closing.",
+                );
+                return;
+              }
+              closeModal();
+            }}
+          >
             <div className="shogun-modal" onClick={(e) => e.stopPropagation()}>
               <div className="shogun-modal-header">
                 <h2>
@@ -2030,6 +2195,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                   className="shogun-close-button"
                   onClick={closeModal}
                   aria-label="Close"
+                  disabled={pendingZkConfirmation || hasPendingSignup}
                 >
                   <CloseIcon />
                 </button>
@@ -2073,6 +2239,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 {authView === "import" && renderImportForm()}
                 {authView === "webauthn-username" &&
                   renderWebAuthnUsernameForm()}
+                {authView === "webauthn-signup-result" &&
+                  renderWebauthnSignupResult()}
                 {authView === "zkproof-login" && renderZkProofLoginForm()}
                 {authView === "zkproof-signup-result" &&
                   renderZkProofSignupResult()}
