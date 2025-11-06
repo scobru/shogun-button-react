@@ -9,7 +9,9 @@ A comprehensive React component library for seamless integration of Shogun authe
 - 🚀 **Easy Integration** - Simple setup with minimal configuration
 - 🎨 **Customizable UI** - Modern, responsive design with dark mode support
 - 🔒 **Multi-Authentication** - Support for Password, MetaMask, WebAuthn, Nostr, and ZK-Proof
+- 🛡️ **WebAuthn Recovery** - Restore hardware credentials on new devices with saved seed phrases
 - 🔑 **Account Management** - Export/import Gun pairs for account backup and recovery
+- 🕵️ **ZK-Proof Trapdoor Handoff** - Display and copy the generated trapdoor during signup to keep anonymous identities portable
 - 📱 **Responsive Design** - Works seamlessly across all device sizes
 - 🌍 **TypeScript Support** - Full type safety and IntelliSense support
 - 🔌 **Plugin System** - Advanced Gun operations with custom hooks
@@ -169,6 +171,21 @@ const { core, options } = shogunConnector({
   showZkProof: true,
 });
 ```
+
+## 🔑 Recovery Flows
+
+### WebAuthn Multi-Device Restore
+
+- Users now see a **Restore with Recovery Code** option when choosing WebAuthn login.
+- Enter the username plus the stored seed phrase to recreate the credential on a new browser.
+- The button calls `webauthnPlugin.signUp(username, { seedPhrase, generateSeedPhrase: false })` behind the scenes, leveraging the core plugin’s `importFromSeed` flow.
+- After a successful restore the seed phrase is shown one more time so the user can double-check or re-copy it before the modal closes.
+
+### ZK-Proof Trapdoor Delivery
+
+- Upon successful `zkproof` signup, the modal switches to a confirmation screen that displays the generated trapdoor (also returned as `seedPhrase`).
+- A **Copy Trapdoor** helper copies the phrase to the clipboard, with inline feedback when the copy succeeds.
+- The user must acknowledge with **I Saved My Trapdoor** before returning to the main UI, reducing the risk of losing the anonymous identity.
 
 ## 🎯 API Reference
 

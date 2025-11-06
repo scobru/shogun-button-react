@@ -352,16 +352,48 @@ export function ShogunButtonProvider({
             throw error;
           }
           break;
-        case "webauthn":
-          username = args[0];
+        case "webauthn": {
+          username = typeof args[0] === "string" ? args[0].trim() : "";
+          const webauthnOptions =
+            args.length > 1 && typeof args[1] === "object" && args[1] !== null
+              ? (args[1] as { seedPhrase?: string; generateSeedPhrase?: boolean })
+              : {};
+
+          if (!username) {
+            throw new Error("Username is required for WebAuthn registration");
+          }
+
           if (isShogunCore(core)) {
             const webauthn: WebauthnPlugin = core.getPlugin("webauthn");
             if (!webauthn) throw new Error("WebAuthn plugin not available");
-            result = await webauthn.signUp(username, { generateSeedPhrase: true });
+
+            const pluginOptions: {
+              seedPhrase?: string;
+              generateSeedPhrase?: boolean;
+            } = {};
+
+            if (webauthnOptions.seedPhrase) {
+              pluginOptions.seedPhrase = webauthnOptions.seedPhrase.trim();
+              pluginOptions.generateSeedPhrase =
+                webauthnOptions.generateSeedPhrase ?? false;
+            } else if (typeof webauthnOptions.generateSeedPhrase === "boolean") {
+              pluginOptions.generateSeedPhrase =
+                webauthnOptions.generateSeedPhrase;
+            }
+
+            if (
+              pluginOptions.generateSeedPhrase === undefined &&
+              !pluginOptions.seedPhrase
+            ) {
+              pluginOptions.generateSeedPhrase = true;
+            }
+
+            result = await webauthn.signUp(username, pluginOptions);
           } else {
             throw new Error("WebAuthn requires ShogunCore");
           }
           break;
+        }
         case "web3":
           if (isShogunCore(core)) {
             const web3: any = core.getPlugin("web3");
@@ -907,7 +939,9 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       | "import"
       | "webauthn-username"
       | "webauthn-signup-result"
+      | "webauthn-recovery"
       | "zkproof-login"
+      | "zkproof-signup-result"
     >("options");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -920,7 +954,11 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [showCopySuccess, setShowCopySuccess] = useState(false);
     const [showImportSuccess, setShowImportSuccess] = useState(false);
     const [zkTrapdoor, setZkTrapdoor] = useState("");
+    const [zkSignupTrapdoor, setZkSignupTrapdoor] = useState("");
+    const [showZkTrapdoorCopySuccess, setShowZkTrapdoorCopySuccess] =
+      useState(false);
     const [webauthnSeedPhrase, setWebauthnSeedPhrase] = useState("");
+    const [webauthnRecoverySeed, setWebauthnRecoverySeed] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Handle click outside to close dropdown
@@ -1093,6 +1131,47 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setAuthView("webauthn-username");
     };
 
+    const handleWebauthnImport = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        const username = formUsername.trim();
+        const recoveryCode = webauthnRecoverySeed.trim();
+
+        if (!username) {
+          throw new Error("Please enter your username");
+        }
+
+        if (!recoveryCode) {
+          throw new Error("Please enter your recovery code");
+        }
+
+        if (!isShogunCore(core)) {
+          throw new Error("WebAuthn recovery requires ShogunCore");
+        }
+
+        const result = await signUp("webauthn", username, {
+          seedPhrase: recoveryCode,
+          generateSeedPhrase: false,
+        });
+
+        if (!result || !result.success) {
+          throw new Error(result?.error || "Failed to restore account");
+        }
+
+        const seedToDisplay =
+          (result as any).seedPhrase || recoveryCode;
+        setWebauthnSeedPhrase(seedToDisplay);
+        setWebauthnRecoverySeed("");
+        setShowCopySuccess(false);
+        setAuthView("webauthn-signup-result");
+      } catch (e: any) {
+        setError(e.message || "Failed to restore WebAuthn account");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const handleZkProofAuth = () => {
       if (!hasPlugin("zkproof")) {
         setError("ZK-Proof plugin not available");
@@ -1132,8 +1211,16 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         if (!result || !result.success) {
           throw new Error(result?.error || "ZK-Proof signup failed");
         }
-        setAuthView("options");
-        setModalIsOpen(false);
+        const trapdoorValue =
+          (result as any).seedPhrase || (result as any).trapdoor || "";
+        if (trapdoorValue) {
+          setZkSignupTrapdoor(trapdoorValue);
+          setShowZkTrapdoorCopySuccess(false);
+          setAuthView("zkproof-signup-result");
+        } else {
+          setAuthView("options");
+          setModalIsOpen(false);
+        }
       } catch (e: any) {
         setError(e.message || "ZK-Proof signup failed");
       } finally {
@@ -1250,7 +1337,10 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setShowImportSuccess(false);
       setRecoveredHint("");
       setZkTrapdoor("");
+      setZkSignupTrapdoor("");
+      setShowZkTrapdoorCopySuccess(false);
       setWebauthnSeedPhrase("");
+      setWebauthnRecoverySeed("");
     };
 
     const openModal = () => {
@@ -1566,6 +1656,111 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           >
             &larr; Back to Options
           </button>
+          {formMode === "login" && (
+            <button
+              type="button"
+              className="shogun-toggle-mode"
+              onClick={() => setAuthView("webauthn-recovery")}
+              disabled={loading}
+            >
+              Restore with Recovery Code
+            </button>
+          )}
+        </div>
+      </div>
+    );
+
+    const renderWebauthnRecoveryForm = () => (
+      <div className="shogun-auth-form">
+        <h3>Restore WebAuthn Account</h3>
+        <div
+          style={{
+            backgroundColor: "#fef3c7",
+            padding: "12px",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            border: "1px solid #f59e0b",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#92400e",
+              margin: "0",
+              fontWeight: "500",
+            }}
+          >
+            ⚠️ Recovery Required
+          </p>
+          <p
+            style={{
+              fontSize: "13px",
+              color: "#a16207",
+              margin: "4px 0 0 0",
+            }}
+          >
+            Enter the username and recovery code saved during signup to restore
+            access on this device.
+          </p>
+        </div>
+        <div className="shogun-form-group">
+          <label htmlFor="recoveryUsername">
+            <UserIcon />
+            <span>Username</span>
+          </label>
+          <input
+            type="text"
+            id="recoveryUsername"
+            value={formUsername}
+            onChange={(e) => setFormUsername(e.target.value)}
+            disabled={loading}
+            placeholder="Enter your username"
+            autoFocus
+          />
+        </div>
+        <div className="shogun-form-group">
+          <label htmlFor="recoverySeed">
+            <KeyIcon />
+            <span>Recovery Code</span>
+          </label>
+          <textarea
+            id="recoverySeed"
+            value={webauthnRecoverySeed}
+            onChange={(e) => setWebauthnRecoverySeed(e.target.value)}
+            disabled={loading}
+            placeholder="Enter your WebAuthn seed phrase..."
+            rows={4}
+            style={{
+              fontFamily: "monospace",
+              fontSize: "12px",
+              width: "100%",
+              padding: "8px",
+              border: "1px solid #f59e0b",
+              borderRadius: "4px",
+              backgroundColor: "#fffbeb",
+            }}
+          />
+        </div>
+        <button
+          type="button"
+          className="shogun-submit-button"
+          onClick={handleWebauthnImport}
+          disabled={loading}
+        >
+          {loading ? "Restoring..." : "Restore Account"}
+        </button>
+        <div className="shogun-form-footer">
+          <button
+            type="button"
+            className="shogun-back-button"
+            onClick={() => {
+              setError("");
+              setAuthView("webauthn-username");
+            }}
+            disabled={loading}
+          >
+            &larr; Back to WebAuthn
+          </button>
         </div>
       </div>
     );
@@ -1820,6 +2015,97 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             disabled={loading}
           >
             Back to Login Options
+          </button>
+        </div>
+      </div>
+    );
+
+    const renderZkProofSignupResult = () => (
+      <div className="shogun-auth-form">
+        <h3>ZK-Proof Account Created!</h3>
+        <div
+          style={{
+            backgroundColor: "#fef3c7",
+            padding: "12px",
+            borderRadius: "8px",
+            marginBottom: "16px",
+            border: "1px solid #f59e0b",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#92400e",
+              margin: "0",
+              fontWeight: "500",
+            }}
+          >
+            ⚠️ Important: Save Your Trapdoor
+          </p>
+          <p
+            style={{ fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" }}
+          >
+            This trapdoor lets you restore your anonymous identity on new devices.
+            Store it securely and never share it.
+          </p>
+        </div>
+        <div className="shogun-form-group">
+          <label>Your Trapdoor (Recovery Phrase):</label>
+          <textarea
+            value={zkSignupTrapdoor}
+            readOnly
+            rows={4}
+            style={{
+              fontFamily: "monospace",
+              fontSize: "12px",
+              width: "100%",
+              padding: "8px",
+              border: "2px solid #f59e0b",
+              borderRadius: "4px",
+              backgroundColor: "#fffbeb",
+            }}
+          />
+          <button
+            type="button"
+            className="shogun-submit-button"
+            style={{ marginTop: "8px" }}
+            onClick={async () => {
+              if (!zkSignupTrapdoor) {
+                return;
+              }
+              try {
+                if (navigator.clipboard) {
+                  await navigator.clipboard.writeText(zkSignupTrapdoor);
+                  setShowZkTrapdoorCopySuccess(true);
+                  setTimeout(() => setShowZkTrapdoorCopySuccess(false), 3000);
+                }
+              } catch (copyError) {
+                console.warn("Failed to copy trapdoor:", copyError);
+              }
+            }}
+            disabled={!zkSignupTrapdoor}
+          >
+            Copy Trapdoor
+          </button>
+          {showZkTrapdoorCopySuccess && (
+            <p
+              style={{
+                color: "#047857",
+                fontSize: "12px",
+                marginTop: "6px",
+              }}
+            >
+              Trapdoor copied to clipboard!
+            </p>
+          )}
+        </div>
+        <div className="shogun-form-footer">
+          <button
+            type="button"
+            className="shogun-submit-button"
+            onClick={finalizeZkProofSignup}
+          >
+            I Saved My Trapdoor
           </button>
         </div>
       </div>
@@ -2103,9 +2389,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 {authView === "import" && renderImportForm()}
                 {authView === "webauthn-username" &&
                   renderWebAuthnUsernameForm()}
+                {authView === "webauthn-recovery" &&
+                  renderWebauthnRecoveryForm()}
                 {authView === "webauthn-signup-result" &&
                   renderWebauthnSignupResult()}
                 {authView === "zkproof-login" && renderZkProofLoginForm()}
+                {authView === "zkproof-signup-result" &&
+                  renderZkProofSignupResult()}
               </div>
             </div>
           </div>
