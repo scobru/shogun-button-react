@@ -2002,10 +2002,10 @@ shebang-regex@^3.0.0:
   resolved "https://registry.yarnpkg.com/shebang-regex/-/shebang-regex-3.0.0.tgz#ae16f1644d873ecad843b0307b143362d4c42172"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
-shogun-core@^6.3.3:
-  version "6.3.3"
-  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-6.3.3.tgz#cf45ef489b760a57056dc5a425885caf78e973bf"
-  integrity sha512-gsInkvEh6pwTRUEeK/D6WV0UlVjPENEclpaSpd30uhnBBcvxw+x2ExFHxk9PhCz2RCTPBnUNZXZK/zZxYY3Tjw==
+shogun-core@^6.3.4:
+  version "6.3.4"
+  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-6.3.4.tgz#997702fda29f4b7c4bcb13103ba1fa0a7d391039"
+  integrity sha512-ph5Rs0nxB3R3bWLdoeA0vIov0Exxndi94xoZYmc5oHSpgWS+Ymzbfg7IT6K4kMzaWBjrqCM43DXY2apWdR2CjQ==
   dependencies:
     "@hpke/chacha20poly1305" "^1.7.1"
     "@hpke/hybridkem-x-wing" "^0.6.1"
