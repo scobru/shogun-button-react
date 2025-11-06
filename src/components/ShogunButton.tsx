@@ -130,13 +130,6 @@ export function ShogunButtonProvider({
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userPub, setUserPub] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
-  const [pendingSignupData, setPendingSignupData] = useState<{
-    userPub: string;
-    username: string;
-    password?: string;
-    seedPhrase?: string;
-    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof";
-  } | null>(null);
 
   // Effetto per gestire l'inizializzazione e pulizia
   useEffect(() => {
@@ -438,11 +431,7 @@ export function ShogunButtonProvider({
           authMethod: authMethod as any,
         };
 
-        if (authMethod === "zkproof" && onSignupSuccess) {
-          setPendingSignupData(signupPayload);
-        } else {
-          onSignupSuccess?.(signupPayload);
-        }
+        onSignupSuccess?.(signupPayload);
       } else {
         onError?.(result.error);
       }
@@ -462,7 +451,6 @@ export function ShogunButtonProvider({
     setIsLoggedIn(false);
     setUserPub(null);
     setUsername(null);
-    setPendingSignupData(null);
   };
 
   // Implementazione del metodo setProvider
@@ -598,13 +586,8 @@ export function ShogunButtonProvider({
   // Plugin hooks removed - GunAdvancedPlugin no longer available
   const pluginHooks: PluginHooks = {};
 
-  const completePendingSignup = React.useCallback(() => {
-    if (pendingSignupData) {
-      const dataToEmit = pendingSignupData;
-      setPendingSignupData(null);
-      onSignupSuccess?.(dataToEmit);
-    }
-  }, [pendingSignupData, onSignupSuccess]);
+  const completePendingSignup = React.useCallback(() => {}, []);
+  const hasPendingSignup = false;
 
   // Create a properly typed context value
   const contextValue: ShogunContextType = React.useMemo(
@@ -625,7 +608,7 @@ export function ShogunButtonProvider({
       setProvider,
       gunPlugin,
       completePendingSignup,
-      hasPendingSignup: Boolean(pendingSignupData),
+      hasPendingSignup,
       put: async (path: string, data: any) => {
         if (isShogunCore(core)) {
           if (!core.gun) throw new Error('Gun instance not available');
@@ -676,7 +659,6 @@ export function ShogunButtonProvider({
       importGunPair,
       gunPlugin,
       pluginHooks,
-      pendingSignupData,
       completePendingSignup,
     ]
   );
@@ -905,8 +887,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       exportGunPair,
       importGunPair,
       hasPlugin,
-      completePendingSignup,
-      hasPendingSignup,
     } = useShogun();
 
     // Form states
@@ -928,7 +908,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       | "webauthn-username"
       | "webauthn-signup-result"
       | "zkproof-login"
-      | "zkproof-signup-result"
     >("options");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -941,10 +920,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [showCopySuccess, setShowCopySuccess] = useState(false);
     const [showImportSuccess, setShowImportSuccess] = useState(false);
     const [zkTrapdoor, setZkTrapdoor] = useState("");
-    const [zkGeneratedTrapdoor, setZkGeneratedTrapdoor] = useState("");
     const [webauthnSeedPhrase, setWebauthnSeedPhrase] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
-    const [pendingZkConfirmation, setPendingZkConfirmation] = useState(false);
 
     // Handle click outside to close dropdown
     useEffect(() => {
@@ -1152,15 +1129,11 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setLoading(true);
       try {
         const result = await signUp("zkproof");
-        
-        if (result && result.success && result.seedPhrase) {
-          // Show the trapdoor to the user - CRITICAL for account recovery!
-          setZkGeneratedTrapdoor(result.seedPhrase);
-          setAuthView("zkproof-signup-result");
-          setPendingZkConfirmation(true);
-        } else if (result && !result.success) {
-          throw new Error(result.error || "ZK-Proof signup failed");
+        if (!result || !result.success) {
+          throw new Error(result?.error || "ZK-Proof signup failed");
         }
+        setAuthView("options");
+        setModalIsOpen(false);
       } catch (e: any) {
         setError(e.message || "ZK-Proof signup failed");
       } finally {
@@ -1277,9 +1250,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setShowImportSuccess(false);
       setRecoveredHint("");
       setZkTrapdoor("");
-      setZkGeneratedTrapdoor("");
       setWebauthnSeedPhrase("");
-      setPendingZkConfirmation(false);
     };
 
     const openModal = () => {
@@ -1289,20 +1260,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     };
 
     const closeModal = () => {
-      if (pendingZkConfirmation || hasPendingSignup) {
-        setError(
-          "Please save your trapdoor and confirm before leaving this screen.",
-        );
-        return;
-      }
+      setError("");
       setModalIsOpen(false);
     };
 
     const finalizeZkProofSignup = () => {
-      completePendingSignup();
       setError("");
-      setPendingZkConfirmation(false);
-      setAuthView("options");
+      resetForm();
       setModalIsOpen(false);
     };
 
@@ -1951,95 +1915,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       </div>
     );
 
-    const renderZkProofSignupResult = () => (
-      <div className="shogun-auth-form">
-        <h3>ZK-Proof Account Created!</h3>
-        <div
-          style={{
-            backgroundColor: "#fef3c7",
-            padding: "12px",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            border: "1px solid #f59e0b",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "14px",
-              color: "#92400e",
-              margin: "0",
-              fontWeight: "500",
-            }}
-          >
-            ⚠️ CRITICAL: Save Your Trapdoor!
-          </p>
-          <p
-            style={{ fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" }}
-          >
-            This is your ONLY way to recover your anonymous account. Save it in a secure location. If you lose it, you will lose access to your account permanently.
-          </p>
-        </div>
-        <div className="shogun-form-group">
-          <label>Your Trapdoor (Recovery Phrase):</label>
-          <textarea
-            value={zkGeneratedTrapdoor}
-            readOnly
-            rows={4}
-            style={{
-              fontFamily: "monospace",
-              fontSize: "12px",
-              width: "100%",
-              padding: "8px",
-              border: "2px solid #f59e0b",
-              borderRadius: "4px",
-              backgroundColor: "#fffbeb",
-            }}
-          />
-          <button
-            type="button"
-            className="shogun-submit-button"
-            style={{ marginTop: "8px" }}
-            onClick={async () => {
-              if (navigator.clipboard) {
-                await navigator.clipboard.writeText(zkGeneratedTrapdoor);
-                setShowCopySuccess(true);
-                setTimeout(() => setShowCopySuccess(false), 3000);
-              }
-            }}
-          >
-            {showCopySuccess ? "✅ Copied!" : "📋 Copy Trapdoor"}
-          </button>
-          {!navigator.clipboard && (
-            <p style={{ fontSize: "12px", color: "#666", marginTop: "8px" }}>
-              ⚠️ Please manually copy the trapdoor above.
-            </p>
-          )}
-        </div>
-        <div
-          style={{
-            backgroundColor: "#dcfce7",
-            color: "#166534",
-            padding: "12px",
-            borderRadius: "8px",
-            marginTop: "16px",
-            fontSize: "14px",
-            border: "1px solid #22c55e",
-            textAlign: "center",
-          }}
-        >
-          ✅ You're now logged in anonymously!
-        </div>
-        <button
-          type="button"
-          className="shogun-submit-button"
-          style={{ marginTop: "16px" }}
-          onClick={finalizeZkProofSignup}
-        >
-          Close and Start Using App
-        </button>
-      </div>
-    );
-
     const renderImportForm = () => (
       <div className="shogun-auth-form">
         <h3>Import Gun Pair</h3>
@@ -2160,15 +2035,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         {modalIsOpen && (
           <div
             className="shogun-modal-overlay"
-            onClick={() => {
-              if (pendingZkConfirmation || hasPendingSignup) {
-                setError(
-                  "Please copy your trapdoor and press Continue before closing.",
-                );
-                return;
-              }
-              closeModal();
-            }}
+            onClick={closeModal}
           >
             <div className="shogun-modal" onClick={(e) => e.stopPropagation()}>
               <div className="shogun-modal-header">
@@ -2185,17 +2052,14 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                             ? "WebAuthn"
                             : authView === "zkproof-login"
                               ? "ZK-Proof Login"
-                              : authView === "zkproof-signup-result"
-                                ? "ZK-Proof Account"
-                                : formMode === "login"
-                                  ? "Login"
-                                  : "Sign Up"}
+                              : formMode === "login"
+                                ? "Login"
+                                : "Sign Up"}
                 </h2>
                 <button
                   className="shogun-close-button"
                   onClick={closeModal}
                   aria-label="Close"
-                  disabled={pendingZkConfirmation || hasPendingSignup}
                 >
                   <CloseIcon />
                 </button>
@@ -2242,8 +2106,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 {authView === "webauthn-signup-result" &&
                   renderWebauthnSignupResult()}
                 {authView === "zkproof-login" && renderZkProofLoginForm()}
-                {authView === "zkproof-signup-result" &&
-                  renderZkProofSignupResult()}
               </div>
             </div>
           </div>
