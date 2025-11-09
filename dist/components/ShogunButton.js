@@ -27,6 +27,7 @@ const defaultShogunContext = {
     remove: async () => { },
     completePendingSignup: () => { },
     hasPendingSignup: false,
+    setHasPendingSignup: (_value) => { },
 };
 // Create context using React's createContext directly
 const ShogunContext = createContext(defaultShogunContext);
@@ -38,6 +39,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userPub, setUserPub] = useState(null);
     const [username, setUsername] = useState(null);
+    const [hasPendingSignup, setHasPendingSignup] = useState(false);
     // Effetto per gestire l'inizializzazione e pulizia
     useEffect(() => {
         var _a, _b;
@@ -353,6 +355,8 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                     seedPhrase: result.seedPhrase,
                     authMethod: authMethod,
                 };
+                const pendingBackup = Boolean(result.seedPhrase || result.trapdoor);
+                setHasPendingSignup(pendingBackup);
                 onSignupSuccess === null || onSignupSuccess === void 0 ? void 0 : onSignupSuccess(signupPayload);
             }
             else {
@@ -486,8 +490,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
     const gunPlugin = null;
     // Plugin hooks removed - GunAdvancedPlugin no longer available
     const pluginHooks = {};
-    const completePendingSignup = React.useCallback(() => { }, []);
-    const hasPendingSignup = false;
+    const completePendingSignup = React.useCallback(() => {
+        setHasPendingSignup(false);
+    }, [setHasPendingSignup]);
     // Create a properly typed context value
     const contextValue = React.useMemo(() => ({
         core,
@@ -507,6 +512,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         gunPlugin,
         completePendingSignup,
         hasPendingSignup,
+        setHasPendingSignup,
         put: async (path, data) => {
             if (isShogunCore(core)) {
                 if (!core.gun)
@@ -566,6 +572,8 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         gunPlugin,
         pluginHooks,
         completePendingSignup,
+        hasPendingSignup,
+        setHasPendingSignup,
     ]);
     // Provide the context value to children
     return (React.createElement(ShogunContext.Provider, { value: contextValue }, children));
@@ -615,7 +623,7 @@ const ExportIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org
 // Component for Shogun login button
 export const ShogunButton = (() => {
     const Button = () => {
-        const { isLoggedIn, username, logout, login, signUp, core, options, exportGunPair, importGunPair, hasPlugin, } = useShogun();
+        const { isLoggedIn, username, logout, login, signUp, core, options, exportGunPair, importGunPair, hasPlugin, hasPendingSignup, setHasPendingSignup, } = useShogun();
         // Form states
         const [modalIsOpen, setModalIsOpen] = useState(false);
         const [formUsername, setFormUsername] = useState("");
@@ -657,6 +665,20 @@ export const ShogunButton = (() => {
                 };
             }
         }, [dropdownOpen]);
+        useEffect(() => {
+            if (hasPendingSignup) {
+                setModalIsOpen(true);
+                if (authView !== "webauthn-signup-result" &&
+                    authView !== "zkproof-signup-result") {
+                    if (webauthnSeedPhrase) {
+                        setAuthView("webauthn-signup-result");
+                    }
+                    else if (zkSignupTrapdoor) {
+                        setAuthView("zkproof-signup-result");
+                    }
+                }
+            }
+        }, [hasPendingSignup, authView, webauthnSeedPhrase, zkSignupTrapdoor]);
         // If already logged in, show only logout button
         if (isLoggedIn && username && !modalIsOpen) {
             return (React.createElement("div", { className: "shogun-logged-in-container" },
@@ -855,6 +877,7 @@ export const ShogunButton = (() => {
                     setZkSignupTrapdoor(trapdoorValue);
                     setShowZkTrapdoorCopySuccess(false);
                     setAuthView("zkproof-signup-result");
+                    setHasPendingSignup(true);
                 }
                 else {
                     setAuthView("options");
@@ -991,11 +1014,13 @@ export const ShogunButton = (() => {
         const closeModal = () => {
             setError("");
             setModalIsOpen(false);
+            setHasPendingSignup(false);
         };
         const finalizeZkProofSignup = () => {
             setError("");
             resetForm();
             setModalIsOpen(false);
+            setHasPendingSignup(false);
         };
         const toggleMode = () => {
             resetForm();
