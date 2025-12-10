@@ -29,6 +29,8 @@ module.exports = {
       commonjs: 'react-dom',
       amd: 'react-dom',
     },
+    // gun-authd is an optional dependency loaded dynamically at runtime
+    'gun-authd': 'gun-authd',
   },
   module: {
     rules: [
@@ -63,6 +65,10 @@ module.exports = {
     new (require('webpack')).ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],
       process: 'process/browser.js',
+    }),
+    // Ignore gun-authd during bundle - it's an optional dependency loaded dynamically
+    new (require('webpack')).IgnorePlugin({
+      resourceRegExp: /^gun-authd$/,
     }),
   ],
 }; 
