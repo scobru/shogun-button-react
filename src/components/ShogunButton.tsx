@@ -973,8 +973,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       useState(false);
     const [webauthnSeedPhrase, setWebauthnSeedPhrase] = useState("");
     const [webauthnRecoverySeed, setWebauthnRecoverySeed] = useState("");
-    const [formPin, setFormPin] = useState(""); // Optional PIN for gun-authd
-    const [showAdvanced, setShowAdvanced] = useState(false); // Toggle for advanced options
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Handle click outside to close dropdown
@@ -1360,8 +1358,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setFormPasswordConfirm("");
       setFormHint("");
       setFormSecurityAnswer("");
-      setFormPin(""); // Reset PIN
-      setShowAdvanced(false); // Reset advanced options toggle
       setError("");
       setLoading(false);
       setAuthView("options");
@@ -1591,41 +1587,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
               />
               </div>
             </>
-          )}
-        
-        {/* Advanced Options - PIN for gun-authd */}
-        <div className="shogun-advanced-toggle">
-          <button
-            type="button"
-            className="shogun-toggle-advanced"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            {showAdvanced ? "▼ Hide Advanced Options" : "▶ Advanced Options"}
-          </button>
-        </div>
-        
-        {showAdvanced && (
-          <div className="shogun-form-group shogun-advanced-options">
-            <label htmlFor="pin">
-              <KeyIcon />
-              <span>PIN (Optional)</span>
-            </label>
-            <input
-              type="password"
-              id="pin"
-              value={formPin}
-              onChange={(e) => setFormPin(e.target.value)}
-              disabled={loading}
-              placeholder="4-8 digit PIN for extra security"
-              pattern="[0-9]*"
-              inputMode="numeric"
-              maxLength={8}
-              minLength={4}
-            />
-            <small className="shogun-field-hint">
-              Optional: Add a PIN for three-factor authentication (gun-authd)
-            </small>
-          </div>
         )}
         
         <button

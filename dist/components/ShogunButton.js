@@ -649,8 +649,6 @@ export const ShogunButton = (() => {
         const [showZkTrapdoorCopySuccess, setShowZkTrapdoorCopySuccess] = useState(false);
         const [webauthnSeedPhrase, setWebauthnSeedPhrase] = useState("");
         const [webauthnRecoverySeed, setWebauthnRecoverySeed] = useState("");
-        const [formPin, setFormPin] = useState(""); // Optional PIN for gun-authd
-        const [showAdvanced, setShowAdvanced] = useState(false); // Toggle for advanced options
         const dropdownRef = useRef(null);
         // Handle click outside to close dropdown
         useEffect(() => {
@@ -992,8 +990,6 @@ export const ShogunButton = (() => {
             setFormPasswordConfirm("");
             setFormHint("");
             setFormSecurityAnswer("");
-            setFormPin(""); // Reset PIN
-            setShowAdvanced(false); // Reset advanced options toggle
             setError("");
             setLoading(false);
             setAuthView("options");
@@ -1097,14 +1093,6 @@ export const ShogunButton = (() => {
                         React.createElement(UserIcon, null),
                         React.createElement("span", null, "Security Answer")),
                     React.createElement("input", { type: "text", id: "securityAnswer", value: formSecurityAnswer, onChange: (e) => setFormSecurityAnswer(e.target.value), disabled: loading, required: true, placeholder: "Enter your security answer" })))),
-            React.createElement("div", { className: "shogun-advanced-toggle" },
-                React.createElement("button", { type: "button", className: "shogun-toggle-advanced", onClick: () => setShowAdvanced(!showAdvanced) }, showAdvanced ? "▼ Hide Advanced Options" : "▶ Advanced Options")),
-            showAdvanced && (React.createElement("div", { className: "shogun-form-group shogun-advanced-options" },
-                React.createElement("label", { htmlFor: "pin" },
-                    React.createElement(KeyIcon, null),
-                    React.createElement("span", null, "PIN (Optional)")),
-                React.createElement("input", { type: "password", id: "pin", value: formPin, onChange: (e) => setFormPin(e.target.value), disabled: loading, placeholder: "4-8 digit PIN for extra security", pattern: "[0-9]*", inputMode: "numeric", maxLength: 8, minLength: 4 }),
-                React.createElement("small", { className: "shogun-field-hint" }, "Optional: Add a PIN for three-factor authentication (gun-authd)"))),
             React.createElement("button", { type: "submit", className: "shogun-submit-button", disabled: loading }, loading
                 ? "Processing..."
                 : formMode === "login"
