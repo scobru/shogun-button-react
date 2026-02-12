@@ -12,11 +12,13 @@ export interface ShogunConnectorOptions {
   showWebauthn?: boolean;
   showNostr?: boolean;
   showZkProof?: boolean;
+  showChallenge?: boolean;
+  showSeedLogin?: boolean;
   darkMode?: boolean;
 
   // Gun instance configuration
   gunInstance?: IGunInstance;
-  
+
   crypto?: {
     autoGenerateOnAuth?: boolean;
   };
@@ -50,6 +52,9 @@ export interface ShogunConnectorOptions {
     deterministic?: boolean;
     minEntropy?: number;
   };
+  challenge?: {
+    enabled?: boolean;
+  };
 
   // Legacy options (kept for backward compatibility)
   enableGunDebug?: boolean;
@@ -61,7 +66,7 @@ export interface ShogunConnectorOptions {
 
 // Definisco un nuovo tipo per l'oggetto ritornato dal connettore
 export interface ShogunConnectorResult {
-  core: ShogunCore ;
+  core: ShogunCore;
   options: ShogunConnectorOptions;
 
   // Helper methods
@@ -71,5 +76,5 @@ export interface ShogunConnectorResult {
   // Nuovi metodi per la gestione dei plugin
   registerPlugin: (plugin: any) => boolean;
   hasPlugin: (name: string) => boolean;
-  gunPlugin: null; 
+  gunPlugin: null;
 }

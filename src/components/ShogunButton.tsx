@@ -23,10 +23,19 @@ interface PluginHooks {
 interface AuthResult {
   success: boolean;
   userPub?: string;
+  username?: string;
   alias?: string;
   method?: string;
+  authMethod?: string;
   error?: string;
   redirectUrl?: string;
+  sessionToken?: string;
+  sea?: {
+    pub: string;
+    priv: string;
+    epub: string;
+    epriv: string;
+  };
 }
 
 // Helper type to check if core is ShogunCore
@@ -107,14 +116,14 @@ type ShogunButtonProviderProps = {
     userPub: string;
     username: string;
     password?: string;
-    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof";
+    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof" | "challenge" | "seed" | "pair";
   }) => void;
   onSignupSuccess?: (data: {
     userPub: string;
     username: string;
     password?: string;
     seedPhrase?: string;
-    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof";
+    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof" | "challenge" | "seed" | "pair";
   }) => void;
   onError?: (error: string) => void;
 };
@@ -287,6 +296,34 @@ export function ShogunButtonProvider({
             authMethod = "zkproof";
           } else {
             throw new Error("ZK-Proof requires ShogunCore");
+          }
+          break;
+        case "challenge":
+          username = args[0];
+          if (!username) throw new Error("Username required for challenge login");
+          
+          if (isShogunCore(core)) {
+            const challengePlugin: any = core.getPlugin("challenge");
+            if (!challengePlugin) throw new Error("Challenge plugin not available");
+            
+            result = await challengePlugin.login(username);
+            authMethod = "challenge";
+          } else {
+             throw new Error("Challenge auth requires ShogunCore");
+          }
+          break;
+        case "seed":
+          username = args[0];
+          const mnemonic = args[1];
+          if (!username || !mnemonic) {
+            throw new Error("Username and seed phrase are required");
+          }
+
+          if (isShogunCore(core)) {
+            result = await core.loginWithSeed(username, mnemonic);
+            authMethod = "seed";
+          } else {
+            throw new Error("Seed authentication requires ShogunCore");
           }
           break;
         default:
@@ -898,6 +935,22 @@ const ZkProofIcon = () => (
   </svg>
 );
 
+const ChallengeIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+  </svg>
+);
+
 const ExportIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -956,6 +1009,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       | "webauthn-recovery"
       | "zkproof-login"
       | "zkproof-signup-result"
+      | "challenge-username"
+      | "seed-login"
     >("options");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -973,6 +1028,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       useState(false);
     const [webauthnSeedPhrase, setWebauthnSeedPhrase] = useState("");
     const [webauthnRecoverySeed, setWebauthnRecoverySeed] = useState("");
+    const [formMnemonic, setFormMnemonic] = useState("");
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Handle click outside to close dropdown
@@ -1260,6 +1316,49 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       }
     };
 
+    const handleChallengeAuth = () => {
+      if (!hasPlugin("challenge")) {
+        setError("Challenge plugin not available");
+        return;
+      }
+      setAuthView("challenge-username");
+    };
+
+    const handleChallengeLogin = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        if (!formUsername.trim()) {
+          throw new Error("Please enter your username");
+        }
+        await handleAuth("challenge", formUsername);
+        setModalIsOpen(false);
+      } catch (e: any) {
+        setError(e.message || "Challenge login failed");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const handleSeedLogin = async () => {
+      setError("");
+      setLoading(true);
+      try {
+        if (!formUsername.trim()) {
+          throw new Error("Please enter your username");
+        }
+        if (!formMnemonic.trim()) {
+          throw new Error("Please enter your seed phrase");
+        }
+        await handleAuth("seed", formUsername.trim(), formMnemonic.trim());
+        setModalIsOpen(false);
+      } catch (e: any) {
+        setError(e.message || "Seed login failed");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const handleRecover = async () => {
       setError("");
       setLoading(true);
@@ -1373,6 +1472,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setShowZkTrapdoorCopySuccess(false);
       setWebauthnSeedPhrase("");
       setWebauthnRecoverySeed("");
+      setFormMnemonic("");
     };
 
     const openModal = () => {
@@ -1449,6 +1549,22 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </div>
         )}
 
+        {options.showChallenge !== false && hasPlugin("challenge") && (
+          <div className="shogun-auth-option-group">
+            <button
+               type="button"
+               className="shogun-auth-option-button"
+               onClick={handleChallengeAuth}
+               disabled={loading}
+            >
+               <ChallengeIcon />
+               {formMode === "login"
+                 ? "Login with Challenge"
+                 : "Signup with Challenge (N/A)"}
+            </button>
+          </div>
+        )}
+
         {options.showZkProof !== false && hasPlugin("zkproof") && (
           <div className="shogun-auth-option-group">
             <button
@@ -1480,6 +1596,18 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             ? "Login with Password"
             : "Signup with Password"}
         </button>
+
+        {options.showSeedLogin !== false && formMode === "login" && (
+          <button
+            type="button"
+            className="shogun-auth-option-button"
+            onClick={() => setAuthView("seed-login")}
+            disabled={loading}
+          >
+            <KeyIcon />
+            Login with Seed phrase
+          </button>
+        )}
 
         {formMode === "login" && (
           <button
@@ -2236,6 +2364,104 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       </div>
     );
 
+    const renderChallengeForm = () => (
+      <div className="shogun-auth-form">
+        <div className="shogun-form-group">
+          <label htmlFor="challenge-username">
+            <UserIcon />
+            <span>Username</span>
+          </label>
+          <input
+            type="text"
+            id="challenge-username"
+            value={formUsername}
+            onChange={(e) => setFormUsername(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your username"
+            autoFocus
+          />
+        </div>
+        <button
+          type="button"
+          className="shogun-submit-button"
+          onClick={handleChallengeLogin}
+          disabled={loading}
+        >
+          {loading ? "Processing..." : "Continue"}
+        </button>
+        <button
+          type="button"
+          className="shogun-back-button"
+          onClick={() => setAuthView("options")}
+          disabled={loading}
+        >
+          Back
+        </button>
+      </div>
+    );
+
+    const renderSeedLoginForm = () => (
+      <div className="shogun-auth-form">
+        <h3>Login with Seed Phrase</h3>
+        <div className="shogun-form-group">
+          <label htmlFor="seed-username">
+            <UserIcon />
+            <span>Username</span>
+          </label>
+          <input
+            type="text"
+            id="seed-username"
+            value={formUsername}
+            onChange={(e) => setFormUsername(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your username"
+            autoFocus
+          />
+        </div>
+        <div className="shogun-form-group">
+          <label htmlFor="seed-mnemonic">
+            <KeyIcon />
+            <span>Seed Phrase (12/24 words)</span>
+          </label>
+          <textarea
+            id="seed-mnemonic"
+            value={formMnemonic}
+            onChange={(e) => setFormMnemonic(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your seed phrase..."
+            rows={3}
+            style={{
+              fontFamily: "monospace",
+              fontSize: "12px",
+              width: "100%",
+              padding: "8px",
+              border: "1px solid #ccc",
+              borderRadius: "4px",
+            }}
+          />
+        </div>
+        <button
+          type="button"
+          className="shogun-submit-button"
+          onClick={handleSeedLogin}
+          disabled={loading || !formUsername.trim() || !formMnemonic.trim()}
+        >
+          {loading ? "Processing..." : "Login with Seed"}
+        </button>
+        <button
+          type="button"
+          className="shogun-back-button"
+          onClick={() => setAuthView("options")}
+          disabled={loading}
+        >
+          Back
+        </button>
+      </div>
+    );
+
     const renderImportForm = () => (
       <div className="shogun-auth-form">
         <h3>Import Gun Pair</h3>
@@ -2373,9 +2599,11 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                             ? "WebAuthn"
                             : authView === "zkproof-login"
                               ? "ZK-Proof Login"
-                              : formMode === "login"
-                                ? "Login"
-                                : "Sign Up"}
+                              : authView === "seed-login"
+                                ? "Login with Seed"
+                                : formMode === "login"
+                                  ? "Login"
+                                  : "Sign Up"}
                 </h2>
                 <button
                   className="shogun-close-button"
@@ -2406,6 +2634,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                   </>
                 )}
 
+                {authView === "seed-login" && renderSeedLoginForm()}
+
                 {authView === "password" && (
                   <>
                     <button
@@ -2431,6 +2661,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 {authView === "zkproof-login" && renderZkProofLoginForm()}
                 {authView === "zkproof-signup-result" &&
                   renderZkProofSignupResult()}
+                {authView === "challenge-username" &&
+                  renderChallengeForm()}
               </div>
             </div>
           </div>

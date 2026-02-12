@@ -8,6 +8,8 @@ export interface ShogunConnectorOptions {
     showWebauthn?: boolean;
     showNostr?: boolean;
     showZkProof?: boolean;
+    showChallenge?: boolean;
+    showSeedLogin?: boolean;
     darkMode?: boolean;
     gunInstance?: IGunInstance;
     crypto?: {
@@ -37,6 +39,9 @@ export interface ShogunConnectorOptions {
         defaultGroupId?: string;
         deterministic?: boolean;
         minEntropy?: number;
+    };
+    challenge?: {
+        enabled?: boolean;
     };
     enableGunDebug?: boolean;
     enableConnectionMonitoring?: boolean;

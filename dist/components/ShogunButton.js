@@ -192,6 +192,35 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                         throw new Error("ZK-Proof requires ShogunCore");
                     }
                     break;
+                case "challenge":
+                    username = args[0];
+                    if (!username)
+                        throw new Error("Username required for challenge login");
+                    if (isShogunCore(core)) {
+                        const challengePlugin = core.getPlugin("challenge");
+                        if (!challengePlugin)
+                            throw new Error("Challenge plugin not available");
+                        result = await challengePlugin.login(username);
+                        authMethod = "challenge";
+                    }
+                    else {
+                        throw new Error("Challenge auth requires ShogunCore");
+                    }
+                    break;
+                case "seed":
+                    username = args[0];
+                    const mnemonic = args[1];
+                    if (!username || !mnemonic) {
+                        throw new Error("Username and seed phrase are required");
+                    }
+                    if (isShogunCore(core)) {
+                        result = await core.loginWithSeed(username, mnemonic);
+                        authMethod = "seed";
+                    }
+                    else {
+                        throw new Error("Seed authentication requires ShogunCore");
+                    }
+                    break;
                 default:
                     throw new Error("Unsupported login method");
             }
@@ -615,6 +644,8 @@ const ZkProofIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.or
     React.createElement("path", { d: "M12 2L2 7l10 5 10-5-10-5z" }),
     React.createElement("path", { d: "M2 17l10 5 10-5" }),
     React.createElement("path", { d: "M2 12l10 5 10-5" })));
+const ChallengeIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+    React.createElement("polygon", { points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" })));
 const ExportIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
     React.createElement("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
     React.createElement("polyline", { points: "14,2 14,8 20,8" }),
@@ -649,6 +680,7 @@ export const ShogunButton = (() => {
         const [showZkTrapdoorCopySuccess, setShowZkTrapdoorCopySuccess] = useState(false);
         const [webauthnSeedPhrase, setWebauthnSeedPhrase] = useState("");
         const [webauthnRecoverySeed, setWebauthnRecoverySeed] = useState("");
+        const [formMnemonic, setFormMnemonic] = useState("");
         const dropdownRef = useRef(null);
         // Handle click outside to close dropdown
         useEffect(() => {
@@ -891,6 +923,50 @@ export const ShogunButton = (() => {
                 setLoading(false);
             }
         };
+        const handleChallengeAuth = () => {
+            if (!hasPlugin("challenge")) {
+                setError("Challenge plugin not available");
+                return;
+            }
+            setAuthView("challenge-username");
+        };
+        const handleChallengeLogin = async () => {
+            setError("");
+            setLoading(true);
+            try {
+                if (!formUsername.trim()) {
+                    throw new Error("Please enter your username");
+                }
+                await handleAuth("challenge", formUsername);
+                setModalIsOpen(false);
+            }
+            catch (e) {
+                setError(e.message || "Challenge login failed");
+            }
+            finally {
+                setLoading(false);
+            }
+        };
+        const handleSeedLogin = async () => {
+            setError("");
+            setLoading(true);
+            try {
+                if (!formUsername.trim()) {
+                    throw new Error("Please enter your username");
+                }
+                if (!formMnemonic.trim()) {
+                    throw new Error("Please enter your seed phrase");
+                }
+                await handleAuth("seed", formUsername.trim(), formMnemonic.trim());
+                setModalIsOpen(false);
+            }
+            catch (e) {
+                setError(e.message || "Seed login failed");
+            }
+            finally {
+                setLoading(false);
+            }
+        };
         const handleRecover = async () => {
             setError("");
             setLoading(true);
@@ -1005,6 +1081,7 @@ export const ShogunButton = (() => {
             setShowZkTrapdoorCopySuccess(false);
             setWebauthnSeedPhrase("");
             setWebauthnRecoverySeed("");
+            setFormMnemonic("");
         };
         const openModal = () => {
             resetForm();
@@ -1045,6 +1122,12 @@ export const ShogunButton = (() => {
                 React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => handleAuth("nostr"), disabled: loading },
                     React.createElement(NostrIcon, null),
                     formMode === "login" ? "Login with Nostr" : "Signup with Nostr"))),
+            options.showChallenge !== false && hasPlugin("challenge") && (React.createElement("div", { className: "shogun-auth-option-group" },
+                React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: handleChallengeAuth, disabled: loading },
+                    React.createElement(ChallengeIcon, null),
+                    formMode === "login"
+                        ? "Login with Challenge"
+                        : "Signup with Challenge (N/A)"))),
             options.showZkProof !== false && hasPlugin("zkproof") && (React.createElement("div", { className: "shogun-auth-option-group" },
                 React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: handleZkProofAuth, disabled: loading },
                     React.createElement(ZkProofIcon, null),
@@ -1058,6 +1141,9 @@ export const ShogunButton = (() => {
                 formMode === "login"
                     ? "Login with Password"
                     : "Signup with Password"),
+            options.showSeedLogin !== false && formMode === "login" && (React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => setAuthView("seed-login"), disabled: loading },
+                React.createElement(KeyIcon, null),
+                "Login with Seed phrase")),
             formMode === "login" && (React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => setAuthView("import"), disabled: loading },
                 React.createElement(ImportIcon, null),
                 "Import Gun Pair"))));
@@ -1385,6 +1471,35 @@ export const ShogunButton = (() => {
                     textAlign: "center",
                 } }, "\u2705 You're now logged in with WebAuthn!"),
             React.createElement("button", { type: "button", className: "shogun-submit-button", style: { marginTop: "16px" }, onClick: finalizeZkProofSignup }, "Close and Start Using App")));
+        const renderChallengeForm = () => (React.createElement("div", { className: "shogun-auth-form" },
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", { htmlFor: "challenge-username" },
+                    React.createElement(UserIcon, null),
+                    React.createElement("span", null, "Username")),
+                React.createElement("input", { type: "text", id: "challenge-username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoFocus: true })),
+            React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleChallengeLogin, disabled: loading }, loading ? "Processing..." : "Continue"),
+            React.createElement("button", { type: "button", className: "shogun-back-button", onClick: () => setAuthView("options"), disabled: loading }, "Back")));
+        const renderSeedLoginForm = () => (React.createElement("div", { className: "shogun-auth-form" },
+            React.createElement("h3", null, "Login with Seed Phrase"),
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", { htmlFor: "seed-username" },
+                    React.createElement(UserIcon, null),
+                    React.createElement("span", null, "Username")),
+                React.createElement("input", { type: "text", id: "seed-username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoFocus: true })),
+            React.createElement("div", { className: "shogun-form-group" },
+                React.createElement("label", { htmlFor: "seed-mnemonic" },
+                    React.createElement(KeyIcon, null),
+                    React.createElement("span", null, "Seed Phrase (12/24 words)")),
+                React.createElement("textarea", { id: "seed-mnemonic", value: formMnemonic, onChange: (e) => setFormMnemonic(e.target.value), disabled: loading, required: true, placeholder: "Enter your seed phrase...", rows: 3, style: {
+                        fontFamily: "monospace",
+                        fontSize: "12px",
+                        width: "100%",
+                        padding: "8px",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                    } })),
+            React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleSeedLogin, disabled: loading || !formUsername.trim() || !formMnemonic.trim() }, loading ? "Processing..." : "Login with Seed"),
+            React.createElement("button", { type: "button", className: "shogun-back-button", onClick: () => setAuthView("options"), disabled: loading }, "Back")));
         const renderImportForm = () => (React.createElement("div", { className: "shogun-auth-form" },
             React.createElement("h3", null, "Import Gun Pair"),
             React.createElement("div", { style: {
@@ -1459,9 +1574,11 @@ export const ShogunButton = (() => {
                                             ? "WebAuthn"
                                             : authView === "zkproof-login"
                                                 ? "ZK-Proof Login"
-                                                : formMode === "login"
-                                                    ? "Login"
-                                                    : "Sign Up"),
+                                                : authView === "seed-login"
+                                                    ? "Login with Seed"
+                                                    : formMode === "login"
+                                                        ? "Login"
+                                                        : "Sign Up"),
                         React.createElement("button", { className: "shogun-close-button", onClick: closeModal, "aria-label": "Close" },
                             React.createElement(CloseIcon, null))),
                     React.createElement("div", { className: "shogun-modal-content" },
@@ -1472,6 +1589,7 @@ export const ShogunButton = (() => {
                                 React.createElement("button", { type: "button", className: "shogun-toggle-mode shogun-prominent-toggle", onClick: toggleMode, disabled: loading }, formMode === "login"
                                     ? "Don't have an account? Sign up"
                                     : "Already have an account? Log in")))),
+                        authView === "seed-login" && renderSeedLoginForm(),
                         authView === "password" && (React.createElement(React.Fragment, null,
                             React.createElement("button", { className: "shogun-back-button", onClick: () => setAuthView("options") }, "\u2190 Back"),
                             renderPasswordForm())),
@@ -1487,7 +1605,9 @@ export const ShogunButton = (() => {
                             renderWebauthnSignupResult(),
                         authView === "zkproof-login" && renderZkProofLoginForm(),
                         authView === "zkproof-signup-result" &&
-                            renderZkProofSignupResult()))))));
+                            renderZkProofSignupResult(),
+                        authView === "challenge-username" &&
+                            renderChallengeForm()))))));
     };
     Button.displayName = "ShogunButton";
     return Object.assign(Button, {
