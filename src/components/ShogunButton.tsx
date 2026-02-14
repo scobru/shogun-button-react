@@ -195,15 +195,12 @@ export function ShogunButtonProvider({
       switch (method) {
         case "password":
           username = args[0];
-          console.log(`[DEBUG] ShogunButton: Calling core.login for username: ${username}`);
           
           if (isShogunCore(core)) {
             result = await core.login(args[0], args[1]);
           } else {
             throw new Error("Unsupported core type");
           }
-          
-          console.log(`[DEBUG] ShogunButton: core.login result:`, result);
           break;
         case "pair":
           // New pair authentication method
@@ -374,21 +371,13 @@ export function ShogunButtonProvider({
           if (args[1] !== args[2]) {
             throw new Error("Passwords do not match");
           }
-          console.log(`[DEBUG] ShogunButton: Calling core.signUp for username: ${username}`);
-          console.log(`[DEBUG] ShogunButton: core object:`, core);
           try {
-            console.log(`[DEBUG] ShogunButton: About to call core.signUp...`);
-            
             if (isShogunCore(core)) {
               result = await core.signUp(args[0], args[1]);
             } else {
               throw new Error("Unsupported core type");
             }
-            
-            console.log(`[DEBUG] ShogunButton: core.signUp completed successfully`);
-            console.log(`[DEBUG] ShogunButton: core.signUp result:`, result);
           } catch (error) {
-            console.error(`[DEBUG] ShogunButton: core.signUp error:`, error);
             throw error;
           }
           break;
@@ -1124,16 +1113,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     // Event handlers
     const handleAuth = async (method: string, ...args: any[]) => {
-      console.log(`[DEBUG] handleAuth called with method: ${method}, formMode: ${formMode}, args:`, args);
       setError("");
       setLoading(true);
 
       try {
         // Use formMode to determine whether to call login or signUp
         const action = formMode === "login" ? login : signUp;
-        console.log(`[DEBUG] handleAuth calling action: ${action.name}, method: ${method}`);
         const result = await action(method, ...args);
-        console.log(`[DEBUG] handleAuth result:`, result);
 
         if (result && !result.success && result.error) {
           setError(result.error);
@@ -1164,7 +1150,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      console.log(`[DEBUG] handleSubmit called, formMode: ${formMode}, username: ${formUsername}`);
       setError("");
       setLoading(true);
 
