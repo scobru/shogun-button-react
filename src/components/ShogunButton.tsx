@@ -970,6 +970,110 @@ const ExportIcon = () => (
   </svg>
 );
 
+const EyeIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+);
+
+const EyeOffIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+    <line x1="1" y1="1" x2="23" y2="23"></line>
+  </svg>
+);
+
+interface PasswordInputProps {
+  id: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+  required?: boolean;
+  placeholder?: string;
+  label: React.ReactNode;
+  icon?: React.ComponentType<any>;
+}
+
+const PasswordInput: React.FC<PasswordInputProps> = ({
+  id,
+  value,
+  onChange,
+  disabled = false,
+  required = false,
+  placeholder = "",
+  label,
+  icon: Icon = LockIcon,
+}) => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="shogun-form-group">
+      <label htmlFor={id}>
+        <Icon />
+        <span>{label}</span>
+      </label>
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <input
+          type={showPassword ? "text" : "password"}
+          id={id}
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          required={required}
+          placeholder={placeholder}
+          style={{ paddingRight: "40px", width: "100%" }}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          style={{
+            position: "absolute",
+            right: "10px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "4px",
+            display: "flex",
+            alignItems: "center",
+            color: "var(--shogun-text-secondary)",
+            zIndex: 10,
+          }}
+          aria-label={showPassword ? "Hide password" : "Show password"}
+        >
+          {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Component for Shogun login button
 export const ShogunButton: ShogunButtonComponent = (() => {
   const Button: React.FC = () => {
@@ -1640,38 +1744,28 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             placeholder="Enter your username"
           />
         </div>
-        <div className="shogun-form-group">
-          <label htmlFor="password">
-            <LockIcon />
-            <span>Password</span>
-          </label>
-          <input
-            type="password"
-            id="password"
-            value={formPassword}
-            onChange={(e) => setFormPassword(e.target.value)}
-            disabled={loading}
-            required
-            placeholder="Enter your password"
-          />
-        </div>
+        <PasswordInput
+          id="password"
+          value={formPassword}
+          onChange={(e) => setFormPassword(e.target.value)}
+          disabled={loading}
+          required
+          placeholder="Enter your password"
+          label="Password"
+          icon={LockIcon}
+        />
         {formMode === "signup" && (
           <>
-            <div className="shogun-form-group">
-              <label htmlFor="passwordConfirm">
-                <KeyIcon />
-                <span>Confirm Password</span>
-              </label>
-              <input
-                type="password"
-                id="passwordConfirm"
-                value={formPasswordConfirm}
-                onChange={(e) => setFormPasswordConfirm(e.target.value)}
-                disabled={loading}
-                required
-                placeholder="Confirm your password"
-              />
-            </div>
+            <PasswordInput
+              id="passwordConfirm"
+              value={formPasswordConfirm}
+              onChange={(e) => setFormPasswordConfirm(e.target.value)}
+              disabled={loading}
+              required
+              placeholder="Confirm your password"
+              label="Confirm Password"
+              icon={KeyIcon}
+            />
             <div className="shogun-form-group">
               <label htmlFor="hint">
                 <UserIcon />
@@ -2030,20 +2124,15 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             login from another device or restore access if needed.
           </p>
         </div>
-        <div className="shogun-form-group">
-          <label htmlFor="exportPassword">
-            <LockIcon />
-            <span>Encryption Password (optional but recommended)</span>
-          </label>
-          <input
-            type="password"
-            id="exportPassword"
-            value={exportPassword}
-            onChange={(e) => setExportPassword(e.target.value)}
-            disabled={loading}
-            placeholder="Leave empty to export unencrypted"
-          />
-        </div>
+        <PasswordInput
+          id="exportPassword"
+          value={exportPassword}
+          onChange={(e) => setExportPassword(e.target.value)}
+          disabled={loading}
+          placeholder="Leave empty to export unencrypted"
+          label="Encryption Password (optional but recommended)"
+          icon={LockIcon}
+        />
         {exportedPair && (
           <div className="shogun-form-group">
             <label>Your Gun Pair (copy this safely):</label>
@@ -2513,20 +2602,15 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             }}
           />
         </div>
-        <div className="shogun-form-group">
-          <label htmlFor="importPassword">
-            <LockIcon />
-            <span>Decryption Password (if encrypted)</span>
-          </label>
-          <input
-            type="password"
-            id="importPassword"
-            value={importPassword}
-            onChange={(e) => setImportPassword(e.target.value)}
-            disabled={loading}
-            placeholder="Enter password if pair was encrypted"
-          />
-        </div>
+        <PasswordInput
+          id="importPassword"
+          value={importPassword}
+          onChange={(e) => setImportPassword(e.target.value)}
+          disabled={loading}
+          placeholder="Enter password if pair was encrypted"
+          label="Decryption Password (if encrypted)"
+          icon={LockIcon}
+        />
         {showImportSuccess && (
           <div
             style={{

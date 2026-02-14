@@ -651,6 +651,37 @@ const ExportIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org
     React.createElement("polyline", { points: "14,2 14,8 20,8" }),
     React.createElement("line", { x1: "12", y1: "11", x2: "12", y2: "21" }),
     React.createElement("polyline", { points: "16,15 12,11 8,15" })));
+const EyeIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+    React.createElement("path", { d: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" }),
+    React.createElement("circle", { cx: "12", cy: "12", r: "3" })));
+const EyeOffIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+    React.createElement("path", { d: "M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" }),
+    React.createElement("line", { x1: "1", y1: "1", x2: "23", y2: "23" })));
+const PasswordInput = ({ id, value, onChange, disabled = false, required = false, placeholder = "", label, icon: Icon = LockIcon, }) => {
+    const [showPassword, setShowPassword] = useState(false);
+    return (React.createElement("div", { className: "shogun-form-group" },
+        React.createElement("label", { htmlFor: id },
+            React.createElement(Icon, null),
+            React.createElement("span", null, label)),
+        React.createElement("div", { style: {
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+            } },
+            React.createElement("input", { type: showPassword ? "text" : "password", id: id, value: value, onChange: onChange, disabled: disabled, required: required, placeholder: placeholder, style: { paddingRight: "40px", width: "100%" } }),
+            React.createElement("button", { type: "button", onClick: () => setShowPassword(!showPassword), style: {
+                    position: "absolute",
+                    right: "10px",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    color: "var(--shogun-text-secondary)",
+                    zIndex: 10,
+                }, "aria-label": showPassword ? "Hide password" : "Show password" }, showPassword ? React.createElement(EyeOffIcon, null) : React.createElement(EyeIcon, null)))));
+};
 // Component for Shogun login button
 export const ShogunButton = (() => {
     const Button = () => {
@@ -1153,17 +1184,9 @@ export const ShogunButton = (() => {
                     React.createElement(UserIcon, null),
                     React.createElement("span", null, "Username")),
                 React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username" })),
-            React.createElement("div", { className: "shogun-form-group" },
-                React.createElement("label", { htmlFor: "password" },
-                    React.createElement(LockIcon, null),
-                    React.createElement("span", null, "Password")),
-                React.createElement("input", { type: "password", id: "password", value: formPassword, onChange: (e) => setFormPassword(e.target.value), disabled: loading, required: true, placeholder: "Enter your password" })),
+            React.createElement(PasswordInput, { id: "password", value: formPassword, onChange: (e) => setFormPassword(e.target.value), disabled: loading, required: true, placeholder: "Enter your password", label: "Password", icon: LockIcon }),
             formMode === "signup" && (React.createElement(React.Fragment, null,
-                React.createElement("div", { className: "shogun-form-group" },
-                    React.createElement("label", { htmlFor: "passwordConfirm" },
-                        React.createElement(KeyIcon, null),
-                        React.createElement("span", null, "Confirm Password")),
-                    React.createElement("input", { type: "password", id: "passwordConfirm", value: formPasswordConfirm, onChange: (e) => setFormPasswordConfirm(e.target.value), disabled: loading, required: true, placeholder: "Confirm your password" })),
+                React.createElement(PasswordInput, { id: "passwordConfirm", value: formPasswordConfirm, onChange: (e) => setFormPasswordConfirm(e.target.value), disabled: loading, required: true, placeholder: "Confirm your password", label: "Confirm Password", icon: KeyIcon }),
                 React.createElement("div", { className: "shogun-form-group" },
                     React.createElement("label", { htmlFor: "hint" },
                         React.createElement(UserIcon, null),
@@ -1305,11 +1328,7 @@ export const ShogunButton = (() => {
                         fontWeight: "500",
                     } }, "\uD83D\uDD12 Backup Your Account"),
                 React.createElement("p", { style: { fontSize: "13px", color: "#075985", margin: "4px 0 0 0" } }, "Export your Gun pair to backup your account. You can use this to login from another device or restore access if needed.")),
-            React.createElement("div", { className: "shogun-form-group" },
-                React.createElement("label", { htmlFor: "exportPassword" },
-                    React.createElement(LockIcon, null),
-                    React.createElement("span", null, "Encryption Password (optional but recommended)")),
-                React.createElement("input", { type: "password", id: "exportPassword", value: exportPassword, onChange: (e) => setExportPassword(e.target.value), disabled: loading, placeholder: "Leave empty to export unencrypted" })),
+            React.createElement(PasswordInput, { id: "exportPassword", value: exportPassword, onChange: (e) => setExportPassword(e.target.value), disabled: loading, placeholder: "Leave empty to export unencrypted", label: "Encryption Password (optional but recommended)", icon: LockIcon }),
             exportedPair && (React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", null, "Your Gun Pair (copy this safely):"),
                 showCopySuccess && (React.createElement("div", { style: {
@@ -1528,11 +1547,7 @@ export const ShogunButton = (() => {
                         border: "1px solid #ccc",
                         borderRadius: "4px",
                     } })),
-            React.createElement("div", { className: "shogun-form-group" },
-                React.createElement("label", { htmlFor: "importPassword" },
-                    React.createElement(LockIcon, null),
-                    React.createElement("span", null, "Decryption Password (if encrypted)")),
-                React.createElement("input", { type: "password", id: "importPassword", value: importPassword, onChange: (e) => setImportPassword(e.target.value), disabled: loading, placeholder: "Enter password if pair was encrypted" })),
+            React.createElement(PasswordInput, { id: "importPassword", value: importPassword, onChange: (e) => setImportPassword(e.target.value), disabled: loading, placeholder: "Enter password if pair was encrypted", label: "Decryption Password (if encrypted)", icon: LockIcon }),
             showImportSuccess && (React.createElement("div", { style: {
                     backgroundColor: "#dcfce7",
                     color: "#166534",
