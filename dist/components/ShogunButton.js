@@ -61,9 +61,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         }
         // Poiché il metodo 'on' non esiste su ShogunCore,
         // gestiamo gli stati direttamente nei metodi di login/logout
-    }, [core, onLoginSuccess]);
+    }, [core]);
     // RxJS observe method
-    const observe = (path) => {
+    const observe = React.useCallback((path) => {
         var _a;
         if (!core) {
             return new Observable();
@@ -74,9 +74,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             return observable;
         }
         return new Observable();
-    };
+    }, [core]);
     // Unified login
-    const login = async (method, ...args) => {
+    const login = React.useCallback(async (method, ...args) => {
         var _a, _b;
         try {
             if (!core) {
@@ -248,9 +248,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             onError === null || onError === void 0 ? void 0 : onError(error.message || "Error during login");
             return { success: false, error: error.message };
         }
-    };
+    }, [core, onLoginSuccess, onError]);
     // Unified signup
-    const signUp = async (method, ...args) => {
+    const signUp = React.useCallback(async (method, ...args) => {
         var _a, _b, _c;
         try {
             if (!core) {
@@ -397,18 +397,18 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             onError === null || onError === void 0 ? void 0 : onError(error.message || "Error during registration");
             return { success: false, error: error.message };
         }
-    };
+    }, [core, onSignupSuccess, onError]);
     // Logout
-    const logout = () => {
+    const logout = React.useCallback(() => {
         if (isShogunCore(core)) {
             core.logout();
         }
         setIsLoggedIn(false);
         setUserPub(null);
         setUsername(null);
-    };
+    }, [core]);
     // Implementazione del metodo setProvider
-    const setProvider = (provider) => {
+    const setProvider = React.useCallback((provider) => {
         var _a;
         if (!core) {
             return false;
@@ -440,21 +440,21 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             console.error("Error setting provider:", error);
             return false;
         }
-    };
-    const hasPlugin = (name) => {
+    }, [core]);
+    const hasPlugin = React.useCallback((name) => {
         if (isShogunCore(core)) {
             return core.hasPlugin(name);
         }
         return false;
-    };
-    const getPlugin = (name) => {
+    }, [core]);
+    const getPlugin = React.useCallback((name) => {
         if (isShogunCore(core)) {
             return core.getPlugin(name);
         }
         return undefined;
-    };
+    }, [core]);
     // Export Gun pair functionality
-    const exportGunPair = async (password) => {
+    const exportGunPair = React.useCallback(async (password) => {
         if (!core) {
             throw new Error("SDK not initialized");
         }
@@ -482,9 +482,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         catch (error) {
             throw new Error(`Failed to export Gun pair: ${error.message}`);
         }
-    };
+    }, [core, isLoggedIn]);
     // Import Gun pair functionality
-    const importGunPair = async (pairData, password) => {
+    const importGunPair = React.useCallback(async (pairData, password) => {
         if (!core) {
             throw new Error("SDK not initialized");
         }
@@ -514,11 +514,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         catch (error) {
             throw new Error(`Failed to import Gun pair: ${error.message}`);
         }
-    };
+    }, [core, login]);
     // Plugin initialization removed - GunAdvancedPlugin no longer available
     const gunPlugin = null;
-    // Plugin hooks removed - GunAdvancedPlugin no longer available
-    const pluginHooks = {};
     const completePendingSignup = React.useCallback(() => {
         setHasPendingSignup(false);
     }, [setHasPendingSignup]);
@@ -599,7 +597,6 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         exportGunPair,
         importGunPair,
         gunPlugin,
-        pluginHooks,
         completePendingSignup,
         hasPendingSignup,
         setHasPendingSignup,
