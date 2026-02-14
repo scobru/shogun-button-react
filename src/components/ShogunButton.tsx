@@ -166,10 +166,10 @@ export function ShogunButtonProvider({
 
     // Poiché il metodo 'on' non esiste su ShogunCore,
     // gestiamo gli stati direttamente nei metodi di login/logout
-  }, [core, onLoginSuccess]);
+  }, [core]);
 
   // RxJS observe method
-  const observe = <T,>(path: string): Observable<T> => {
+  const observe = React.useCallback(<T,>(path: string): Observable<T> => {
     if (!core) {
       return new Observable<T>();
     }
@@ -179,10 +179,10 @@ export function ShogunButtonProvider({
       return observable;
     }
     return new Observable<T>();
-  };
+  }, [core]);
 
   // Unified login
-  const login = async (method: string, ...args: any[]) => {
+  const login = React.useCallback(async (method: string, ...args: any[]) => {
     try {
       if (!core) {
         throw new Error("SDK not initialized");
@@ -355,10 +355,10 @@ export function ShogunButtonProvider({
       onError?.(error.message || "Error during login");
       return { success: false, error: error.message };
     }
-  };
+  }, [core, onLoginSuccess, onError]);
 
   // Unified signup
-  const signUp = async (method: string, ...args: any[]) => {
+  const signUp = React.useCallback(async (method: string, ...args: any[]) => {
     try {
       if (!core) {
         throw new Error("SDK not initialized");
@@ -517,10 +517,10 @@ export function ShogunButtonProvider({
       onError?.(error.message || "Error during registration");
       return { success: false, error: error.message };
     }
-  };
+  }, [core, onSignupSuccess, onError]);
 
   // Logout
-  const logout = () => {
+  const logout = React.useCallback(() => {
     if (isShogunCore(core)) {
       core.logout();
     }
@@ -528,10 +528,10 @@ export function ShogunButtonProvider({
     setIsLoggedIn(false);
     setUserPub(null);
     setUsername(null);
-  };
+  }, [core]);
 
   // Implementazione del metodo setProvider
-  const setProvider = (provider: any): boolean => {
+  const setProvider = React.useCallback((provider: any): boolean => {
     if (!core) {
       return false;
     }
@@ -562,24 +562,24 @@ export function ShogunButtonProvider({
       console.error("Error setting provider:", error);
       return false;
     }
-  };
+  }, [core]);
 
-  const hasPlugin = (name: string): boolean => {
+  const hasPlugin = React.useCallback((name: string): boolean => {
     if (isShogunCore(core)) {
       return core.hasPlugin(name);
     }
     return false;
-  };
+  }, [core]);
 
-  const getPlugin = <T,>(name: string): T | undefined => {
+  const getPlugin = React.useCallback(<T,>(name: string): T | undefined => {
     if (isShogunCore(core)) {
       return core.getPlugin<T>(name);
     }
     return undefined;
-  };
+  }, [core]);
 
   // Export Gun pair functionality
-  const exportGunPair = async (password?: string): Promise<string> => {
+  const exportGunPair = React.useCallback(async (password?: string): Promise<string> => {
     if (!core) {
       throw new Error("SDK not initialized");
     }
@@ -612,10 +612,10 @@ export function ShogunButtonProvider({
     } catch (error: any) {
       throw new Error(`Failed to export Gun pair: ${error.message}`);
     }
-  };
+  }, [core, isLoggedIn]);
 
   // Import Gun pair functionality
-  const importGunPair = async (
+  const importGunPair = React.useCallback(async (
     pairData: string,
     password?: string
   ): Promise<boolean> => {
@@ -654,14 +654,10 @@ export function ShogunButtonProvider({
     } catch (error: any) {
       throw new Error(`Failed to import Gun pair: ${error.message}`);
     }
-  };
+  }, [core, login]);
 
   // Plugin initialization removed - GunAdvancedPlugin no longer available
   const gunPlugin = null;
-
-
-  // Plugin hooks removed - GunAdvancedPlugin no longer available
-  const pluginHooks: PluginHooks = {};
 
   const completePendingSignup = React.useCallback(() => {
     setHasPendingSignup(false);
@@ -737,7 +733,6 @@ export function ShogunButtonProvider({
       exportGunPair,
       importGunPair,
       gunPlugin,
-      pluginHooks,
       completePendingSignup,
       hasPendingSignup,
       setHasPendingSignup,
