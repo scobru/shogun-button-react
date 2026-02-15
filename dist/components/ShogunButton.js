@@ -1085,11 +1085,25 @@ export const ShogunButton = (() => {
             setAuthView("options");
             setModalIsOpen(true);
         };
-        const closeModal = () => {
+        const closeModal = React.useCallback(() => {
             setError("");
             setModalIsOpen(false);
             setHasPendingSignup(false);
-        };
+        }, []);
+        // Close modal on Escape key press
+        useEffect(() => {
+            if (!modalIsOpen)
+                return;
+            const handleKeyDown = (event) => {
+                if (event.key === "Escape") {
+                    closeModal();
+                }
+            };
+            document.addEventListener("keydown", handleKeyDown);
+            return () => {
+                document.removeEventListener("keydown", handleKeyDown);
+            };
+        }, [modalIsOpen, closeModal]);
         const finalizeZkProofSignup = () => {
             setError("");
             resetForm();
