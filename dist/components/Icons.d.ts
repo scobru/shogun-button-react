@@ -1,0 +1,13 @@
+import React from "react";
+export declare const WalletIcon: () => React.JSX.Element;
+export declare const KeyIcon: () => React.JSX.Element;
+export declare const NostrIcon: () => React.JSX.Element;
+export declare const WebAuthnIcon: () => React.JSX.Element;
+export declare const LogoutIcon: () => React.JSX.Element;
+export declare const UserIcon: () => React.JSX.Element;
+export declare const LockIcon: () => React.JSX.Element;
+export declare const CloseIcon: () => React.JSX.Element;
+export declare const ImportIcon: () => React.JSX.Element;
+export declare const ZkProofIcon: () => React.JSX.Element;
+export declare const ChallengeIcon: () => React.JSX.Element;
+export declare const ExportIcon: () => React.JSX.Element;

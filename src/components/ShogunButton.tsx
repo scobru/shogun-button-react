@@ -7,6 +7,20 @@ import React, {
 } from "react";
 import { ShogunCore, WebauthnPlugin } from "shogun-core";
 import { Observable } from "rxjs";
+import {
+  WalletIcon,
+  KeyIcon,
+  NostrIcon,
+  WebAuthnIcon,
+  LogoutIcon,
+  UserIcon,
+  LockIcon,
+  CloseIcon,
+  ImportIcon,
+  ZkProofIcon,
+  ChallengeIcon,
+  ExportIcon
+} from "./Icons";
 
 import "../styles/index.css";
 
@@ -753,217 +767,227 @@ type ShogunButtonComponent = React.FC & {
   useShogun: typeof useShogun;
 };
 
-// SVG Icons Components
-const WalletIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-    <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
-  </svg>
-);
+// PasswordForm Component
+const PasswordForm = ({
+  username,
+  setUsername,
+  mode,
+  onToggleMode,
+  onForgotPassword,
+  onSuccess,
+  login,
+  signUp,
+  core
+}: {
+  username: string;
+  setUsername: (u: string) => void;
+  mode: "login" | "signup";
+  onToggleMode: () => void;
+  onForgotPassword: () => void;
+  onSuccess: () => void;
+  login: (method: string, ...args: any[]) => Promise<any>;
+  signUp: (method: string, ...args: any[]) => Promise<any>;
+  core: ShogunCore | null;
+}) => {
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [hint, setHint] = useState("");
+  const [securityAnswer, setSecurityAnswer] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [securityQuestion] = useState("What is your favorite color?");
 
-const KeyIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="7.5" cy="15.5" r="5.5"></circle>
-    <path d="m21 2-9.6 9.6"></path>
-    <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
-  </svg>
-);
+  const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError("");
+      setLoading(true);
 
-const NostrIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M19.5 4.5 15 9l-3-3-4.5 4.5L9 12l-1.5 1.5L12 18l4.5-4.5L15 12l1.5-1.5L21 6l-1.5-1.5Z"></path>
-    <path d="M12 12 6 6l-1.5 1.5L9 12l-4.5 4.5L6 18l6-6Z"></path>
-  </svg>
-);
+      try {
+        if (mode === "signup") {
+          const result = await signUp(
+            "password",
+            username,
+            password,
+            passwordConfirm
+          );
+          if (result && result.success) {
+             if (isShogunCore(core) && core.db && hint) {
+              try {
+                const user = core.gun.user();
+                if (user && user.is) {
+                  core.db.gun.get('users').get(username).get('hint').put(hint);
+                  if (securityAnswer) {
+                    core.db.gun.get('users').get(username).get('security').put({
+                      question: securityQuestion,
+                      answer: securityAnswer
+                    });
+                  }
+                }
+              } catch (error) {
+                console.warn('Failed to store password hint:', error);
+              }
+            }
+            if (result.redirectUrl) {
+              window.location.href = result.redirectUrl;
+            } else {
+              onSuccess();
+            }
+          } else if (result && result.error) {
+            setError(result.error);
+          }
+        } else {
+            const result = await login("password", username, password);
+             if (result && result.success) {
+                if (result.redirectUrl) {
+                  window.location.href = result.redirectUrl;
+                } else {
+                  onSuccess();
+                }
+             } else {
+                setError(result.error || "Login failed");
+             }
+        }
+      } catch (e: any) {
+        setError(e.message || "An unexpected error occurred.");
+      } finally {
+        setLoading(false);
+      }
+  };
 
-const WebAuthnIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M7 11v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-4"></path>
-    <path d="M14 4V2a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2"></path>
-  </svg>
-);
+  return (
+    <div className="shogun-auth-form">
+      {error && <div className="shogun-error-message">{error}</div>}
+      <form onSubmit={handleSubmit} className="shogun-auth-form">
+        <div className="shogun-form-group">
+          <label htmlFor="username">
+            <UserIcon />
+            <span>Username</span>
+          </label>
+          <input
+            type="text"
+            id="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your username"
+          />
+        </div>
+        <div className="shogun-form-group">
+            <label htmlFor="password">
+            <LockIcon />
+            <span>Password</span>
+            </label>
+            <input
+            type="password"
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={loading}
+            required
+            placeholder="Enter your password"
+            />
+        </div>
+        {mode === "signup" && (
+            <>
+            <div className="shogun-form-group">
+                <label htmlFor="passwordConfirm">
+                <KeyIcon />
+                <span>Confirm Password</span>
+                </label>
+                <input
+                type="password"
+                id="passwordConfirm"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                disabled={loading}
+                required
+                placeholder="Confirm your password"
+                />
+            </div>
+            <div className="shogun-form-group">
+                <label htmlFor="hint">
+                <UserIcon />
+                <span>Password Hint</span>
+                </label>
+                <input
+                type="text"
+                id="hint"
+                value={hint}
+                onChange={(e) => setHint(e.target.value)}
+                disabled={loading}
+                required
+                placeholder="Enter your password hint"
+                />
+            </div>
+            <div className="shogun-form-group">
+                <label htmlFor="securityQuestion">
+                <UserIcon />
+                <span>Security Question</span>
+                </label>
+                <input
+                type="text"
+                id="securityQuestion"
+                value={securityQuestion}
+                disabled={true}
+                />
+            </div>
+            <div className="shogun-form-group">
+                <label htmlFor="securityAnswer">
+                <UserIcon />
+                <span>Security Answer</span>
+                </label>
+                <input
+                type="text"
+                id="securityAnswer"
+                value={securityAnswer}
+                onChange={(e) => setSecurityAnswer(e.target.value)}
+                disabled={loading}
+                required
+                placeholder="Enter your security answer"
+                />
+            </div>
+            </>
+        )}
 
-const LogoutIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-    <polyline points="16 17 21 12 16 7"></polyline>
-    <line x1="21" y1="12" x2="9" y2="12"></line>
-  </svg>
-);
+        <button
+            type="submit"
+            className="shogun-submit-button"
+            disabled={loading}
+        >
+            {loading
+            ? "Processing..."
+            : mode === "login"
+                ? "Sign In"
+                : "Create Account"}
+        </button>
+        <div className="shogun-form-footer">
+            <button
+            type="button"
+            className="shogun-toggle-mode shogun-prominent-toggle"
+            onClick={onToggleMode}
+            disabled={loading}
+            >
+            {mode === "login"
+                ? "Don't have an account? Sign up"
+                : "Already have an account? Log in"}
+            </button>
+            {mode === "login" && (
+            <button
+                type="button"
+                className="shogun-toggle-mode"
+                onClick={onForgotPassword}
+                disabled={loading}
+            >
+                Forgot password?
+            </button>
+            )}
+        </div>
+      </form>
+    </div>
+  );
+};
 
-const UserIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-    <circle cx="12" cy="7" r="4"></circle>
-  </svg>
-);
-
-const LockIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="18" y1="6" x2="6" y2="18"></line>
-    <line x1="6" y1="6" x2="18" y2="18"></line>
-  </svg>
-);
-
-const ImportIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-    <polyline points="14,2 14,8 20,8"></polyline>
-    <line x1="16" y1="13" x2="8" y2="13"></line>
-    <line x1="12" y1="17" x2="12" y2="9"></line>
-  </svg>
-);
-
-const ZkProofIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-    <path d="M2 17l10 5 10-5"></path>
-    <path d="M2 12l10 5 10-5"></path>
-  </svg>
-);
-
-const ChallengeIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-  </svg>
-);
-
-const ExportIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-    <polyline points="14,2 14,8 20,8"></polyline>
-    <line x1="12" y1="11" x2="12" y2="21"></line>
-    <polyline points="16,15 12,11 8,15"></polyline>
-  </svg>
-);
 
 // Component for Shogun login button
 export const ShogunButton: ShogunButtonComponent = (() => {
@@ -986,10 +1010,10 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     // Form states
     const [modalIsOpen, setModalIsOpen] = useState(false);
     const [formUsername, setFormUsername] = useState("");
-    const [formPassword, setFormPassword] = useState("");
-    const [formPasswordConfirm, setFormPasswordConfirm] = useState("");
-    const [formHint, setFormHint] = useState("");
-    const [formSecurityQuestion] = useState("What is your favorite color?"); // Hardcoded for now
+    // formPassword, formPasswordConfirm, formHint moved to PasswordForm
+    // formSecurityQuestion moved to PasswordForm (const)
+    // formSecurityAnswer kept for recovery
+    const [formSecurityQuestion] = useState("What is your favorite color?");
     const [formSecurityAnswer, setFormSecurityAnswer] = useState("");
     const [formMode, setFormMode] = useState<"login" | "signup">("login");
     const [authView, setAuthView] = useState<
@@ -1157,53 +1181,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      console.log(`[DEBUG] handleSubmit called, formMode: ${formMode}, username: ${formUsername}`);
-      setError("");
-      setLoading(true);
-
-      try {
-        if (formMode === "signup") {
-          const result = await signUp(
-            "password",
-            formUsername,
-            formPassword,
-            formPasswordConfirm
-          );
-          if (result && result.success) {
-            // Password hint functionality has been removed from shogun-core
-            // Users should store hints manually in their own data structures if needed
-            if (isShogunCore(core) && core.db && formHint) {
-              try {
-                // Store hint manually in user data
-                const user = core.gun.user();
-                if (user && user.is) {
-                  core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
-                  if (formSecurityAnswer) {
-                    core.db.gun.get('users').get(formUsername).get('security').put({
-                      question: formSecurityQuestion,
-                      answer: formSecurityAnswer
-                    });
-                  }
-                }
-              } catch (error) {
-                console.warn('Failed to store password hint:', error);
-              }
-            }
-            setModalIsOpen(false);
-          } else if (result && result.error) {
-            setError(result.error);
-          }
-        } else {
-          await handleAuth("password", formUsername, formPassword);
-        }
-      } catch (e: any) {
-        setError(e.message || "An unexpected error occurred.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    // handleSubmit removed (logic moved to PasswordForm)
 
     const handleWebAuthnAuth = () => {
       if (!hasPlugin("webauthn")) {
@@ -1448,9 +1426,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     const resetForm = () => {
       setFormUsername("");
-      setFormPassword("");
-      setFormPasswordConfirm("");
-      setFormHint("");
+      // formPassword etc removed
       setFormSecurityAnswer("");
       setError("");
       setLoading(false);
@@ -1616,136 +1592,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           </button>
         )}
       </div>
-    );
-
-    const renderPasswordForm = () => (
-      <form onSubmit={handleSubmit} className="shogun-auth-form">
-        <div className="shogun-form-group">
-          <label htmlFor="username">
-            <UserIcon />
-            <span>Username</span>
-          </label>
-          <input
-            type="text"
-            id="username"
-            value={formUsername}
-            onChange={(e) => setFormUsername(e.target.value)}
-            disabled={loading}
-            required
-            placeholder="Enter your username"
-          />
-        </div>
-        <div className="shogun-form-group">
-          <label htmlFor="password">
-            <LockIcon />
-            <span>Password</span>
-          </label>
-          <input
-            type="password"
-            id="password"
-            value={formPassword}
-            onChange={(e) => setFormPassword(e.target.value)}
-            disabled={loading}
-            required
-            placeholder="Enter your password"
-          />
-        </div>
-        {formMode === "signup" && (
-          <>
-            <div className="shogun-form-group">
-              <label htmlFor="passwordConfirm">
-                <KeyIcon />
-                <span>Confirm Password</span>
-              </label>
-              <input
-                type="password"
-                id="passwordConfirm"
-                value={formPasswordConfirm}
-                onChange={(e) => setFormPasswordConfirm(e.target.value)}
-                disabled={loading}
-                required
-                placeholder="Confirm your password"
-              />
-            </div>
-            <div className="shogun-form-group">
-              <label htmlFor="hint">
-                <UserIcon />
-                <span>Password Hint</span>
-              </label>
-              <input
-                type="text"
-                id="hint"
-                value={formHint}
-                onChange={(e) => setFormHint(e.target.value)}
-                disabled={loading}
-                required
-                placeholder="Enter your password hint"
-              />
-            </div>
-            <div className="shogun-form-group">
-              <label htmlFor="securityQuestion">
-                <UserIcon />
-                <span>Security Question</span>
-              </label>
-              <input
-                type="text"
-                id="securityQuestion"
-                value={formSecurityQuestion}
-                disabled={true}
-              />
-            </div>
-            <div className="shogun-form-group">
-              <label htmlFor="securityAnswer">
-                <UserIcon />
-                <span>Security Answer</span>
-              </label>
-              <input
-                type="text"
-                id="securityAnswer"
-                value={formSecurityAnswer}
-                onChange={(e) => setFormSecurityAnswer(e.target.value)}
-                disabled={loading}
-                required
-                placeholder="Enter your security answer"
-              />
-              </div>
-            </>
-        )}
-        
-        <button
-          type="submit"
-          className="shogun-submit-button"
-          disabled={loading}
-        >
-          {loading
-            ? "Processing..."
-            : formMode === "login"
-              ? "Sign In"
-              : "Create Account"}
-        </button>
-        <div className="shogun-form-footer">
-          <button
-            type="button"
-            className="shogun-toggle-mode shogun-prominent-toggle"
-            onClick={toggleMode}
-            disabled={loading}
-          >
-            {formMode === "login"
-              ? "Don't have an account? Sign up"
-              : "Already have an account? Log in"}
-          </button>
-          {formMode === "login" && (
-            <button
-              type="button"
-              className="shogun-toggle-mode"
-              onClick={() => setAuthView("recover")}
-              disabled={loading}
-            >
-              Forgot password?
-            </button>
-          )}
-        </div>
-      </form>
     );
 
     const renderWebAuthnUsernameForm = () => (
@@ -2639,7 +2485,17 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                     >
                       &larr; Back
                     </button>
-                    {renderPasswordForm()}
+                    <PasswordForm
+                        username={formUsername}
+                        setUsername={setFormUsername}
+                        mode={formMode}
+                        onToggleMode={toggleMode}
+                        onForgotPassword={() => setAuthView("recover")}
+                        onSuccess={() => setModalIsOpen(false)}
+                        login={login}
+                        signUp={signUp}
+                        core={core}
+                    />
                   </>
                 )}
 
