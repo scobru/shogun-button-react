@@ -1633,6 +1633,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             disabled={loading}
             required
             placeholder="Enter your username"
+            autoComplete="username"
           />
         </div>
         <div className="shogun-form-group">
@@ -1648,6 +1649,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             disabled={loading}
             required
             placeholder="Enter your password"
+            autoComplete={formMode === "login" ? "current-password" : "new-password"}
           />
         </div>
         {formMode === "signup" && (
@@ -1665,6 +1667,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 disabled={loading}
                 required
                 placeholder="Confirm your password"
+                autoComplete="new-password"
               />
             </div>
             <div className="shogun-form-group">
@@ -1795,6 +1798,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             required
             placeholder="Enter your username"
             autoFocus
+            autoComplete="username webauthn"
           />
         </div>
         <button
@@ -1938,6 +1942,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             disabled={loading}
             required
             placeholder="Enter your username"
+            autoComplete="username"
           />
         </div>
         <div className="shogun-form-group">
@@ -2375,6 +2380,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             required
             placeholder="Enter your username"
             autoFocus
+            autoComplete="username"
           />
         </div>
         <button
@@ -2413,6 +2419,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             required
             placeholder="Enter your username"
             autoFocus
+            autoComplete="username"
           />
         </div>
         <div className="shogun-form-group">
@@ -2609,7 +2616,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 </button>
               </div>
               <div className="shogun-modal-content">
-                {error && <div className="shogun-error-message">{error}</div>}
+                {error && <div className="shogun-error-message" role="alert">{error}</div>}
 
                 {authView === "options" && (
                   <>
