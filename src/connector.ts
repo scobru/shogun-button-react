@@ -22,7 +22,7 @@ export async function shogunConnector(
     showZkProof,
     showChallenge,
     darkMode,
-    enableGunDebug = true,
+    enableGunDebug = false,
     enableConnectionMonitoring = true,
     defaultPageSize = 20,
     connectionTimeout = 10000,
@@ -52,12 +52,11 @@ export async function shogunConnector(
     } : undefined,
     challenge: challenge?.enabled ? { enabled: true } : undefined,
     timeouts,
-    silent: false, // Enable console logs for debugging
+    silent: !enableGunDebug,
   });
 
   // Note: ShogunCore v2.0.0 initializes automatically in constructor
   // No need to call initialize() separately
-  console.log(`[DEBUG] ShogunConnector: ShogunCore initialized with gunInstance`);
 
   const setProvider = (provider: any): boolean => {
     if (!core) {

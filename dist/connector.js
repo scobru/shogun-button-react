@@ -1,6 +1,6 @@
 import { ShogunCore } from "shogun-core";
 export async function shogunConnector(options) {
-    const { gunInstance, appName, timeouts, webauthn, nostr, web3, zkproof, challenge, showWebauthn, showNostr, showMetamask, showZkProof, showChallenge, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, crypto, ...restOptions } = options;
+    const { gunInstance, appName, timeouts, webauthn, nostr, web3, zkproof, challenge, showWebauthn, showNostr, showMetamask, showZkProof, showChallenge, darkMode, enableGunDebug = false, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, crypto, ...restOptions } = options;
     let core = null;
     let gun = null;
     gun = gunInstance;
@@ -20,11 +20,10 @@ export async function shogunConnector(options) {
         } : undefined,
         challenge: (challenge === null || challenge === void 0 ? void 0 : challenge.enabled) ? { enabled: true } : undefined,
         timeouts,
-        silent: false, // Enable console logs for debugging
+        silent: !enableGunDebug,
     });
     // Note: ShogunCore v2.0.0 initializes automatically in constructor
     // No need to call initialize() separately
-    console.log(`[DEBUG] ShogunConnector: ShogunCore initialized with gunInstance`);
     const setProvider = (provider) => {
         var _a;
         if (!core) {
