@@ -716,14 +716,14 @@ export const ShogunButton = (() => {
                                 React.createElement("span", { className: "shogun-username-full" }, username.length > 20
                                     ? `${username.substring(0, 10)}...${username.substring(username.length - 6)}`
                                     : username))),
-                        React.createElement("div", { className: "shogun-dropdown-item", onClick: () => {
+                        React.createElement("button", { className: "shogun-dropdown-item", onClick: () => {
                                 setDropdownOpen(false);
                                 setAuthView("export");
                                 setModalIsOpen(true);
                             } },
                             React.createElement(ExportIcon, null),
                             React.createElement("span", null, "Export Pair")),
-                        React.createElement("div", { className: "shogun-dropdown-item", onClick: logout },
+                        React.createElement("button", { className: "shogun-dropdown-item", onClick: logout },
                             React.createElement(LogoutIcon, null),
                             React.createElement("span", null, "Disconnect")))))));
         }
@@ -1567,7 +1567,7 @@ export const ShogunButton = (() => {
                         React.createElement("button", { className: "shogun-close-button", onClick: closeModal, "aria-label": "Close" },
                             React.createElement(CloseIcon, null))),
                     React.createElement("div", { className: "shogun-modal-content" },
-                        error && React.createElement("div", { className: "shogun-error-message" }, error),
+                        error && (React.createElement("div", { className: "shogun-error-message", role: "alert" }, error)),
                         authView === "options" && (React.createElement(React.Fragment, null,
                             renderAuthOptions(),
                             React.createElement("div", { className: "shogun-form-footer" },

@@ -167,6 +167,11 @@
   font-size: 14px;
   cursor: pointer;
   transition: var(--shogun-transition);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
 }
 
 .shogun-dropdown-item:hover {
