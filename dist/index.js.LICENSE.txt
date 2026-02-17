@@ -18,6 +18,8 @@
 
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 
+/*! noble-ciphers - MIT License (c) 2023 Paul Miller (paulmillr.com) */
+
 /*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 
 /*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
@@ -25,6 +27,8 @@
 /*! safe-buffer. MIT License. Feross Aboukhadijeh <https://feross.org/opensource> */
 
 /*! scure-base - MIT License (c) 2022 Paul Miller (paulmillr.com) */
+
+/*! scure-bip39 - MIT License (c) 2022 Patricio Palladino, Paul Miller (paulmillr.com) */
 
 /**
  * @module @semaphore-protocol/group
