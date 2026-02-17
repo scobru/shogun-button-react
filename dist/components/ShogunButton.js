@@ -40,6 +40,15 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
     const [userPub, setUserPub] = useState(null);
     const [username, setUsername] = useState(null);
     const [hasPendingSignup, setHasPendingSignup] = useState(false);
+    // Refs for callbacks to ensure stable context
+    const onLoginSuccessRef = useRef(onLoginSuccess);
+    const onSignupSuccessRef = useRef(onSignupSuccess);
+    const onErrorRef = useRef(onError);
+    useEffect(() => {
+        onLoginSuccessRef.current = onLoginSuccess;
+        onSignupSuccessRef.current = onSignupSuccess;
+        onErrorRef.current = onError;
+    }, [onLoginSuccess, onSignupSuccess, onError]);
     // Effetto per gestire l'inizializzazione e pulizia
     useEffect(() => {
         var _a, _b;
@@ -77,7 +86,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
     }, [core]);
     // Unified login
     const login = React.useCallback(async (method, ...args) => {
-        var _a, _b;
+        var _a, _b, _c, _d, _e;
         try {
             if (!core) {
                 throw new Error("SDK not initialized");
@@ -231,25 +240,25 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                 setIsLoggedIn(true);
                 setUserPub(userPub);
                 setUsername(displayName);
-                onLoginSuccess === null || onLoginSuccess === void 0 ? void 0 : onLoginSuccess({
+                (_c = onLoginSuccessRef.current) === null || _c === void 0 ? void 0 : _c.call(onLoginSuccessRef, {
                     userPub: userPub,
                     username: displayName,
                     authMethod: authMethod,
                 });
             }
             else {
-                onError === null || onError === void 0 ? void 0 : onError(result.error || "Login failed");
+                (_d = onErrorRef.current) === null || _d === void 0 ? void 0 : _d.call(onErrorRef, result.error || "Login failed");
             }
             return result;
         }
         catch (error) {
-            onError === null || onError === void 0 ? void 0 : onError(error.message || "Error during login");
+            (_e = onErrorRef.current) === null || _e === void 0 ? void 0 : _e.call(onErrorRef, error.message || "Error during login");
             return { success: false, error: error.message };
         }
-    }, [core, onLoginSuccess, onError]);
+    }, [core]);
     // Unified signup
     const signUp = React.useCallback(async (method, ...args) => {
-        var _a, _b, _c;
+        var _a, _b, _c, _d, _e, _f;
         try {
             if (!core) {
                 throw new Error("SDK not initialized");
@@ -378,18 +387,18 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                 };
                 const pendingBackup = Boolean(result.seedPhrase || result.trapdoor);
                 setHasPendingSignup(pendingBackup);
-                onSignupSuccess === null || onSignupSuccess === void 0 ? void 0 : onSignupSuccess(signupPayload);
+                (_d = onSignupSuccessRef.current) === null || _d === void 0 ? void 0 : _d.call(onSignupSuccessRef, signupPayload);
             }
             else {
-                onError === null || onError === void 0 ? void 0 : onError(result.error);
+                (_e = onErrorRef.current) === null || _e === void 0 ? void 0 : _e.call(onErrorRef, result.error);
             }
             return result;
         }
         catch (error) {
-            onError === null || onError === void 0 ? void 0 : onError(error.message || "Error during registration");
+            (_f = onErrorRef.current) === null || _f === void 0 ? void 0 : _f.call(onErrorRef, error.message || "Error during registration");
             return { success: false, error: error.message };
         }
-    }, [core, onSignupSuccess, onError]);
+    }, [core]);
     // Logout
     const logout = React.useCallback(() => {
         if (isShogunCore(core)) {
