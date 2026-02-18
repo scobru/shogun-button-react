@@ -1164,12 +1164,24 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 // Store hint manually in user data
                 const user = core.gun.user();
                 if (user && user.is) {
-                  core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
-                  if (formSecurityAnswer) {
+                  if ((window as any).SEA && (window as any).SEA.encrypt && formSecurityAnswer) {
+                    // Encrypt hint using security answer
+                    const encryptedHint = await (window as any).SEA.encrypt(formHint, formSecurityAnswer);
+                    core.db.gun.get('users').get(formUsername).get('hint').put(encryptedHint);
+
+                    // Store question only, not the answer
                     core.db.gun.get('users').get(formUsername).get('security').put({
-                      question: formSecurityQuestion,
-                      answer: formSecurityAnswer
+                      question: formSecurityQuestion
                     });
+                  } else {
+                    console.warn('SEA not available, falling back to plaintext storage');
+                    core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
+                    if (formSecurityAnswer) {
+                      core.db.gun.get('users').get(formUsername).get('security').put({
+                        question: formSecurityQuestion,
+                        answer: formSecurityAnswer
+                      });
+                    }
                   }
                 }
               } catch (error) {
@@ -1352,6 +1364,24 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 resolve(hint || null);
               });
             });
+
+            // Try to decrypt hint with security answer (new secure method)
+            let decryptedHint: string | undefined;
+            if (hintNode && (window as any).SEA && (window as any).SEA.decrypt) {
+              try {
+                const result = await (window as any).SEA.decrypt(hintNode, formSecurityAnswer);
+                if (result) decryptedHint = result;
+              } catch (e) {
+                // Decryption failed, might be plaintext (legacy)
+              }
+            }
+
+            if (decryptedHint) {
+              setRecoveredHint(decryptedHint);
+              setAuthView("showHint");
+              setLoading(false); // Stop loading here as we return early
+              return;
+            }
 
             const securityNode = await new Promise<any>((resolve) => {
               core.db.gun.get('users').get(formUsername).get('security').once((security: any) => {
