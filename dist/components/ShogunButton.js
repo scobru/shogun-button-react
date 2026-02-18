@@ -716,14 +716,14 @@ export const ShogunButton = (() => {
                                 React.createElement("span", { className: "shogun-username-full" }, username.length > 20
                                     ? `${username.substring(0, 10)}...${username.substring(username.length - 6)}`
                                     : username))),
-                        React.createElement("div", { className: "shogun-dropdown-item", onClick: () => {
+                        React.createElement("button", { className: "shogun-dropdown-item", onClick: () => {
                                 setDropdownOpen(false);
                                 setAuthView("export");
                                 setModalIsOpen(true);
                             } },
                             React.createElement(ExportIcon, null),
                             React.createElement("span", null, "Export Pair")),
-                        React.createElement("div", { className: "shogun-dropdown-item", onClick: logout },
+                        React.createElement("button", { className: "shogun-dropdown-item", onClick: logout },
                             React.createElement(LogoutIcon, null),
                             React.createElement("span", null, "Disconnect")))))));
         }
@@ -1137,12 +1137,12 @@ export const ShogunButton = (() => {
                 React.createElement("label", { htmlFor: "username" },
                     React.createElement(UserIcon, null),
                     React.createElement("span", null, "Username")),
-                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username" })),
+                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoComplete: "username" })),
             React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", { htmlFor: "password" },
                     React.createElement(LockIcon, null),
                     React.createElement("span", null, "Password")),
-                React.createElement("input", { type: "password", id: "password", value: formPassword, onChange: (e) => setFormPassword(e.target.value), disabled: loading, required: true, placeholder: "Enter your password" })),
+                React.createElement("input", { type: "password", id: "password", value: formPassword, onChange: (e) => setFormPassword(e.target.value), disabled: loading, required: true, placeholder: "Enter your password", autoComplete: formMode === "signup" ? "new-password" : "current-password" })),
             formMode === "signup" && (React.createElement(React.Fragment, null,
                 React.createElement("div", { className: "shogun-form-group" },
                     React.createElement("label", { htmlFor: "passwordConfirm" },
@@ -1200,7 +1200,7 @@ export const ShogunButton = (() => {
                 React.createElement("label", { htmlFor: "username" },
                     React.createElement(UserIcon, null),
                     React.createElement("span", null, "Username")),
-                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoFocus: true })),
+                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoFocus: true, autoComplete: "username" })),
             React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: () => handleAuth("webauthn", formUsername), disabled: loading || !formUsername.trim() }, loading ? "Processing..." : `Continue with WebAuthn`),
             React.createElement("div", { className: "shogun-form-footer" },
                 React.createElement("button", { type: "button", className: "shogun-back-button", onClick: () => setAuthView("options"), disabled: loading }, "\u2190 Back to Options"),
@@ -1229,7 +1229,7 @@ export const ShogunButton = (() => {
                 React.createElement("label", { htmlFor: "recoveryUsername" },
                     React.createElement(UserIcon, null),
                     React.createElement("span", null, "Username")),
-                React.createElement("input", { type: "text", id: "recoveryUsername", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, placeholder: "Enter your username", autoFocus: true })),
+                React.createElement("input", { type: "text", id: "recoveryUsername", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, placeholder: "Enter your username", autoFocus: true, autoComplete: "username" })),
             React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", { htmlFor: "recoverySeed" },
                     React.createElement(KeyIcon, null),
@@ -1254,7 +1254,7 @@ export const ShogunButton = (() => {
                 React.createElement("label", { htmlFor: "username" },
                     React.createElement(UserIcon, null),
                     React.createElement("span", null, "Username")),
-                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username" })),
+                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoComplete: "username" })),
             React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", null, "Security Question"),
                 React.createElement("p", null, formSecurityQuestion)),
@@ -1461,7 +1461,7 @@ export const ShogunButton = (() => {
                 React.createElement("label", { htmlFor: "challenge-username" },
                     React.createElement(UserIcon, null),
                     React.createElement("span", null, "Username")),
-                React.createElement("input", { type: "text", id: "challenge-username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoFocus: true })),
+                React.createElement("input", { type: "text", id: "challenge-username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoFocus: true, autoComplete: "username" })),
             React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleChallengeLogin, disabled: loading }, loading ? "Processing..." : "Continue"),
             React.createElement("button", { type: "button", className: "shogun-back-button", onClick: () => setAuthView("options"), disabled: loading }, "Back")));
         const renderSeedLoginForm = () => (React.createElement("div", { className: "shogun-auth-form" },
@@ -1470,7 +1470,7 @@ export const ShogunButton = (() => {
                 React.createElement("label", { htmlFor: "seed-username" },
                     React.createElement(UserIcon, null),
                     React.createElement("span", null, "Username")),
-                React.createElement("input", { type: "text", id: "seed-username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoFocus: true })),
+                React.createElement("input", { type: "text", id: "seed-username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username", autoFocus: true, autoComplete: "username" })),
             React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", { htmlFor: "seed-mnemonic" },
                     React.createElement(KeyIcon, null),
@@ -1567,7 +1567,7 @@ export const ShogunButton = (() => {
                         React.createElement("button", { className: "shogun-close-button", onClick: closeModal, "aria-label": "Close" },
                             React.createElement(CloseIcon, null))),
                     React.createElement("div", { className: "shogun-modal-content" },
-                        error && React.createElement("div", { className: "shogun-error-message" }, error),
+                        error && React.createElement("div", { className: "shogun-error-message", role: "alert" }, error),
                         authView === "options" && (React.createElement(React.Fragment, null,
                             renderAuthOptions(),
                             React.createElement("div", { className: "shogun-form-footer" },
