@@ -779,12 +779,24 @@ export const ShogunButton = (() => {
                                 // Store hint manually in user data
                                 const user = core.gun.user();
                                 if (user && user.is) {
-                                    core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
-                                    if (formSecurityAnswer) {
+                                    if (window.SEA && window.SEA.encrypt && formSecurityAnswer) {
+                                        // Encrypt hint using security answer
+                                        const encryptedHint = await window.SEA.encrypt(formHint, formSecurityAnswer);
+                                        core.db.gun.get('users').get(formUsername).get('hint').put(encryptedHint);
+                                        // Store question only, not the answer
                                         core.db.gun.get('users').get(formUsername).get('security').put({
-                                            question: formSecurityQuestion,
-                                            answer: formSecurityAnswer
+                                            question: formSecurityQuestion
                                         });
+                                    }
+                                    else {
+                                        console.warn('SEA not available, falling back to plaintext storage');
+                                        core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
+                                        if (formSecurityAnswer) {
+                                            core.db.gun.get('users').get(formUsername).get('security').put({
+                                                question: formSecurityQuestion,
+                                                answer: formSecurityAnswer
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -965,6 +977,24 @@ export const ShogunButton = (() => {
                                 resolve(hint || null);
                             });
                         });
+                        // Try to decrypt hint with security answer (new secure method)
+                        let decryptedHint;
+                        if (hintNode && window.SEA && window.SEA.decrypt) {
+                            try {
+                                const result = await window.SEA.decrypt(hintNode, formSecurityAnswer);
+                                if (result)
+                                    decryptedHint = result;
+                            }
+                            catch (e) {
+                                // Decryption failed, might be plaintext (legacy)
+                            }
+                        }
+                        if (decryptedHint) {
+                            setRecoveredHint(decryptedHint);
+                            setAuthView("showHint");
+                            setLoading(false); // Stop loading here as we return early
+                            return;
+                        }
                         const securityNode = await new Promise((resolve) => {
                             core.db.gun.get('users').get(formUsername).get('security').once((security) => {
                                 resolve(security || null);
