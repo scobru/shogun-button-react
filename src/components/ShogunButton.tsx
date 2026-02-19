@@ -754,6 +754,7 @@ const WalletIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
     <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
@@ -772,6 +773,7 @@ const KeyIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <circle cx="7.5" cy="15.5" r="5.5"></circle>
     <path d="m21 2-9.6 9.6"></path>
@@ -790,6 +792,7 @@ const NostrIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <path d="M19.5 4.5 15 9l-3-3-4.5 4.5L9 12l-1.5 1.5L12 18l4.5-4.5L15 12l1.5-1.5L21 6l-1.5-1.5Z"></path>
     <path d="M12 12 6 6l-1.5 1.5L9 12l-4.5 4.5L6 18l6-6Z"></path>
@@ -807,6 +810,7 @@ const WebAuthnIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <path d="M7 11v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-4"></path>
     <path d="M14 4V2a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2"></path>
@@ -824,6 +828,7 @@ const LogoutIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
     <polyline points="16 17 21 12 16 7"></polyline>
@@ -842,6 +847,7 @@ const UserIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
     <circle cx="12" cy="7" r="4"></circle>
@@ -859,6 +865,7 @@ const LockIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -876,6 +883,7 @@ const CloseIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <line x1="18" y1="6" x2="6" y2="18"></line>
     <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -893,6 +901,7 @@ const ImportIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
     <polyline points="14,2 14,8 20,8"></polyline>
@@ -912,6 +921,7 @@ const ZkProofIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
     <path d="M2 17l10 5 10-5"></path>
@@ -930,6 +940,7 @@ const ChallengeIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
   </svg>
@@ -946,6 +957,7 @@ const ExportIcon = React.memo(() => (
     strokeWidth="2"
     strokeLinecap="round"
     strokeLinejoin="round"
+    aria-hidden="true"
   >
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
     <polyline points="14,2 14,8 20,8"></polyline>
@@ -2594,7 +2606,15 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 </button>
               </div>
               <div className="shogun-modal-content">
-                {error && <div className="shogun-error-message">{error}</div>}
+                {error && (
+                  <div
+                    className="shogun-error-message"
+                    role="alert"
+                    aria-live="assertive"
+                  >
+                    {error}
+                  </div>
+                )}
 
                 {authView === "options" && (
                   <>
