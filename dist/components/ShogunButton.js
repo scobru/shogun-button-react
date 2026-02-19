@@ -779,17 +779,45 @@ export const ShogunButton = (() => {
                                 // Store hint manually in user data
                                 const user = core.gun.user();
                                 if (user && user.is) {
-                                    core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
-                                    if (formSecurityAnswer) {
-                                        core.db.gun.get('users').get(formUsername).get('security').put({
+                                    if (formSecurityAnswer &&
+                                        window.SEA &&
+                                        window.SEA.encrypt) {
+                                        const encryptedHint = await window.SEA.encrypt(formHint, formSecurityAnswer);
+                                        core.db.gun
+                                            .get("users")
+                                            .get(formUsername)
+                                            .get("hint")
+                                            .put(encryptedHint);
+                                        // Store security question (but not answer) so recovery can display it
+                                        core.db.gun
+                                            .get("users")
+                                            .get(formUsername)
+                                            .get("security")
+                                            .put({
                                             question: formSecurityQuestion,
-                                            answer: formSecurityAnswer
                                         });
+                                    }
+                                    else {
+                                        core.db.gun
+                                            .get("users")
+                                            .get(formUsername)
+                                            .get("hint")
+                                            .put(formHint);
+                                        if (formSecurityAnswer) {
+                                            core.db.gun
+                                                .get("users")
+                                                .get(formUsername)
+                                                .get("security")
+                                                .put({
+                                                question: formSecurityQuestion,
+                                                answer: formSecurityAnswer,
+                                            });
+                                        }
                                     }
                                 }
                             }
                             catch (error) {
-                                console.warn('Failed to store password hint:', error);
+                                console.warn("Failed to store password hint:", error);
                             }
                         }
                         setModalIsOpen(false);
@@ -965,22 +993,46 @@ export const ShogunButton = (() => {
                                 resolve(hint || null);
                             });
                         });
-                        const securityNode = await new Promise((resolve) => {
-                            core.db.gun.get('users').get(formUsername).get('security').once((security) => {
-                                resolve(security || null);
-                            });
-                        });
-                        if (securityNode && securityNode.answer === formSecurityAnswer) {
-                            if (hintNode) {
-                                setRecoveredHint(hintNode);
-                                setAuthView("showHint");
+                        // Try to decrypt hint using SEA
+                        let decryptedHint = null;
+                        if (hintNode &&
+                            window.SEA &&
+                            window.SEA.decrypt) {
+                            try {
+                                decryptedHint = await window.SEA.decrypt(hintNode, formSecurityAnswer);
                             }
-                            else {
-                                setError("No hint found for this user.");
+                            catch (e) {
+                                // Decryption failed or data is not in SEA format (likely legacy plaintext)
+                                // Continue to legacy fallback
                             }
                         }
+                        if (decryptedHint) {
+                            setRecoveredHint(decryptedHint);
+                            setAuthView("showHint");
+                        }
                         else {
-                            setError("Security answer is incorrect.");
+                            // Fallback for legacy (plaintext)
+                            const securityNode = await new Promise((resolve) => {
+                                core.db.gun
+                                    .get("users")
+                                    .get(formUsername)
+                                    .get("security")
+                                    .once((security) => {
+                                    resolve(security || null);
+                                });
+                            });
+                            if (securityNode && securityNode.answer === formSecurityAnswer) {
+                                if (hintNode) {
+                                    setRecoveredHint(hintNode);
+                                    setAuthView("showHint");
+                                }
+                                else {
+                                    setError("No hint found for this user.");
+                                }
+                            }
+                            else {
+                                setError("Security answer is incorrect.");
+                            }
                         }
                     }
                     catch (error) {

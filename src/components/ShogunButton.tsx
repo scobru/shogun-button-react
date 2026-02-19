@@ -1164,16 +1164,49 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 // Store hint manually in user data
                 const user = core.gun.user();
                 if (user && user.is) {
-                  core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
-                  if (formSecurityAnswer) {
-                    core.db.gun.get('users').get(formUsername).get('security').put({
-                      question: formSecurityQuestion,
-                      answer: formSecurityAnswer
-                    });
+                  if (
+                    formSecurityAnswer &&
+                    (window as any).SEA &&
+                    (window as any).SEA.encrypt
+                  ) {
+                    const encryptedHint = await (window as any).SEA.encrypt(
+                      formHint,
+                      formSecurityAnswer
+                    );
+                    core.db.gun
+                      .get("users")
+                      .get(formUsername)
+                      .get("hint")
+                      .put(encryptedHint);
+
+                    // Store security question (but not answer) so recovery can display it
+                    core.db.gun
+                      .get("users")
+                      .get(formUsername)
+                      .get("security")
+                      .put({
+                        question: formSecurityQuestion,
+                      });
+                  } else {
+                    core.db.gun
+                      .get("users")
+                      .get(formUsername)
+                      .get("hint")
+                      .put(formHint);
+                    if (formSecurityAnswer) {
+                      core.db.gun
+                        .get("users")
+                        .get(formUsername)
+                        .get("security")
+                        .put({
+                          question: formSecurityQuestion,
+                          answer: formSecurityAnswer,
+                        });
+                    }
                   }
                 }
               } catch (error) {
-                console.warn('Failed to store password hint:', error);
+                console.warn("Failed to store password hint:", error);
               }
             }
             setModalIsOpen(false);
@@ -1353,21 +1386,49 @@ export const ShogunButton: ShogunButtonComponent = (() => {
               });
             });
 
-            const securityNode = await new Promise<any>((resolve) => {
-              core.db.gun.get('users').get(formUsername).get('security').once((security: any) => {
-                resolve(security || null);
-              });
-            });
-
-            if (securityNode && securityNode.answer === formSecurityAnswer) {
-              if (hintNode) {
-                setRecoveredHint(hintNode);
-                setAuthView("showHint");
-              } else {
-                setError("No hint found for this user.");
+            // Try to decrypt hint using SEA
+            let decryptedHint = null;
+            if (
+              hintNode &&
+              (window as any).SEA &&
+              (window as any).SEA.decrypt
+            ) {
+              try {
+                decryptedHint = await (window as any).SEA.decrypt(
+                  hintNode,
+                  formSecurityAnswer
+                );
+              } catch (e) {
+                // Decryption failed or data is not in SEA format (likely legacy plaintext)
+                // Continue to legacy fallback
               }
+            }
+
+            if (decryptedHint) {
+              setRecoveredHint(decryptedHint);
+              setAuthView("showHint");
             } else {
-              setError("Security answer is incorrect.");
+              // Fallback for legacy (plaintext)
+              const securityNode = await new Promise<any>((resolve) => {
+                core.db.gun
+                  .get("users")
+                  .get(formUsername)
+                  .get("security")
+                  .once((security: any) => {
+                    resolve(security || null);
+                  });
+              });
+
+              if (securityNode && securityNode.answer === formSecurityAnswer) {
+                if (hintNode) {
+                  setRecoveredHint(hintNode);
+                  setAuthView("showHint");
+                } else {
+                  setError("No hint found for this user.");
+                }
+              } else {
+                setError("Security answer is incorrect.");
+              }
             }
           } catch (error: any) {
             setError(error.message || "Could not recover hint.");
