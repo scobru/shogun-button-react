@@ -143,6 +143,16 @@ export function ShogunButtonProvider({
   const [username, setUsername] = useState<string | null>(null);
   const [hasPendingSignup, setHasPendingSignup] = useState<boolean>(false);
 
+  // Use refs to store latest callbacks to prevent context invalidation
+  const onLoginSuccessRef = useRef(onLoginSuccess);
+  const onSignupSuccessRef = useRef(onSignupSuccess);
+  const onErrorRef = useRef(onError);
+
+  // Update refs on every render
+  onLoginSuccessRef.current = onLoginSuccess;
+  onSignupSuccessRef.current = onSignupSuccess;
+  onErrorRef.current = onError;
+
   // Effetto per gestire l'inizializzazione e pulizia
   useEffect(() => {
     if (!core) return;
@@ -342,20 +352,20 @@ export function ShogunButtonProvider({
         setUserPub(userPub);
         setUsername(displayName);
 
-        onLoginSuccess?.({
+        onLoginSuccessRef.current?.({
           userPub: userPub,
           username: displayName,
           authMethod: authMethod as any,
         });
       } else {
-        onError?.(result.error || "Login failed");
+        onErrorRef.current?.(result.error || "Login failed");
       }
       return result;
     } catch (error: any) {
-      onError?.(error.message || "Error during login");
+      onErrorRef.current?.(error.message || "Error during login");
       return { success: false, error: error.message };
     }
-  }, [core, onLoginSuccess, onError]);
+  }, [core]);
 
   // Unified signup
   const signUp = React.useCallback(async (method: string, ...args: any[]) => {
@@ -508,16 +518,16 @@ export function ShogunButtonProvider({
         );
         setHasPendingSignup(pendingBackup);
 
-        onSignupSuccess?.(signupPayload);
+        onSignupSuccessRef.current?.(signupPayload);
       } else {
-        onError?.(result.error);
+        onErrorRef.current?.(result.error);
       }
       return result;
     } catch (error: any) {
-      onError?.(error.message || "Error during registration");
+      onErrorRef.current?.(error.message || "Error during registration");
       return { success: false, error: error.message };
     }
-  }, [core, onSignupSuccess, onError]);
+  }, [core]);
 
   // Logout
   const logout = React.useCallback(() => {
@@ -754,7 +764,7 @@ type ShogunButtonComponent = React.FC & {
 };
 
 // SVG Icons Components
-const WalletIcon = () => (
+const WalletIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -770,9 +780,9 @@ const WalletIcon = () => (
     <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
     <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
   </svg>
-);
+));
 
-const KeyIcon = () => (
+const KeyIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -788,9 +798,9 @@ const KeyIcon = () => (
     <path d="m21 2-9.6 9.6"></path>
     <path d="m15.5 7.5 3 3L22 7l-3-3"></path>
   </svg>
-);
+));
 
-const NostrIcon = () => (
+const NostrIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -805,9 +815,9 @@ const NostrIcon = () => (
     <path d="M19.5 4.5 15 9l-3-3-4.5 4.5L9 12l-1.5 1.5L12 18l4.5-4.5L15 12l1.5-1.5L21 6l-1.5-1.5Z"></path>
     <path d="M12 12 6 6l-1.5 1.5L9 12l-4.5 4.5L6 18l6-6Z"></path>
   </svg>
-);
+));
 
-const WebAuthnIcon = () => (
+const WebAuthnIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -822,9 +832,9 @@ const WebAuthnIcon = () => (
     <path d="M7 11v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-4"></path>
     <path d="M14 4V2a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2"></path>
   </svg>
-);
+));
 
-const LogoutIcon = () => (
+const LogoutIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -840,9 +850,9 @@ const LogoutIcon = () => (
     <polyline points="16 17 21 12 16 7"></polyline>
     <line x1="21" y1="12" x2="9" y2="12"></line>
   </svg>
-);
+));
 
-const UserIcon = () => (
+const UserIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -857,9 +867,9 @@ const UserIcon = () => (
     <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
     <circle cx="12" cy="7" r="4"></circle>
   </svg>
-);
+));
 
-const LockIcon = () => (
+const LockIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -874,9 +884,9 @@ const LockIcon = () => (
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
   </svg>
-);
+));
 
-const CloseIcon = () => (
+const CloseIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -891,9 +901,9 @@ const CloseIcon = () => (
     <line x1="18" y1="6" x2="6" y2="18"></line>
     <line x1="6" y1="6" x2="18" y2="18"></line>
   </svg>
-);
+));
 
-const ImportIcon = () => (
+const ImportIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -910,9 +920,9 @@ const ImportIcon = () => (
     <line x1="16" y1="13" x2="8" y2="13"></line>
     <line x1="12" y1="17" x2="12" y2="9"></line>
   </svg>
-);
+));
 
-const ZkProofIcon = () => (
+const ZkProofIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -928,9 +938,9 @@ const ZkProofIcon = () => (
     <path d="M2 17l10 5 10-5"></path>
     <path d="M2 12l10 5 10-5"></path>
   </svg>
-);
+));
 
-const ChallengeIcon = () => (
+const ChallengeIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -944,9 +954,9 @@ const ChallengeIcon = () => (
   >
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
   </svg>
-);
+));
 
-const ExportIcon = () => (
+const ExportIcon = React.memo(() => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="20"
@@ -963,7 +973,7 @@ const ExportIcon = () => (
     <line x1="12" y1="11" x2="12" y2="21"></line>
     <polyline points="16,15 12,11 8,15"></polyline>
   </svg>
-);
+));
 
 // Component for Shogun login button
 export const ShogunButton: ShogunButtonComponent = (() => {
