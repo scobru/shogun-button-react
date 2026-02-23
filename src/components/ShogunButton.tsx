@@ -756,7 +756,7 @@ type ShogunButtonComponent = React.FC & {
 // SVG Icons Components
 const WalletIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -774,7 +774,7 @@ const WalletIcon = () => (
 
 const KeyIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -792,7 +792,7 @@ const KeyIcon = () => (
 
 const NostrIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -809,7 +809,7 @@ const NostrIcon = () => (
 
 const WebAuthnIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -826,7 +826,7 @@ const WebAuthnIcon = () => (
 
 const LogoutIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -844,7 +844,7 @@ const LogoutIcon = () => (
 
 const UserIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -861,7 +861,7 @@ const UserIcon = () => (
 
 const LockIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -878,7 +878,7 @@ const LockIcon = () => (
 
 const CloseIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="24"
     height="24"
     viewBox="0 0 24 24"
@@ -895,7 +895,7 @@ const CloseIcon = () => (
 
 const ImportIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -914,7 +914,7 @@ const ImportIcon = () => (
 
 const ZkProofIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -932,7 +932,7 @@ const ZkProofIcon = () => (
 
 const ChallengeIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -948,7 +948,7 @@ const ChallengeIcon = () => (
 
 const ExportIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
     width="20"
     height="20"
     viewBox="0 0 24 24"
@@ -1095,7 +1095,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                     </span>
                   </div>
                 </div>
-                <div
+                <button
                   className="shogun-dropdown-item"
                   onClick={() => {
                     setDropdownOpen(false);
@@ -1105,11 +1105,11 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 >
                   <ExportIcon />
                   <span>Export Pair</span>
-                </div>
-                <div className="shogun-dropdown-item" onClick={logout}>
+                </button>
+                <button className="shogun-dropdown-item" onClick={logout}>
                   <LogoutIcon />
                   <span>Disconnect</span>
-                </div>
+                </button>
               </div>
             )}
           </div>
@@ -1633,6 +1633,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             disabled={loading}
             required
             placeholder="Enter your username"
+            autoComplete="username"
           />
         </div>
         <div className="shogun-form-group">
@@ -1648,6 +1649,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             disabled={loading}
             required
             placeholder="Enter your password"
+            autoComplete={formMode === "login" ? "current-password" : "new-password"}
           />
         </div>
         {formMode === "signup" && (
@@ -1665,6 +1667,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 disabled={loading}
                 required
                 placeholder="Confirm your password"
+                autoComplete="new-password"
               />
             </div>
             <div className="shogun-form-group">
@@ -2609,7 +2612,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 </button>
               </div>
               <div className="shogun-modal-content">
-                {error && <div className="shogun-error-message">{error}</div>}
+                {error && <div className="shogun-error-message" role="alert" aria-live="assertive">{error}</div>}
 
                 {authView === "options" && (
                   <>
