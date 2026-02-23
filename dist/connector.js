@@ -24,7 +24,6 @@ export async function shogunConnector(options) {
     });
     // Note: ShogunCore v2.0.0 initializes automatically in constructor
     // No need to call initialize() separately
-    console.log(`[DEBUG] ShogunConnector: ShogunCore initialized with gunInstance`);
     const setProvider = (provider) => {
         var _a;
         if (!core) {
