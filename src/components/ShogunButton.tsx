@@ -1633,6 +1633,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             disabled={loading}
             required
             placeholder="Enter your username"
+            autoComplete="username"
           />
         </div>
         <div className="shogun-form-group">
@@ -1648,6 +1649,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             disabled={loading}
             required
             placeholder="Enter your password"
+            autoComplete={formMode === "signup" ? "new-password" : "current-password"}
           />
         </div>
         {formMode === "signup" && (
@@ -1665,6 +1667,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 disabled={loading}
                 required
                 placeholder="Confirm your password"
+                autoComplete="new-password"
               />
             </div>
             <div className="shogun-form-group">
@@ -2609,7 +2612,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 </button>
               </div>
               <div className="shogun-modal-content">
-                {error && <div className="shogun-error-message">{error}</div>}
+                {error && <div className="shogun-error-message" role="alert" aria-live="assertive">{error}</div>}
 
                 {authView === "options" && (
                   <>
