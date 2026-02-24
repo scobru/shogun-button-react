@@ -143,6 +143,17 @@ export function ShogunButtonProvider({
   const [username, setUsername] = useState<string | null>(null);
   const [hasPendingSignup, setHasPendingSignup] = useState<boolean>(false);
 
+  // Refs for callbacks to prevent unnecessary re-renders of login/signup functions
+  const onLoginSuccessRef = useRef(onLoginSuccess);
+  const onSignupSuccessRef = useRef(onSignupSuccess);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onLoginSuccessRef.current = onLoginSuccess;
+    onSignupSuccessRef.current = onSignupSuccess;
+    onErrorRef.current = onError;
+  }, [onLoginSuccess, onSignupSuccess, onError]);
+
   // Effetto per gestire l'inizializzazione e pulizia
   useEffect(() => {
     if (!core) return;
@@ -342,20 +353,20 @@ export function ShogunButtonProvider({
         setUserPub(userPub);
         setUsername(displayName);
 
-        onLoginSuccess?.({
+        onLoginSuccessRef.current?.({
           userPub: userPub,
           username: displayName,
           authMethod: authMethod as any,
         });
       } else {
-        onError?.(result.error || "Login failed");
+        onErrorRef.current?.(result.error || "Login failed");
       }
       return result;
     } catch (error: any) {
-      onError?.(error.message || "Error during login");
+      onErrorRef.current?.(error.message || "Error during login");
       return { success: false, error: error.message };
     }
-  }, [core, onLoginSuccess, onError]);
+  }, [core]);
 
   // Unified signup
   const signUp = React.useCallback(async (method: string, ...args: any[]) => {
@@ -508,16 +519,16 @@ export function ShogunButtonProvider({
         );
         setHasPendingSignup(pendingBackup);
 
-        onSignupSuccess?.(signupPayload);
+        onSignupSuccessRef.current?.(signupPayload);
       } else {
-        onError?.(result.error);
+        onErrorRef.current?.(result.error);
       }
       return result;
     } catch (error: any) {
-      onError?.(error.message || "Error during registration");
+      onErrorRef.current?.(error.message || "Error during registration");
       return { success: false, error: error.message };
     }
-  }, [core, onSignupSuccess, onError]);
+  }, [core]);
 
   // Logout
   const logout = React.useCallback(() => {
