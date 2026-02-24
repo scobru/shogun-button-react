@@ -1179,12 +1179,32 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 // Store hint manually in user data
                 const user = core.gun.user();
                 if (user && user.is) {
-                  core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
                   if (formSecurityAnswer) {
-                    core.db.gun.get('users').get(formUsername).get('security').put({
-                      question: formSecurityQuestion,
-                      answer: formSecurityAnswer
-                    });
+                    // Encrypt hint with security answer
+                    if ((window as any).SEA && (window as any).SEA.encrypt) {
+                      const encryptedHint = await (window as any).SEA.encrypt(
+                        formHint,
+                        formSecurityAnswer
+                      );
+                      core.db
+                        .gun.get("users")
+                        .get(formUsername)
+                        .get("hint")
+                        .put(encryptedHint);
+                      // Store question but NOT the answer in plaintext
+                      core.db
+                        .gun.get("users")
+                        .get(formUsername)
+                        .get("security")
+                        .put({
+                          question: formSecurityQuestion,
+                          answer: null, // Scrub old plaintext answer if exists
+                        });
+                    } else {
+                      console.warn(
+                        "SEA encryption not available, skipping hint storage"
+                      );
+                    }
                   }
                 }
               } catch (error) {
@@ -1363,26 +1383,53 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           // Users should implement their own recovery logic using Gun's get operations
           try {
             const hintNode = await new Promise<string | null>((resolve) => {
-              core.db.gun.get('users').get(formUsername).get('hint').once((hint: any) => {
-                resolve(hint || null);
-              });
+              core.db.gun
+                .get("users")
+                .get(formUsername)
+                .get("hint")
+                .once((hint: any) => {
+                  resolve(hint || null);
+                });
             });
 
             const securityNode = await new Promise<any>((resolve) => {
-              core.db.gun.get('users').get(formUsername).get('security').once((security: any) => {
-                resolve(security || null);
-              });
+              core.db.gun
+                .get("users")
+                .get(formUsername)
+                .get("security")
+                .once((security: any) => {
+                  resolve(security || null);
+                });
             });
 
-            if (securityNode && securityNode.answer === formSecurityAnswer) {
-              if (hintNode) {
-                setRecoveredHint(hintNode);
-                setAuthView("showHint");
-              } else {
-                setError("No hint found for this user.");
-              }
+            // Try to decrypt hint with provided answer
+            let decryptedHint: string | undefined;
+            if (
+              (window as any).SEA &&
+              (window as any).SEA.decrypt &&
+              hintNode
+            ) {
+              decryptedHint = await (window as any).SEA.decrypt(
+                hintNode,
+                formSecurityAnswer
+              );
+            }
+
+            // If decryption failed, check for legacy plaintext answer
+            if (
+              !decryptedHint &&
+              securityNode &&
+              securityNode.answer === formSecurityAnswer
+            ) {
+              // Legacy fallback: answer matches plaintext stored answer, assume hint is plaintext
+              decryptedHint = hintNode || undefined;
+            }
+
+            if (decryptedHint) {
+              setRecoveredHint(decryptedHint);
+              setAuthView("showHint");
             } else {
-              setError("Security answer is incorrect.");
+              setError("Security answer is incorrect or hint not found.");
             }
           } catch (error: any) {
             setError(error.message || "Could not recover hint.");
