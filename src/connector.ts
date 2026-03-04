@@ -14,12 +14,10 @@ export async function shogunConnector(
     webauthn,
     nostr,
     web3,
-    zkproof,
     challenge,
     showWebauthn,
     showNostr,
     showMetamask,
-    showZkProof,
     showChallenge,
     darkMode,
     enableGunDebug = true,
@@ -46,10 +44,6 @@ export async function shogunConnector(
     } : undefined,
     web3: web3?.enabled ? { enabled: true } : undefined,
     nostr: nostr?.enabled ? { enabled: true } : undefined,
-    zkproof: zkproof?.enabled ? {
-      enabled: true,
-      defaultGroupId: zkproof.defaultGroupId || "shogun-users",
-    } : undefined,
     challenge: challenge?.enabled ? { enabled: true } : undefined,
     timeouts,
     silent: false, // Enable console logs for debugging

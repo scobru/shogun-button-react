@@ -40,7 +40,11 @@ interface AuthResult {
 
 // Helper type to check if core is ShogunCore
 function isShogunCore(core: any): core is ShogunCore {
-  return core && typeof core.isLoggedIn === 'function' && typeof core.gun !== 'undefined';
+  return (
+    core &&
+    typeof core.isLoggedIn === "function" &&
+    typeof core.gun !== "undefined"
+  );
 }
 
 // Context type for ShogunProvider
@@ -116,14 +120,28 @@ type ShogunButtonProviderProps = {
     userPub: string;
     username: string;
     password?: string;
-    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof" | "challenge" | "seed" | "pair";
+    authMethod?:
+      | "password"
+      | "web3"
+      | "webauthn"
+      | "nostr"
+      | "challenge"
+      | "seed"
+      | "pair";
   }) => void;
   onSignupSuccess?: (data: {
     userPub: string;
     username: string;
     password?: string;
     seedPhrase?: string;
-    authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof" | "challenge" | "seed" | "pair";
+    authMethod?:
+      | "password"
+      | "web3"
+      | "webauthn"
+      | "nostr"
+      | "challenge"
+      | "seed"
+      | "pair";
   }) => void;
   onError?: (error: string) => void;
 };
@@ -169,492 +187,497 @@ export function ShogunButtonProvider({
   }, [core]);
 
   // RxJS observe method
-  const observe = React.useCallback(<T,>(path: string): Observable<T> => {
-    if (!core) {
+  const observe = React.useCallback(
+    <T,>(path: string): Observable<T> => {
+      if (!core) {
+        return new Observable<T>();
+      }
+      const rx: any = (core as any)?.rx || (core as any)?.db?.rx;
+      if (rx && typeof rx.observe === "function") {
+        const observable = rx.observe(path) as Observable<T>;
+        return observable;
+      }
       return new Observable<T>();
-    }
-    const rx: any = (core as any)?.rx || (core as any)?.db?.rx;
-    if (rx && typeof rx.observe === "function") {
-      const observable = rx.observe(path) as Observable<T>;
-      return observable;
-    }
-    return new Observable<T>();
-  }, [core]);
+    },
+    [core],
+  );
 
   // Unified login
-  const login = React.useCallback(async (method: string, ...args: any[]) => {
-    try {
-      if (!core) {
-        throw new Error("SDK not initialized");
-      }
-
-      let result: AuthResult;
-      let authMethod = method;
-      let username: string | undefined;
-
-      switch (method) {
-        case "password":
-          username = args[0];
-          console.log(`[DEBUG] ShogunButton: Calling core.login for username: ${username}`);
-          
-          if (isShogunCore(core)) {
-            result = await core.login(args[0], args[1]);
-          } else {
-            throw new Error("Unsupported core type");
-          }
-          
-          console.log(`[DEBUG] ShogunButton: core.login result:`, result);
-          break;
-        case "pair":
-          // New pair authentication method
-          const pair = args[0];
-          if (!pair || typeof pair !== "object") {
-            throw new Error("Invalid pair data provided");
-          }
-
-          if (isShogunCore(core)) {
-            result = await new Promise((resolve, reject) => {
-              core.gun.user().auth(pair, (ack: any) => {
-                if (ack.err) {
-                  reject(new Error(`Pair authentication failed: ${ack.err}`));
-                  return;
-                }
-
-                const pub = ack.pub || pair.pub;
-                const alias = ack.alias || `user_${pub?.substring(0, 8)}`;
-
-                resolve({
-                  success: true,
-                  userPub: pub,
-                  alias: alias,
-                  method: "pair",
-                } as AuthResult);
-              });
-            });
-          } else {
-            throw new Error("Pair authentication requires ShogunCore");
-          }
-
-          username = (result as any).alias;
-          authMethod = "pair";
-          break;
-        case "webauthn":
-          username = args[0];
-          if (isShogunCore(core)) {
-            const webauthn: any = core.getPlugin("webauthn");
-            if (!webauthn) throw new Error("WebAuthn plugin not available");
-            result = await webauthn.login(username);
-          } else {
-            throw new Error("WebAuthn requires ShogunCore");
-          }
-          break;
-        case "web3":
-          if (isShogunCore(core)) {
-            const web3: any = core.getPlugin("web3");
-            if (!web3) throw new Error("Web3 plugin not available");
-            const connectionResult = await web3.connectMetaMask();
-            if (!connectionResult.success || !connectionResult.address) {
-              throw new Error(
-                connectionResult.error || "Failed to connect wallet."
-              );
-            }
-            username = connectionResult.address;
-            result = await web3.login(connectionResult.address);
-          } else {
-            throw new Error("Web3 requires ShogunCore");
-          }
-          break;
-        case "nostr":
-          if (isShogunCore(core)) {
-            const nostr: any = core.getPlugin("nostr");
-            if (!nostr) throw new Error("Nostr plugin not available");
-            const nostrResult = await nostr.connectBitcoinWallet();
-            if (!nostrResult || !nostrResult.success) {
-              throw new Error(
-                nostrResult?.error || "Connessione al wallet Bitcoin fallita"
-              );
-            }
-            const pubkey = nostrResult.address;
-            if (!pubkey) throw new Error("Nessuna chiave pubblica ottenuta");
-            username = pubkey;
-            result = await nostr.login(pubkey);
-          } else {
-            throw new Error("Nostr requires ShogunCore");
-          }
-          break;
-        case "zkproof":
-          const trapdoor = args[0];
-          if (!trapdoor || typeof trapdoor !== "string") {
-            throw new Error("Invalid trapdoor provided");
-          }
-          if (isShogunCore(core)) {
-            const zkproof: any = core.getPlugin("zkproof");
-            if (!zkproof) throw new Error("ZK-Proof plugin not available");
-            const zkLoginResult: any = await zkproof.login(trapdoor);
-            result = zkLoginResult;
-            username = zkLoginResult.username || zkLoginResult.alias || `zk_${(zkLoginResult.userPub || "").slice(0, 16)}`;
-            authMethod = "zkproof";
-          } else {
-            throw new Error("ZK-Proof requires ShogunCore");
-          }
-          break;
-        case "challenge":
-          username = args[0];
-          if (!username) throw new Error("Username required for challenge login");
-          
-          if (isShogunCore(core)) {
-            const challengePlugin: any = core.getPlugin("challenge");
-            if (!challengePlugin) throw new Error("Challenge plugin not available");
-            
-            result = await challengePlugin.login(username);
-            authMethod = "challenge";
-          } else {
-             throw new Error("Challenge auth requires ShogunCore");
-          }
-          break;
-        case "seed":
-          username = args[0];
-          const mnemonic = args[1];
-          if (!username || !mnemonic) {
-            throw new Error("Username and seed phrase are required");
-          }
-
-          if (isShogunCore(core)) {
-            result = await core.loginWithSeed(username, mnemonic);
-            authMethod = "seed";
-          } else {
-            throw new Error("Seed authentication requires ShogunCore");
-          }
-          break;
-        default:
-          throw new Error("Unsupported login method");
-      }
-
-      if (result.success) {
-        let userPub = result.userPub || "";
-        if (!userPub && isShogunCore(core)) {
-          userPub = core.gun.user()?.is?.pub || "";
+  const login = React.useCallback(
+    async (method: string, ...args: any[]) => {
+      try {
+        if (!core) {
+          throw new Error("SDK not initialized");
         }
-        const displayName =
-          result.alias || username || userPub.slice(0, 8) + "...";
 
-        setIsLoggedIn(true);
-        setUserPub(userPub);
-        setUsername(displayName);
+        let result: AuthResult;
+        let authMethod = method;
+        let username: string | undefined;
 
-        onLoginSuccess?.({
-          userPub: userPub,
-          username: displayName,
-          authMethod: authMethod as any,
-        });
-      } else {
-        onError?.(result.error || "Login failed");
-      }
-      return result;
-    } catch (error: any) {
-      onError?.(error.message || "Error during login");
-      return { success: false, error: error.message };
-    }
-  }, [core, onLoginSuccess, onError]);
+        switch (method) {
+          case "password":
+            username = args[0];
+            console.log(
+              `[DEBUG] ShogunButton: Calling core.login for username: ${username}`,
+            );
 
-  // Unified signup
-  const signUp = React.useCallback(async (method: string, ...args: any[]) => {
-    try {
-      if (!core) {
-        throw new Error("SDK not initialized");
-      }
-
-      let result: AuthResult;
-      let authMethod = method;
-      let username: string | undefined;
-
-      switch (method) {
-        case "password":
-          username = args[0];
-          if (args[1] !== args[2]) {
-            throw new Error("Passwords do not match");
-          }
-          console.log(`[DEBUG] ShogunButton: Calling core.signUp for username: ${username}`);
-          console.log(`[DEBUG] ShogunButton: core object:`, core);
-          try {
-            console.log(`[DEBUG] ShogunButton: About to call core.signUp...`);
-            
             if (isShogunCore(core)) {
-              result = await core.signUp(args[0], args[1]);
+              result = await core.login(args[0], args[1]);
             } else {
               throw new Error("Unsupported core type");
             }
-            
-            console.log(`[DEBUG] ShogunButton: core.signUp completed successfully`);
-            console.log(`[DEBUG] ShogunButton: core.signUp result:`, result);
-          } catch (error) {
-            console.error(`[DEBUG] ShogunButton: core.signUp error:`, error);
-            throw error;
-          }
-          break;
-        case "webauthn": {
-          username = typeof args[0] === "string" ? args[0].trim() : "";
-          const webauthnOptions =
-            args.length > 1 && typeof args[1] === "object" && args[1] !== null
-              ? (args[1] as { seedPhrase?: string; generateSeedPhrase?: boolean })
-              : {};
 
-          if (!username) {
-            throw new Error("Username is required for WebAuthn registration");
-          }
-
-          if (isShogunCore(core)) {
-            const webauthn: WebauthnPlugin = core.getPlugin("webauthn");
-            if (!webauthn) throw new Error("WebAuthn plugin not available");
-
-            const pluginOptions: {
-              seedPhrase?: string;
-              generateSeedPhrase?: boolean;
-            } = {};
-
-            if (webauthnOptions.seedPhrase) {
-              pluginOptions.seedPhrase = webauthnOptions.seedPhrase.trim();
-              pluginOptions.generateSeedPhrase =
-                webauthnOptions.generateSeedPhrase ?? false;
-            } else if (typeof webauthnOptions.generateSeedPhrase === "boolean") {
-              pluginOptions.generateSeedPhrase =
-                webauthnOptions.generateSeedPhrase;
+            console.log(`[DEBUG] ShogunButton: core.login result:`, result);
+            break;
+          case "pair":
+            // New pair authentication method
+            const pair = args[0];
+            if (!pair || typeof pair !== "object") {
+              throw new Error("Invalid pair data provided");
             }
 
-            if (
-              pluginOptions.generateSeedPhrase === undefined &&
-              !pluginOptions.seedPhrase
-            ) {
-              pluginOptions.generateSeedPhrase = true;
+            if (isShogunCore(core)) {
+              result = await new Promise((resolve, reject) => {
+                core.gun.user().auth(pair, (ack: any) => {
+                  if (ack.err) {
+                    reject(new Error(`Pair authentication failed: ${ack.err}`));
+                    return;
+                  }
+
+                  const pub = ack.pub || pair.pub;
+                  const alias = ack.alias || `user_${pub?.substring(0, 8)}`;
+
+                  resolve({
+                    success: true,
+                    userPub: pub,
+                    alias: alias,
+                    method: "pair",
+                  } as AuthResult);
+                });
+              });
+            } else {
+              throw new Error("Pair authentication requires ShogunCore");
             }
 
-            result = await webauthn.signUp(username, pluginOptions);
-          } else {
-            throw new Error("WebAuthn requires ShogunCore");
-          }
-          break;
+            username = (result as any).alias;
+            authMethod = "pair";
+            break;
+          case "webauthn":
+            username = args[0];
+            if (isShogunCore(core)) {
+              const webauthn: any = core.getPlugin("webauthn");
+              if (!webauthn) throw new Error("WebAuthn plugin not available");
+              result = await webauthn.login(username);
+            } else {
+              throw new Error("WebAuthn requires ShogunCore");
+            }
+            break;
+          case "web3":
+            if (isShogunCore(core)) {
+              const web3: any = core.getPlugin("web3");
+              if (!web3) throw new Error("Web3 plugin not available");
+              const connectionResult = await web3.connectMetaMask();
+              if (!connectionResult.success || !connectionResult.address) {
+                throw new Error(
+                  connectionResult.error || "Failed to connect wallet.",
+                );
+              }
+              username = connectionResult.address;
+              result = await web3.login(connectionResult.address);
+            } else {
+              throw new Error("Web3 requires ShogunCore");
+            }
+            break;
+          case "nostr":
+            if (isShogunCore(core)) {
+              const nostr: any = core.getPlugin("nostr");
+              if (!nostr) throw new Error("Nostr plugin not available");
+              const nostrResult = await nostr.connectBitcoinWallet();
+              if (!nostrResult || !nostrResult.success) {
+                throw new Error(
+                  nostrResult?.error || "Connessione al wallet Bitcoin fallita",
+                );
+              }
+              const pubkey = nostrResult.address;
+              if (!pubkey) throw new Error("Nessuna chiave pubblica ottenuta");
+              username = pubkey;
+              result = await nostr.login(pubkey);
+            } else {
+              throw new Error("Nostr requires ShogunCore");
+            }
+            break;
+          case "challenge":
+            username = args[0];
+            if (!username)
+              throw new Error("Username required for challenge login");
+
+            if (isShogunCore(core)) {
+              const challengePlugin: any = core.getPlugin("challenge");
+              if (!challengePlugin)
+                throw new Error("Challenge plugin not available");
+
+              result = await challengePlugin.login(username);
+              authMethod = "challenge";
+            } else {
+              throw new Error("Challenge auth requires ShogunCore");
+            }
+            break;
+          case "seed":
+            username = args[0];
+            const mnemonic = args[1];
+            if (!username || !mnemonic) {
+              throw new Error("Username and seed phrase are required");
+            }
+
+            if (isShogunCore(core)) {
+              result = await core.loginWithSeed(username, mnemonic);
+              authMethod = "seed";
+            } else {
+              throw new Error("Seed authentication requires ShogunCore");
+            }
+            break;
+          default:
+            throw new Error("Unsupported login method");
         }
-        case "web3":
-          if (isShogunCore(core)) {
-            const web3: any = core.getPlugin("web3");
-            if (!web3) throw new Error("Web3 plugin not available");
-            const connectionResult = await web3.connectMetaMask();
-            if (!connectionResult.success || !connectionResult.address) {
-              throw new Error(
-                connectionResult.error || "Failed to connect wallet."
-              );
-            }
-            username = connectionResult.address;
-            result = await web3.signUp(connectionResult.address);
-          } else {
-            throw new Error("Web3 requires ShogunCore");
-          }
-          break;
-        case "nostr":
-          if (isShogunCore(core)) {
-            const nostr: any = core.getPlugin("nostr");
-            if (!nostr) throw new Error("Nostr plugin not available");
-            const nostrResult = await nostr.connectBitcoinWallet();
-            if (!nostrResult || !nostrResult.success) {
-              throw new Error(
-                nostrResult?.error || "Connessione al wallet Bitcoin fallita"
-              );
-            }
-            const pubkey = nostrResult.address;
-            if (!pubkey) throw new Error("Nessuna chiave pubblica ottenuta");
-            username = pubkey;
-            result = await nostr.signUp(pubkey);
-          } else {
-            throw new Error("Nostr requires ShogunCore");
-          }
-          break;
-        case "zkproof":
-          if (isShogunCore(core)) {
-            const zkproofPlugin: any = core.getPlugin("zkproof");
-            if (!zkproofPlugin) throw new Error("ZK-Proof plugin not available");
-            const seed = args[0]; // Optional seed
-            const zkSignupResult: any = await zkproofPlugin.signUp(seed);
-            result = zkSignupResult;
-            username = zkSignupResult.username || zkSignupResult.alias || `zk_${(zkSignupResult.userPub || "").slice(0, 16)}`;
-            authMethod = "zkproof";
-          } else {
-            throw new Error("ZK-Proof requires ShogunCore");
-          }
-          break;
-        default:
-          throw new Error("Unsupported signup method");
-      }
 
-      if (result.success) {
-        let userPub = result.userPub || "";
-        if (!userPub && isShogunCore(core)) {
-          userPub = core.gun.user()?.is?.pub || "";
+        if (result.success) {
+          let userPub = result.userPub || "";
+          if (!userPub && isShogunCore(core)) {
+            userPub = core.gun.user()?.is?.pub || "";
+          }
+          const displayName =
+            result.alias || username || userPub.slice(0, 8) + "...";
+
+          setIsLoggedIn(true);
+          setUserPub(userPub);
+          setUsername(displayName);
+
+          onLoginSuccess?.({
+            userPub: userPub,
+            username: displayName,
+            authMethod: authMethod as any,
+          });
+        } else {
+          onError?.(result.error || "Login failed");
         }
-        const displayName =
-          result.alias || username || userPub.slice(0, 8) + "...";
-
-        setIsLoggedIn(true);
-        setUserPub(userPub);
-        setUsername(displayName);
-        const signupPayload = {
-          userPub: userPub,
-          username: displayName,
-          seedPhrase: (result as any).seedPhrase,
-          authMethod: authMethod as any,
-        };
-
-        const pendingBackup = Boolean(
-          (result as any).seedPhrase || (result as any).trapdoor
-        );
-        setHasPendingSignup(pendingBackup);
-
-        onSignupSuccess?.(signupPayload);
-      } else {
-        onError?.(result.error);
+        return result;
+      } catch (error: any) {
+        onError?.(error.message || "Error during login");
+        return { success: false, error: error.message };
       }
-      return result;
-    } catch (error: any) {
-      onError?.(error.message || "Error during registration");
-      return { success: false, error: error.message };
-    }
-  }, [core, onSignupSuccess, onError]);
+    },
+    [core, onLoginSuccess, onError],
+  );
+
+  // Unified signup
+  const signUp = React.useCallback(
+    async (method: string, ...args: any[]) => {
+      try {
+        if (!core) {
+          throw new Error("SDK not initialized");
+        }
+
+        let result: AuthResult;
+        let authMethod = method;
+        let username: string | undefined;
+
+        switch (method) {
+          case "password":
+            username = args[0];
+            if (args[1] !== args[2]) {
+              throw new Error("Passwords do not match");
+            }
+            console.log(
+              `[DEBUG] ShogunButton: Calling core.signUp for username: ${username}`,
+            );
+            console.log(`[DEBUG] ShogunButton: core object:`, core);
+            try {
+              console.log(`[DEBUG] ShogunButton: About to call core.signUp...`);
+
+              if (isShogunCore(core)) {
+                result = await core.signUp(args[0], args[1]);
+              } else {
+                throw new Error("Unsupported core type");
+              }
+
+              console.log(
+                `[DEBUG] ShogunButton: core.signUp completed successfully`,
+              );
+              console.log(`[DEBUG] ShogunButton: core.signUp result:`, result);
+            } catch (error) {
+              console.error(`[DEBUG] ShogunButton: core.signUp error:`, error);
+              throw error;
+            }
+            break;
+          case "webauthn": {
+            username = typeof args[0] === "string" ? args[0].trim() : "";
+            const webauthnOptions =
+              args.length > 1 && typeof args[1] === "object" && args[1] !== null
+                ? (args[1] as {
+                    seedPhrase?: string;
+                    generateSeedPhrase?: boolean;
+                  })
+                : {};
+
+            if (!username) {
+              throw new Error("Username is required for WebAuthn registration");
+            }
+
+            if (isShogunCore(core)) {
+              const webauthn: WebauthnPlugin = core.getPlugin("webauthn");
+              if (!webauthn) throw new Error("WebAuthn plugin not available");
+
+              const pluginOptions: {
+                seedPhrase?: string;
+                generateSeedPhrase?: boolean;
+              } = {};
+
+              if (webauthnOptions.seedPhrase) {
+                pluginOptions.seedPhrase = webauthnOptions.seedPhrase.trim();
+                pluginOptions.generateSeedPhrase =
+                  webauthnOptions.generateSeedPhrase ?? false;
+              } else if (
+                typeof webauthnOptions.generateSeedPhrase === "boolean"
+              ) {
+                pluginOptions.generateSeedPhrase =
+                  webauthnOptions.generateSeedPhrase;
+              }
+
+              if (
+                pluginOptions.generateSeedPhrase === undefined &&
+                !pluginOptions.seedPhrase
+              ) {
+                pluginOptions.generateSeedPhrase = true;
+              }
+
+              result = await webauthn.signUp(username, pluginOptions);
+            } else {
+              throw new Error("WebAuthn requires ShogunCore");
+            }
+            break;
+          }
+          case "web3":
+            if (isShogunCore(core)) {
+              const web3: any = core.getPlugin("web3");
+              if (!web3) throw new Error("Web3 plugin not available");
+              const connectionResult = await web3.connectMetaMask();
+              if (!connectionResult.success || !connectionResult.address) {
+                throw new Error(
+                  connectionResult.error || "Failed to connect wallet.",
+                );
+              }
+              username = connectionResult.address;
+              result = await web3.signUp(connectionResult.address);
+            } else {
+              throw new Error("Web3 requires ShogunCore");
+            }
+            break;
+          case "nostr":
+            if (isShogunCore(core)) {
+              const nostr: any = core.getPlugin("nostr");
+              if (!nostr) throw new Error("Nostr plugin not available");
+              const nostrResult = await nostr.connectBitcoinWallet();
+              if (!nostrResult || !nostrResult.success) {
+                throw new Error(
+                  nostrResult?.error || "Connessione al wallet Bitcoin fallita",
+                );
+              }
+              const pubkey = nostrResult.address;
+              if (!pubkey) throw new Error("Nessuna chiave pubblica ottenuta");
+              username = pubkey;
+              result = await nostr.signUp(pubkey);
+            } else {
+              throw new Error("Nostr requires ShogunCore");
+            }
+            break;
+          default:
+            throw new Error("Unsupported signup method");
+        }
+
+        if (result.success) {
+          let userPub = result.userPub || "";
+          if (!userPub && isShogunCore(core)) {
+            userPub = core.gun.user()?.is?.pub || "";
+          }
+          const displayName =
+            result.alias || username || userPub.slice(0, 8) + "...";
+
+          setIsLoggedIn(true);
+          setUserPub(userPub);
+          setUsername(displayName);
+          const signupPayload = {
+            userPub: userPub,
+            username: displayName,
+            seedPhrase: (result as any).seedPhrase,
+            authMethod: authMethod as any,
+          };
+
+          const pendingBackup = Boolean(
+            (result as any).seedPhrase || (result as any).trapdoor,
+          );
+          setHasPendingSignup(pendingBackup);
+
+          onSignupSuccess?.(signupPayload);
+        } else {
+          onError?.(result.error);
+        }
+        return result;
+      } catch (error: any) {
+        onError?.(error.message || "Error during registration");
+        return { success: false, error: error.message };
+      }
+    },
+    [core, onSignupSuccess, onError],
+  );
 
   // Logout
   const logout = React.useCallback(() => {
     if (isShogunCore(core)) {
       core.logout();
     }
-    
+
     setIsLoggedIn(false);
     setUserPub(null);
     setUsername(null);
   }, [core]);
 
   // Implementazione del metodo setProvider
-  const setProvider = React.useCallback((provider: any): boolean => {
-    if (!core) {
-      return false;
-    }
-
-    try {
-      let newProviderUrl: string | null = null;
-
-      if (provider && provider.connection && provider.connection.url) {
-        newProviderUrl = provider.connection.url;
-      } else if (typeof provider === "string") {
-        newProviderUrl = provider;
+  const setProvider = React.useCallback(
+    (provider: any): boolean => {
+      if (!core) {
+        return false;
       }
 
-      if (newProviderUrl) {
-        const gun: any = (core as any)?.db?.gun || (core as any)?.gun;
-        if (gun && typeof gun.opt === "function") {
-          try {
-            gun.opt({ peers: [newProviderUrl] });
-            return true;
-          } catch (e) {
-            console.error("Error adding peer via gun.opt:", e);
-            return false;
+      try {
+        let newProviderUrl: string | null = null;
+
+        if (provider && provider.connection && provider.connection.url) {
+          newProviderUrl = provider.connection.url;
+        } else if (typeof provider === "string") {
+          newProviderUrl = provider;
+        }
+
+        if (newProviderUrl) {
+          const gun: any = (core as any)?.db?.gun || (core as any)?.gun;
+          if (gun && typeof gun.opt === "function") {
+            try {
+              gun.opt({ peers: [newProviderUrl] });
+              return true;
+            } catch (e) {
+              console.error("Error adding peer via gun.opt:", e);
+              return false;
+            }
           }
         }
+        return false;
+      } catch (error) {
+        console.error("Error setting provider:", error);
+        return false;
+      }
+    },
+    [core],
+  );
+
+  const hasPlugin = React.useCallback(
+    (name: string): boolean => {
+      if (isShogunCore(core)) {
+        return core.hasPlugin(name);
       }
       return false;
-    } catch (error) {
-      console.error("Error setting provider:", error);
-      return false;
-    }
-  }, [core]);
+    },
+    [core],
+  );
 
-  const hasPlugin = React.useCallback((name: string): boolean => {
-    if (isShogunCore(core)) {
-      return core.hasPlugin(name);
-    }
-    return false;
-  }, [core]);
-
-  const getPlugin = React.useCallback(<T,>(name: string): T | undefined => {
-    if (isShogunCore(core)) {
-      return core.getPlugin<T>(name);
-    }
-    return undefined;
-  }, [core]);
+  const getPlugin = React.useCallback(
+    <T,>(name: string): T | undefined => {
+      if (isShogunCore(core)) {
+        return core.getPlugin<T>(name);
+      }
+      return undefined;
+    },
+    [core],
+  );
 
   // Export Gun pair functionality
-  const exportGunPair = React.useCallback(async (password?: string): Promise<string> => {
-    if (!core) {
-      throw new Error("SDK not initialized");
-    }
-
-    if (!isLoggedIn) {
-      throw new Error("User not authenticated");
-    }
-
-    try {
-      const pair =
-        sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair");
-
-      if (!pair) {
-        throw new Error("No Gun pair available for current user");
+  const exportGunPair = React.useCallback(
+    async (password?: string): Promise<string> => {
+      if (!core) {
+        throw new Error("SDK not initialized");
       }
 
-      let pairData = JSON.stringify(pair);
+      if (!isLoggedIn) {
+        throw new Error("User not authenticated");
+      }
 
-      // If password provided, encrypt the pair
-      if (password && password.trim()) {
-        // Use Gun's SEA for encryption if available
-        if ((window as any).SEA && (window as any).SEA.encrypt) {
-          pairData = await (window as any).SEA.encrypt(pairData, password);
-        } else {
-          console.warn("SEA encryption not available, exporting unencrypted");
+      try {
+        const pair =
+          sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair");
+
+        if (!pair) {
+          throw new Error("No Gun pair available for current user");
         }
-      }
 
-      return pairData;
-    } catch (error: any) {
-      throw new Error(`Failed to export Gun pair: ${error.message}`);
-    }
-  }, [core, isLoggedIn]);
+        let pairData = JSON.stringify(pair);
+
+        // If password provided, encrypt the pair
+        if (password && password.trim()) {
+          // Use Gun's SEA for encryption if available
+          if ((window as any).SEA && (window as any).SEA.encrypt) {
+            pairData = await (window as any).SEA.encrypt(pairData, password);
+          } else {
+            console.warn("SEA encryption not available, exporting unencrypted");
+          }
+        }
+
+        return pairData;
+      } catch (error: any) {
+        throw new Error(`Failed to export Gun pair: ${error.message}`);
+      }
+    },
+    [core, isLoggedIn],
+  );
 
   // Import Gun pair functionality
-  const importGunPair = React.useCallback(async (
-    pairData: string,
-    password?: string
-  ): Promise<boolean> => {
-    if (!core) {
-      throw new Error("SDK not initialized");
-    }
+  const importGunPair = React.useCallback(
+    async (pairData: string, password?: string): Promise<boolean> => {
+      if (!core) {
+        throw new Error("SDK not initialized");
+      }
 
-    try {
-      let dataString = pairData;
+      try {
+        let dataString = pairData;
 
-      // If password provided, decrypt the pair
-      if (password && password.trim()) {
-        if ((window as any).SEA && (window as any).SEA.decrypt) {
-          dataString = await (window as any).SEA.decrypt(pairData, password);
-          if (!dataString) {
-            throw new Error("Failed to decrypt pair data - wrong password?");
+        // If password provided, decrypt the pair
+        if (password && password.trim()) {
+          if ((window as any).SEA && (window as any).SEA.decrypt) {
+            dataString = await (window as any).SEA.decrypt(pairData, password);
+            if (!dataString) {
+              throw new Error("Failed to decrypt pair data - wrong password?");
+            }
+          } else {
+            console.warn(
+              "SEA decryption not available, assuming unencrypted data",
+            );
           }
-        } else {
-          console.warn(
-            "SEA decryption not available, assuming unencrypted data"
-          );
         }
+
+        const pair = JSON.parse(dataString);
+
+        // Validate pair structure
+        if (!pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
+          throw new Error("Invalid pair structure - missing required keys");
+        }
+
+        // Authenticate with the imported pair
+        const result = await login("pair", pair);
+
+        return result.success;
+      } catch (error: any) {
+        throw new Error(`Failed to import Gun pair: ${error.message}`);
       }
-
-      const pair = JSON.parse(dataString);
-
-      // Validate pair structure
-      if (!pair.pub || !pair.priv || !pair.epub || !pair.epriv) {
-        throw new Error("Invalid pair structure - missing required keys");
-      }
-
-      // Authenticate with the imported pair
-      const result = await login("pair", pair);
-
-      return result.success;
-    } catch (error: any) {
-      throw new Error(`Failed to import Gun pair: ${error.message}`);
-    }
-  }, [core, login]);
+    },
+    [core, login],
+  );
 
   // Plugin initialization removed - GunAdvancedPlugin no longer available
   const gunPlugin = null;
@@ -686,7 +709,7 @@ export function ShogunButtonProvider({
       setHasPendingSignup,
       put: async (path: string, data: any) => {
         if (isShogunCore(core)) {
-          if (!core.gun) throw new Error('Gun instance not available');
+          if (!core.gun) throw new Error("Gun instance not available");
           return new Promise((resolve, reject) => {
             core.gun.get(path).put(data, (ack: any) => {
               if (ack.err) reject(new Error(ack.err));
@@ -694,7 +717,7 @@ export function ShogunButtonProvider({
             });
           });
         } else {
-          throw new Error('Core not available');
+          throw new Error("Core not available");
         }
       },
       get: (path: string) => {
@@ -706,7 +729,7 @@ export function ShogunButtonProvider({
       },
       remove: async (path: string) => {
         if (isShogunCore(core)) {
-          if (!core.gun) throw new Error('Gun instance not available');
+          if (!core.gun) throw new Error("Gun instance not available");
           return new Promise((resolve, reject) => {
             core.gun.get(path).put(null, (ack: any) => {
               if (ack.err) reject(new Error(ack.err));
@@ -714,7 +737,7 @@ export function ShogunButtonProvider({
             });
           });
         } else {
-          throw new Error('Core not available');
+          throw new Error("Core not available");
         }
       },
     }),
@@ -736,7 +759,7 @@ export function ShogunButtonProvider({
       completePendingSignup,
       hasPendingSignup,
       setHasPendingSignup,
-    ]
+    ],
   );
 
   // Provide the context value to children
@@ -912,24 +935,6 @@ const ImportIcon = () => (
   </svg>
 );
 
-const ZkProofIcon = () => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-    <path d="M2 17l10 5 10-5"></path>
-    <path d="M2 12l10 5 10-5"></path>
-  </svg>
-);
-
 const ChallengeIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -988,39 +993,27 @@ export const ShogunButton: ShogunButtonComponent = (() => {
     const [formUsername, setFormUsername] = useState("");
     const [formPassword, setFormPassword] = useState("");
     const [formPasswordConfirm, setFormPasswordConfirm] = useState("");
-    const [formHint, setFormHint] = useState("");
-    const [formSecurityQuestion] = useState("What is your favorite color?"); // Hardcoded for now
-    const [formSecurityAnswer, setFormSecurityAnswer] = useState("");
     const [formMode, setFormMode] = useState<"login" | "signup">("login");
     const [authView, setAuthView] = useState<
       | "options"
       | "password"
-      | "recover"
-      | "showHint"
       | "export"
       | "import"
       | "webauthn-username"
       | "webauthn-signup-result"
       | "webauthn-recovery"
-      | "zkproof-login"
-      | "zkproof-signup-result"
       | "challenge-username"
       | "seed-login"
     >("options");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [recoveredHint, setRecoveredHint] = useState("");
     const [exportPassword, setExportPassword] = useState("");
     const [importPassword, setImportPassword] = useState("");
     const [importPairData, setImportPairData] = useState("");
     const [exportedPair, setExportedPair] = useState("");
     const [showCopySuccess, setShowCopySuccess] = useState(false);
     const [showImportSuccess, setShowImportSuccess] = useState(false);
-    const [zkTrapdoor, setZkTrapdoor] = useState("");
-    const [zkSignupTrapdoor, setZkSignupTrapdoor] = useState("");
-    const [showZkTrapdoorCopySuccess, setShowZkTrapdoorCopySuccess] =
-      useState(false);
     const [webauthnSeedPhrase, setWebauthnSeedPhrase] = useState("");
     const [webauthnRecoverySeed, setWebauthnRecoverySeed] = useState("");
     const [formMnemonic, setFormMnemonic] = useState("");
@@ -1049,18 +1042,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       if (hasPendingSignup) {
         setModalIsOpen(true);
 
-        if (
-          authView !== "webauthn-signup-result" &&
-          authView !== "zkproof-signup-result"
-        ) {
+        if (authView !== "webauthn-signup-result") {
           if (webauthnSeedPhrase) {
             setAuthView("webauthn-signup-result");
-          } else if (zkSignupTrapdoor) {
-            setAuthView("zkproof-signup-result");
           }
         }
       }
-    }, [hasPendingSignup, authView, webauthnSeedPhrase, zkSignupTrapdoor]);
+    }, [hasPendingSignup, authView, webauthnSeedPhrase]);
 
     // If already logged in, show only logout button
     if (isLoggedIn && username && !modalIsOpen) {
@@ -1119,14 +1107,19 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     // Event handlers
     const handleAuth = async (method: string, ...args: any[]) => {
-      console.log(`[DEBUG] handleAuth called with method: ${method}, formMode: ${formMode}, args:`, args);
+      console.log(
+        `[DEBUG] handleAuth called with method: ${method}, formMode: ${formMode}, args:`,
+        args,
+      );
       setError("");
       setLoading(true);
 
       try {
         // Use formMode to determine whether to call login or signUp
         const action = formMode === "login" ? login : signUp;
-        console.log(`[DEBUG] handleAuth calling action: ${action.name}, method: ${method}`);
+        console.log(
+          `[DEBUG] handleAuth calling action: ${action.name}, method: ${method}`,
+        );
         const result = await action(method, ...args);
         console.log(`[DEBUG] handleAuth result:`, result);
 
@@ -1159,7 +1152,9 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      console.log(`[DEBUG] handleSubmit called, formMode: ${formMode}, username: ${formUsername}`);
+      console.log(
+        `[DEBUG] handleSubmit called, formMode: ${formMode}, username: ${formUsername}`,
+      );
       setError("");
       setLoading(true);
 
@@ -1169,28 +1164,9 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             "password",
             formUsername,
             formPassword,
-            formPasswordConfirm
+            formPasswordConfirm,
           );
           if (result && result.success) {
-            // Password hint functionality has been removed from shogun-core
-            // Users should store hints manually in their own data structures if needed
-            if (isShogunCore(core) && core.db && formHint) {
-              try {
-                // Store hint manually in user data
-                const user = core.gun.user();
-                if (user && user.is) {
-                  core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
-                  if (formSecurityAnswer) {
-                    core.db.gun.get('users').get(formUsername).get('security').put({
-                      question: formSecurityQuestion,
-                      answer: formSecurityAnswer
-                    });
-                  }
-                }
-              } catch (error) {
-                console.warn('Failed to store password hint:', error);
-              }
-            }
             setModalIsOpen(false);
           } else if (result && result.error) {
             setError(result.error);
@@ -1241,71 +1217,13 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           throw new Error(result?.error || "Failed to restore account");
         }
 
-        const seedToDisplay =
-          (result as any).seedPhrase || recoveryCode;
+        const seedToDisplay = (result as any).seedPhrase || recoveryCode;
         setWebauthnSeedPhrase(seedToDisplay);
         setWebauthnRecoverySeed("");
         setShowCopySuccess(false);
         setAuthView("webauthn-signup-result");
       } catch (e: any) {
         setError(e.message || "Failed to restore WebAuthn account");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const handleZkProofAuth = () => {
-      if (!hasPlugin("zkproof")) {
-        setError("ZK-Proof plugin not available");
-        return;
-      }
-      
-      if (formMode === "login") {
-        setAuthView("zkproof-login");
-      } else {
-        // For signup, directly call signUp and show trapdoor
-        handleZkProofSignup();
-      }
-    };
-
-    const handleZkProofLogin = async () => {
-      setError("");
-      setLoading(true);
-      try {
-        if (!zkTrapdoor.trim()) {
-          throw new Error("Please enter your trapdoor");
-        }
-        
-        await handleAuth("zkproof", zkTrapdoor);
-        setModalIsOpen(false);
-      } catch (e: any) {
-        setError(e.message || "ZK-Proof login failed");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const handleZkProofSignup = async () => {
-      setError("");
-      setLoading(true);
-      try {
-        const result = await signUp("zkproof");
-        if (!result || !result.success) {
-          throw new Error(result?.error || "ZK-Proof signup failed");
-        }
-        const trapdoorValue =
-          (result as any).seedPhrase || (result as any).trapdoor || "";
-        if (trapdoorValue) {
-          setZkSignupTrapdoor(trapdoorValue);
-          setShowZkTrapdoorCopySuccess(false);
-          setAuthView("zkproof-signup-result");
-          setHasPendingSignup(true);
-        } else {
-          setAuthView("options");
-          setModalIsOpen(false);
-        }
-      } catch (e: any) {
-        setError(e.message || "ZK-Proof signup failed");
       } finally {
         setLoading(false);
       }
@@ -1354,47 +1272,9 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       }
     };
 
-    const handleRecover = async () => {
-      setError("");
-      setLoading(true);
-      try {
-        if (isShogunCore(core) && core.db) {
-          // Password recovery functionality has been removed from shogun-core
-          // Users should implement their own recovery logic using Gun's get operations
-          try {
-            const hintNode = await new Promise<string | null>((resolve) => {
-              core.db.gun.get('users').get(formUsername).get('hint').once((hint: any) => {
-                resolve(hint || null);
-              });
-            });
-
-            const securityNode = await new Promise<any>((resolve) => {
-              core.db.gun.get('users').get(formUsername).get('security').once((security: any) => {
-                resolve(security || null);
-              });
-            });
-
-            if (securityNode && securityNode.answer === formSecurityAnswer) {
-              if (hintNode) {
-                setRecoveredHint(hintNode);
-                setAuthView("showHint");
-              } else {
-                setError("No hint found for this user.");
-              }
-            } else {
-              setError("Security answer is incorrect.");
-            }
-          } catch (error: any) {
-            setError(error.message || "Could not recover hint.");
-          }
-        } else {
-          setError("Password recovery requires ShogunCore");
-        }
-      } catch (e: any) {
-        setError(e.message || "An unexpected error occurred.");
-      } finally {
-        setLoading(false);
-      }
+    const handleForgotPassword = async (e: React.MouseEvent) => {
+      e.preventDefault();
+      setError("Password recovery is no longer supported.");
     };
 
     const handleExportPair = async () => {
@@ -1427,7 +1307,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
 
         const success = await importGunPair(
           importPairData,
-          importPassword || undefined
+          importPassword || undefined,
         );
         if (success) {
           setShowImportSuccess(true);
@@ -1450,8 +1330,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setFormUsername("");
       setFormPassword("");
       setFormPasswordConfirm("");
-      setFormHint("");
-      setFormSecurityAnswer("");
       setError("");
       setLoading(false);
       setAuthView("options");
@@ -1461,10 +1339,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setExportedPair("");
       setShowCopySuccess(false);
       setShowImportSuccess(false);
-      setRecoveredHint("");
-      setZkTrapdoor("");
-      setZkSignupTrapdoor("");
-      setShowZkTrapdoorCopySuccess(false);
+      // Additional reset code if needed
       setWebauthnSeedPhrase("");
       setWebauthnRecoverySeed("");
       setFormMnemonic("");
@@ -1482,7 +1357,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       setHasPendingSignup(false);
     };
 
-    const finalizeZkProofSignup = () => {
+    const finalizeSignup = () => {
       setError("");
       resetForm();
       setModalIsOpen(false);
@@ -1547,31 +1422,15 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         {options.showChallenge !== false && hasPlugin("challenge") && (
           <div className="shogun-auth-option-group">
             <button
-               type="button"
-               className="shogun-auth-option-button"
-               onClick={handleChallengeAuth}
-               disabled={loading}
-            >
-               <ChallengeIcon />
-               {formMode === "login"
-                 ? "Login with Challenge"
-                 : "Signup with Challenge (N/A)"}
-            </button>
-          </div>
-        )}
-
-        {options.showZkProof !== false && hasPlugin("zkproof") && (
-          <div className="shogun-auth-option-group">
-            <button
               type="button"
               className="shogun-auth-option-button"
-              onClick={handleZkProofAuth}
+              onClick={handleChallengeAuth}
               disabled={loading}
             >
-              <ZkProofIcon />
+              <ChallengeIcon />
               {formMode === "login"
-                ? "Login with ZK-Proof"
-                : "Signup with ZK-Proof"}
+                ? "Login with Challenge"
+                : "Signup with Challenge (N/A)"}
             </button>
           </div>
         )}
@@ -1667,51 +1526,9 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                 placeholder="Confirm your password"
               />
             </div>
-            <div className="shogun-form-group">
-              <label htmlFor="hint">
-                <UserIcon />
-                <span>Password Hint</span>
-              </label>
-              <input
-                type="text"
-                id="hint"
-                value={formHint}
-                onChange={(e) => setFormHint(e.target.value)}
-                disabled={loading}
-                required
-                placeholder="Enter your password hint"
-              />
-            </div>
-            <div className="shogun-form-group">
-              <label htmlFor="securityQuestion">
-                <UserIcon />
-                <span>Security Question</span>
-              </label>
-              <input
-                type="text"
-                id="securityQuestion"
-                value={formSecurityQuestion}
-                disabled={true}
-              />
-            </div>
-            <div className="shogun-form-group">
-              <label htmlFor="securityAnswer">
-                <UserIcon />
-                <span>Security Answer</span>
-              </label>
-              <input
-                type="text"
-                id="securityAnswer"
-                value={formSecurityAnswer}
-                onChange={(e) => setFormSecurityAnswer(e.target.value)}
-                disabled={loading}
-                required
-                placeholder="Enter your security answer"
-              />
-              </div>
-            </>
+          </>
         )}
-        
+
         <button
           type="submit"
           className="shogun-submit-button"
@@ -1734,16 +1551,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
               ? "Don't have an account? Sign up"
               : "Already have an account? Log in"}
           </button>
-          {formMode === "login" && (
-            <button
-              type="button"
-              className="shogun-toggle-mode"
-              onClick={() => setAuthView("recover")}
-              disabled={loading}
-            >
-              Forgot password?
-            </button>
-          )}
         </div>
       </form>
     );
@@ -1923,79 +1730,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       </div>
     );
 
-    const renderRecoveryForm = () => (
-      <div className="shogun-auth-form">
-        <div className="shogun-form-group">
-          <label htmlFor="username">
-            <UserIcon />
-            <span>Username</span>
-          </label>
-          <input
-            type="text"
-            id="username"
-            value={formUsername}
-            onChange={(e) => setFormUsername(e.target.value)}
-            disabled={loading}
-            required
-            placeholder="Enter your username"
-          />
-        </div>
-        <div className="shogun-form-group">
-          <label>Security Question</label>
-          <p>{formSecurityQuestion}</p>
-        </div>
-        <div className="shogun-form-group">
-          <label htmlFor="securityAnswer">
-            <KeyIcon />
-            <span>Answer</span>
-          </label>
-          <input
-            type="text"
-            id="securityAnswer"
-            value={formSecurityAnswer}
-            onChange={(e) => setFormSecurityAnswer(e.target.value)}
-            disabled={loading}
-            required
-            placeholder="Enter your answer"
-          />
-        </div>
-        <button
-          type="button"
-          className="shogun-submit-button"
-          onClick={handleRecover}
-          disabled={loading}
-        >
-          {loading ? "Recovering..." : "Get Hint"}
-        </button>
-        <div className="shogun-form-footer">
-          <button
-            className="shogun-toggle-mode"
-            onClick={() => setAuthView("password")}
-            disabled={loading}
-          >
-            Back to Login
-          </button>
-        </div>
-      </div>
-    );
-
-    const renderHint = () => (
-      <div className="shogun-auth-form">
-        <h3>Your Password Hint</h3>
-        <p className="shogun-hint">{recoveredHint}</p>
-        <button
-          className="shogun-submit-button"
-          onClick={() => {
-            setAuthView("password");
-            resetForm();
-            setFormMode("login");
-          }}
-        >
-          Back to Login
-        </button>
-      </div>
-    );
-
     const renderExportForm = () => (
       <div className="shogun-auth-form">
         <h3>Export Gun Pair</h3>
@@ -2108,167 +1842,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       </div>
     );
 
-    const renderZkProofLoginForm = () => (
-      <div className="shogun-auth-form">
-        <h3>Login with ZK-Proof</h3>
-        <div
-          style={{
-            backgroundColor: "#f0f9ff",
-            padding: "12px",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            border: "1px solid #0ea5e9",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "14px",
-              color: "#0c4a6e",
-              margin: "0",
-              fontWeight: "500",
-            }}
-          >
-            🔒 Anonymous Authentication
-          </p>
-          <p
-            style={{ fontSize: "13px", color: "#075985", margin: "4px 0 0 0" }}
-          >
-            Enter your trapdoor (recovery phrase) to login anonymously using Zero-Knowledge Proofs. Your identity remains private.
-          </p>
-        </div>
-        <div className="shogun-form-group">
-          <label htmlFor="zkTrapdoor">
-            <KeyIcon />
-            <span>Trapdoor / Recovery Phrase</span>
-          </label>
-          <textarea
-            id="zkTrapdoor"
-            value={zkTrapdoor}
-            onChange={(e) => setZkTrapdoor(e.target.value)}
-            disabled={loading}
-            placeholder="Enter your trapdoor..."
-            rows={4}
-            style={{
-              fontFamily: "monospace",
-              fontSize: "12px",
-              width: "100%",
-              padding: "8px",
-              border: "1px solid #ccc",
-              borderRadius: "4px",
-            }}
-          />
-        </div>
-        <button
-          type="button"
-          className="shogun-submit-button"
-          onClick={handleZkProofLogin}
-          disabled={loading || !zkTrapdoor.trim()}
-        >
-          {loading ? "Processing..." : "Login Anonymously"}
-        </button>
-        <div className="shogun-form-footer">
-          <button
-            className="shogun-toggle-mode"
-            onClick={() => setAuthView("options")}
-            disabled={loading}
-          >
-            Back to Login Options
-          </button>
-        </div>
-      </div>
-    );
-
-    const renderZkProofSignupResult = () => (
-      <div className="shogun-auth-form">
-        <h3>ZK-Proof Account Created!</h3>
-        <div
-          style={{
-            backgroundColor: "#fef3c7",
-            padding: "12px",
-            borderRadius: "8px",
-            marginBottom: "16px",
-            border: "1px solid #f59e0b",
-          }}
-        >
-          <p
-            style={{
-              fontSize: "14px",
-              color: "#92400e",
-              margin: "0",
-              fontWeight: "500",
-            }}
-          >
-            ⚠️ Important: Save Your Trapdoor
-          </p>
-          <p
-            style={{ fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" }}
-          >
-            This trapdoor lets you restore your anonymous identity on new devices.
-            Store it securely and never share it.
-          </p>
-        </div>
-        <div className="shogun-form-group">
-          <label>Your Trapdoor (Recovery Phrase):</label>
-          <textarea
-            value={zkSignupTrapdoor}
-            readOnly
-            rows={4}
-            style={{
-              fontFamily: "monospace",
-              fontSize: "12px",
-              width: "100%",
-              padding: "8px",
-              border: "2px solid #f59e0b",
-              borderRadius: "4px",
-              backgroundColor: "#fffbeb",
-            }}
-          />
-          <button
-            type="button"
-            className="shogun-submit-button"
-            style={{ marginTop: "8px" }}
-            onClick={async () => {
-              if (!zkSignupTrapdoor) {
-                return;
-              }
-              try {
-                if (navigator.clipboard) {
-                  await navigator.clipboard.writeText(zkSignupTrapdoor);
-                  setShowZkTrapdoorCopySuccess(true);
-                  setTimeout(() => setShowZkTrapdoorCopySuccess(false), 3000);
-                }
-              } catch (copyError) {
-                console.warn("Failed to copy trapdoor:", copyError);
-              }
-            }}
-            disabled={!zkSignupTrapdoor}
-          >
-            Copy Trapdoor
-          </button>
-          {showZkTrapdoorCopySuccess && (
-            <p
-              style={{
-                color: "#047857",
-                fontSize: "12px",
-                marginTop: "6px",
-              }}
-            >
-              Trapdoor copied to clipboard!
-            </p>
-          )}
-        </div>
-        <div className="shogun-form-footer">
-          <button
-            type="button"
-            className="shogun-submit-button"
-            onClick={finalizeZkProofSignup}
-          >
-            I Saved My Trapdoor
-          </button>
-        </div>
-      </div>
-    );
-
     const renderWebauthnSignupResult = () => (
       <div className="shogun-auth-form">
         <h3>WebAuthn Account Created!</h3>
@@ -2294,7 +1867,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           <p
             style={{ fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" }}
           >
-            This seed phrase lets you add new devices or recover your WebAuthn account. Keep it private and store it securely.
+            This seed phrase lets you add new devices or recover your WebAuthn
+            account. Keep it private and store it securely.
           </p>
         </div>
         <div className="shogun-form-group">
@@ -2352,7 +1926,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
           type="button"
           className="shogun-submit-button"
           style={{ marginTop: "16px" }}
-          onClick={finalizeZkProofSignup}
+          onClick={finalizeSignup}
         >
           Close and Start Using App
         </button>
@@ -2575,30 +2149,21 @@ export const ShogunButton: ShogunButtonComponent = (() => {
         </button>
 
         {modalIsOpen && (
-          <div
-            className="shogun-modal-overlay"
-            onClick={closeModal}
-          >
+          <div className="shogun-modal-overlay" onClick={closeModal}>
             <div className="shogun-modal" onClick={(e) => e.stopPropagation()}>
               <div className="shogun-modal-header">
                 <h2>
-                  {authView === "recover"
-                    ? "Recover Password"
-                    : authView === "showHint"
-                      ? "Password Hint"
-                      : authView === "export"
-                        ? "Export Gun Pair"
-                        : authView === "import"
-                          ? "Import Gun Pair"
-                          : authView === "webauthn-username"
-                            ? "WebAuthn"
-                            : authView === "zkproof-login"
-                              ? "ZK-Proof Login"
-                              : authView === "seed-login"
-                                ? "Login with Seed"
-                                : formMode === "login"
-                                  ? "Login"
-                                  : "Sign Up"}
+                  {authView === "export"
+                    ? "Export Gun Pair"
+                    : authView === "import"
+                      ? "Import Gun Pair"
+                      : authView === "webauthn-username"
+                        ? "WebAuthn"
+                        : authView === "seed-login"
+                          ? "Login with Seed"
+                          : formMode === "login"
+                            ? "Login"
+                            : "Sign Up"}
                 </h2>
                 <button
                   className="shogun-close-button"
@@ -2643,8 +2208,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                   </>
                 )}
 
-                {authView === "recover" && renderRecoveryForm()}
-                {authView === "showHint" && renderHint()}
                 {authView === "export" && renderExportForm()}
                 {authView === "import" && renderImportForm()}
                 {authView === "webauthn-username" &&
@@ -2653,11 +2216,7 @@ export const ShogunButton: ShogunButtonComponent = (() => {
                   renderWebauthnRecoveryForm()}
                 {authView === "webauthn-signup-result" &&
                   renderWebauthnSignupResult()}
-                {authView === "zkproof-login" && renderZkProofLoginForm()}
-                {authView === "zkproof-signup-result" &&
-                  renderZkProofSignupResult()}
-                {authView === "challenge-username" &&
-                  renderChallengeForm()}
+                {authView === "challenge-username" && renderChallengeForm()}
               </div>
             </div>
           </div>

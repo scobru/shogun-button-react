@@ -3,7 +3,9 @@ import { Observable } from "rxjs";
 import "../styles/index.css";
 // Helper type to check if core is ShogunCore
 function isShogunCore(core) {
-    return core && typeof core.isLoggedIn === 'function' && typeof core.gun !== 'undefined';
+    return (core &&
+        typeof core.isLoggedIn === "function" &&
+        typeof core.gun !== "undefined");
 }
 // Default context
 const defaultShogunContext = {
@@ -174,24 +176,6 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                         throw new Error("Nostr requires ShogunCore");
                     }
                     break;
-                case "zkproof":
-                    const trapdoor = args[0];
-                    if (!trapdoor || typeof trapdoor !== "string") {
-                        throw new Error("Invalid trapdoor provided");
-                    }
-                    if (isShogunCore(core)) {
-                        const zkproof = core.getPlugin("zkproof");
-                        if (!zkproof)
-                            throw new Error("ZK-Proof plugin not available");
-                        const zkLoginResult = await zkproof.login(trapdoor);
-                        result = zkLoginResult;
-                        username = zkLoginResult.username || zkLoginResult.alias || `zk_${(zkLoginResult.userPub || "").slice(0, 16)}`;
-                        authMethod = "zkproof";
-                    }
-                    else {
-                        throw new Error("ZK-Proof requires ShogunCore");
-                    }
-                    break;
                 case "challenge":
                     username = args[0];
                     if (!username)
@@ -349,21 +333,6 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                     }
                     else {
                         throw new Error("Nostr requires ShogunCore");
-                    }
-                    break;
-                case "zkproof":
-                    if (isShogunCore(core)) {
-                        const zkproofPlugin = core.getPlugin("zkproof");
-                        if (!zkproofPlugin)
-                            throw new Error("ZK-Proof plugin not available");
-                        const seed = args[0]; // Optional seed
-                        const zkSignupResult = await zkproofPlugin.signUp(seed);
-                        result = zkSignupResult;
-                        username = zkSignupResult.username || zkSignupResult.alias || `zk_${(zkSignupResult.userPub || "").slice(0, 16)}`;
-                        authMethod = "zkproof";
-                    }
-                    else {
-                        throw new Error("ZK-Proof requires ShogunCore");
                     }
                     break;
                 default:
@@ -543,7 +512,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         put: async (path, data) => {
             if (isShogunCore(core)) {
                 if (!core.gun)
-                    throw new Error('Gun instance not available');
+                    throw new Error("Gun instance not available");
                 return new Promise((resolve, reject) => {
                     core.gun.get(path).put(data, (ack) => {
                         if (ack.err)
@@ -554,7 +523,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                 });
             }
             else {
-                throw new Error('Core not available');
+                throw new Error("Core not available");
             }
         },
         get: (path) => {
@@ -568,7 +537,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         remove: async (path) => {
             if (isShogunCore(core)) {
                 if (!core.gun)
-                    throw new Error('Gun instance not available');
+                    throw new Error("Gun instance not available");
                 return new Promise((resolve, reject) => {
                     core.gun.get(path).put(null, (ack) => {
                         if (ack.err)
@@ -579,7 +548,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                 });
             }
             else {
-                throw new Error('Core not available');
+                throw new Error("Core not available");
             }
         },
     }), [
@@ -637,10 +606,6 @@ const ImportIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org
     React.createElement("polyline", { points: "14,2 14,8 20,8" }),
     React.createElement("line", { x1: "16", y1: "13", x2: "8", y2: "13" }),
     React.createElement("line", { x1: "12", y1: "17", x2: "12", y2: "9" })));
-const ZkProofIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
-    React.createElement("path", { d: "M12 2L2 7l10 5 10-5-10-5z" }),
-    React.createElement("path", { d: "M2 17l10 5 10-5" }),
-    React.createElement("path", { d: "M2 12l10 5 10-5" })));
 const ChallengeIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
     React.createElement("polygon", { points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" })));
 const ExportIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
@@ -657,24 +622,17 @@ export const ShogunButton = (() => {
         const [formUsername, setFormUsername] = useState("");
         const [formPassword, setFormPassword] = useState("");
         const [formPasswordConfirm, setFormPasswordConfirm] = useState("");
-        const [formHint, setFormHint] = useState("");
-        const [formSecurityQuestion] = useState("What is your favorite color?"); // Hardcoded for now
-        const [formSecurityAnswer, setFormSecurityAnswer] = useState("");
         const [formMode, setFormMode] = useState("login");
         const [authView, setAuthView] = useState("options");
         const [error, setError] = useState("");
         const [loading, setLoading] = useState(false);
         const [dropdownOpen, setDropdownOpen] = useState(false);
-        const [recoveredHint, setRecoveredHint] = useState("");
         const [exportPassword, setExportPassword] = useState("");
         const [importPassword, setImportPassword] = useState("");
         const [importPairData, setImportPairData] = useState("");
         const [exportedPair, setExportedPair] = useState("");
         const [showCopySuccess, setShowCopySuccess] = useState(false);
         const [showImportSuccess, setShowImportSuccess] = useState(false);
-        const [zkTrapdoor, setZkTrapdoor] = useState("");
-        const [zkSignupTrapdoor, setZkSignupTrapdoor] = useState("");
-        const [showZkTrapdoorCopySuccess, setShowZkTrapdoorCopySuccess] = useState(false);
         const [webauthnSeedPhrase, setWebauthnSeedPhrase] = useState("");
         const [webauthnRecoverySeed, setWebauthnRecoverySeed] = useState("");
         const [formMnemonic, setFormMnemonic] = useState("");
@@ -697,17 +655,13 @@ export const ShogunButton = (() => {
         useEffect(() => {
             if (hasPendingSignup) {
                 setModalIsOpen(true);
-                if (authView !== "webauthn-signup-result" &&
-                    authView !== "zkproof-signup-result") {
+                if (authView !== "webauthn-signup-result") {
                     if (webauthnSeedPhrase) {
                         setAuthView("webauthn-signup-result");
                     }
-                    else if (zkSignupTrapdoor) {
-                        setAuthView("zkproof-signup-result");
-                    }
                 }
             }
-        }, [hasPendingSignup, authView, webauthnSeedPhrase, zkSignupTrapdoor]);
+        }, [hasPendingSignup, authView, webauthnSeedPhrase]);
         // If already logged in, show only logout button
         if (isLoggedIn && username && !modalIsOpen) {
             return (React.createElement("div", { className: "shogun-logged-in-container" },
@@ -784,26 +738,6 @@ export const ShogunButton = (() => {
                 if (formMode === "signup") {
                     const result = await signUp("password", formUsername, formPassword, formPasswordConfirm);
                     if (result && result.success) {
-                        // Password hint functionality has been removed from shogun-core
-                        // Users should store hints manually in their own data structures if needed
-                        if (isShogunCore(core) && core.db && formHint) {
-                            try {
-                                // Store hint manually in user data
-                                const user = core.gun.user();
-                                if (user && user.is) {
-                                    core.db.gun.get('users').get(formUsername).get('hint').put(formHint);
-                                    if (formSecurityAnswer) {
-                                        core.db.gun.get('users').get(formUsername).get('security').put({
-                                            question: formSecurityQuestion,
-                                            answer: formSecurityAnswer
-                                        });
-                                    }
-                                }
-                            }
-                            catch (error) {
-                                console.warn('Failed to store password hint:', error);
-                            }
-                        }
                         setModalIsOpen(false);
                     }
                     else if (result && result.error) {
@@ -863,63 +797,6 @@ export const ShogunButton = (() => {
                 setLoading(false);
             }
         };
-        const handleZkProofAuth = () => {
-            if (!hasPlugin("zkproof")) {
-                setError("ZK-Proof plugin not available");
-                return;
-            }
-            if (formMode === "login") {
-                setAuthView("zkproof-login");
-            }
-            else {
-                // For signup, directly call signUp and show trapdoor
-                handleZkProofSignup();
-            }
-        };
-        const handleZkProofLogin = async () => {
-            setError("");
-            setLoading(true);
-            try {
-                if (!zkTrapdoor.trim()) {
-                    throw new Error("Please enter your trapdoor");
-                }
-                await handleAuth("zkproof", zkTrapdoor);
-                setModalIsOpen(false);
-            }
-            catch (e) {
-                setError(e.message || "ZK-Proof login failed");
-            }
-            finally {
-                setLoading(false);
-            }
-        };
-        const handleZkProofSignup = async () => {
-            setError("");
-            setLoading(true);
-            try {
-                const result = await signUp("zkproof");
-                if (!result || !result.success) {
-                    throw new Error((result === null || result === void 0 ? void 0 : result.error) || "ZK-Proof signup failed");
-                }
-                const trapdoorValue = result.seedPhrase || result.trapdoor || "";
-                if (trapdoorValue) {
-                    setZkSignupTrapdoor(trapdoorValue);
-                    setShowZkTrapdoorCopySuccess(false);
-                    setAuthView("zkproof-signup-result");
-                    setHasPendingSignup(true);
-                }
-                else {
-                    setAuthView("options");
-                    setModalIsOpen(false);
-                }
-            }
-            catch (e) {
-                setError(e.message || "ZK-Proof signup failed");
-            }
-            finally {
-                setLoading(false);
-            }
-        };
         const handleChallengeAuth = () => {
             if (!hasPlugin("challenge")) {
                 setError("Challenge plugin not available");
@@ -964,51 +841,9 @@ export const ShogunButton = (() => {
                 setLoading(false);
             }
         };
-        const handleRecover = async () => {
-            setError("");
-            setLoading(true);
-            try {
-                if (isShogunCore(core) && core.db) {
-                    // Password recovery functionality has been removed from shogun-core
-                    // Users should implement their own recovery logic using Gun's get operations
-                    try {
-                        const hintNode = await new Promise((resolve) => {
-                            core.db.gun.get('users').get(formUsername).get('hint').once((hint) => {
-                                resolve(hint || null);
-                            });
-                        });
-                        const securityNode = await new Promise((resolve) => {
-                            core.db.gun.get('users').get(formUsername).get('security').once((security) => {
-                                resolve(security || null);
-                            });
-                        });
-                        if (securityNode && securityNode.answer === formSecurityAnswer) {
-                            if (hintNode) {
-                                setRecoveredHint(hintNode);
-                                setAuthView("showHint");
-                            }
-                            else {
-                                setError("No hint found for this user.");
-                            }
-                        }
-                        else {
-                            setError("Security answer is incorrect.");
-                        }
-                    }
-                    catch (error) {
-                        setError(error.message || "Could not recover hint.");
-                    }
-                }
-                else {
-                    setError("Password recovery requires ShogunCore");
-                }
-            }
-            catch (e) {
-                setError(e.message || "An unexpected error occurred.");
-            }
-            finally {
-                setLoading(false);
-            }
+        const handleForgotPassword = async (e) => {
+            e.preventDefault();
+            setError("Password recovery is no longer supported.");
         };
         const handleExportPair = async () => {
             setError("");
@@ -1061,8 +896,6 @@ export const ShogunButton = (() => {
             setFormUsername("");
             setFormPassword("");
             setFormPasswordConfirm("");
-            setFormHint("");
-            setFormSecurityAnswer("");
             setError("");
             setLoading(false);
             setAuthView("options");
@@ -1072,10 +905,7 @@ export const ShogunButton = (() => {
             setExportedPair("");
             setShowCopySuccess(false);
             setShowImportSuccess(false);
-            setRecoveredHint("");
-            setZkTrapdoor("");
-            setZkSignupTrapdoor("");
-            setShowZkTrapdoorCopySuccess(false);
+            // Additional reset code if needed
             setWebauthnSeedPhrase("");
             setWebauthnRecoverySeed("");
             setFormMnemonic("");
@@ -1090,7 +920,7 @@ export const ShogunButton = (() => {
             setModalIsOpen(false);
             setHasPendingSignup(false);
         };
-        const finalizeZkProofSignup = () => {
+        const finalizeSignup = () => {
             setError("");
             resetForm();
             setModalIsOpen(false);
@@ -1125,12 +955,6 @@ export const ShogunButton = (() => {
                     formMode === "login"
                         ? "Login with Challenge"
                         : "Signup with Challenge (N/A)"))),
-            options.showZkProof !== false && hasPlugin("zkproof") && (React.createElement("div", { className: "shogun-auth-option-group" },
-                React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: handleZkProofAuth, disabled: loading },
-                    React.createElement(ZkProofIcon, null),
-                    formMode === "login"
-                        ? "Login with ZK-Proof"
-                        : "Signup with ZK-Proof"))),
             React.createElement("div", { className: "shogun-divider" },
                 React.createElement("span", null, "or")),
             React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => setAuthView("password"), disabled: loading },
@@ -1160,22 +984,7 @@ export const ShogunButton = (() => {
                     React.createElement("label", { htmlFor: "passwordConfirm" },
                         React.createElement(KeyIcon, null),
                         React.createElement("span", null, "Confirm Password")),
-                    React.createElement("input", { type: "password", id: "passwordConfirm", value: formPasswordConfirm, onChange: (e) => setFormPasswordConfirm(e.target.value), disabled: loading, required: true, placeholder: "Confirm your password" })),
-                React.createElement("div", { className: "shogun-form-group" },
-                    React.createElement("label", { htmlFor: "hint" },
-                        React.createElement(UserIcon, null),
-                        React.createElement("span", null, "Password Hint")),
-                    React.createElement("input", { type: "text", id: "hint", value: formHint, onChange: (e) => setFormHint(e.target.value), disabled: loading, required: true, placeholder: "Enter your password hint" })),
-                React.createElement("div", { className: "shogun-form-group" },
-                    React.createElement("label", { htmlFor: "securityQuestion" },
-                        React.createElement(UserIcon, null),
-                        React.createElement("span", null, "Security Question")),
-                    React.createElement("input", { type: "text", id: "securityQuestion", value: formSecurityQuestion, disabled: true })),
-                React.createElement("div", { className: "shogun-form-group" },
-                    React.createElement("label", { htmlFor: "securityAnswer" },
-                        React.createElement(UserIcon, null),
-                        React.createElement("span", null, "Security Answer")),
-                    React.createElement("input", { type: "text", id: "securityAnswer", value: formSecurityAnswer, onChange: (e) => setFormSecurityAnswer(e.target.value), disabled: loading, required: true, placeholder: "Enter your security answer" })))),
+                    React.createElement("input", { type: "password", id: "passwordConfirm", value: formPasswordConfirm, onChange: (e) => setFormPasswordConfirm(e.target.value), disabled: loading, required: true, placeholder: "Confirm your password" })))),
             React.createElement("button", { type: "submit", className: "shogun-submit-button", disabled: loading }, loading
                 ? "Processing..."
                 : formMode === "login"
@@ -1184,8 +993,7 @@ export const ShogunButton = (() => {
             React.createElement("div", { className: "shogun-form-footer" },
                 React.createElement("button", { type: "button", className: "shogun-toggle-mode shogun-prominent-toggle", onClick: toggleMode, disabled: loading }, formMode === "login"
                     ? "Don't have an account? Sign up"
-                    : "Already have an account? Log in"),
-                formMode === "login" && (React.createElement("button", { type: "button", className: "shogun-toggle-mode", onClick: () => setAuthView("recover"), disabled: loading }, "Forgot password?")))));
+                    : "Already have an account? Log in"))));
         const renderWebAuthnUsernameForm = () => (React.createElement("div", { className: "shogun-auth-form" },
             React.createElement("h3", null, formMode === "login"
                 ? "Login with WebAuthn"
@@ -1261,31 +1069,6 @@ export const ShogunButton = (() => {
                         setError("");
                         setAuthView("webauthn-username");
                     }, disabled: loading }, "\u2190 Back to WebAuthn"))));
-        const renderRecoveryForm = () => (React.createElement("div", { className: "shogun-auth-form" },
-            React.createElement("div", { className: "shogun-form-group" },
-                React.createElement("label", { htmlFor: "username" },
-                    React.createElement(UserIcon, null),
-                    React.createElement("span", null, "Username")),
-                React.createElement("input", { type: "text", id: "username", value: formUsername, onChange: (e) => setFormUsername(e.target.value), disabled: loading, required: true, placeholder: "Enter your username" })),
-            React.createElement("div", { className: "shogun-form-group" },
-                React.createElement("label", null, "Security Question"),
-                React.createElement("p", null, formSecurityQuestion)),
-            React.createElement("div", { className: "shogun-form-group" },
-                React.createElement("label", { htmlFor: "securityAnswer" },
-                    React.createElement(KeyIcon, null),
-                    React.createElement("span", null, "Answer")),
-                React.createElement("input", { type: "text", id: "securityAnswer", value: formSecurityAnswer, onChange: (e) => setFormSecurityAnswer(e.target.value), disabled: loading, required: true, placeholder: "Enter your answer" })),
-            React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleRecover, disabled: loading }, loading ? "Recovering..." : "Get Hint"),
-            React.createElement("div", { className: "shogun-form-footer" },
-                React.createElement("button", { className: "shogun-toggle-mode", onClick: () => setAuthView("password"), disabled: loading }, "Back to Login"))));
-        const renderHint = () => (React.createElement("div", { className: "shogun-auth-form" },
-            React.createElement("h3", null, "Your Password Hint"),
-            React.createElement("p", { className: "shogun-hint" }, recoveredHint),
-            React.createElement("button", { className: "shogun-submit-button", onClick: () => {
-                    setAuthView("password");
-                    resetForm();
-                    setFormMode("login");
-                } }, "Back to Login")));
         const renderExportForm = () => (React.createElement("div", { className: "shogun-auth-form" },
             React.createElement("h3", null, "Export Gun Pair"),
             React.createElement("div", { style: {
@@ -1342,86 +1125,6 @@ export const ShogunButton = (() => {
                             setExportedPair("");
                         }
                     }, disabled: loading }, "Back"))));
-        const renderZkProofLoginForm = () => (React.createElement("div", { className: "shogun-auth-form" },
-            React.createElement("h3", null, "Login with ZK-Proof"),
-            React.createElement("div", { style: {
-                    backgroundColor: "#f0f9ff",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    marginBottom: "16px",
-                    border: "1px solid #0ea5e9",
-                } },
-                React.createElement("p", { style: {
-                        fontSize: "14px",
-                        color: "#0c4a6e",
-                        margin: "0",
-                        fontWeight: "500",
-                    } }, "\uD83D\uDD12 Anonymous Authentication"),
-                React.createElement("p", { style: { fontSize: "13px", color: "#075985", margin: "4px 0 0 0" } }, "Enter your trapdoor (recovery phrase) to login anonymously using Zero-Knowledge Proofs. Your identity remains private.")),
-            React.createElement("div", { className: "shogun-form-group" },
-                React.createElement("label", { htmlFor: "zkTrapdoor" },
-                    React.createElement(KeyIcon, null),
-                    React.createElement("span", null, "Trapdoor / Recovery Phrase")),
-                React.createElement("textarea", { id: "zkTrapdoor", value: zkTrapdoor, onChange: (e) => setZkTrapdoor(e.target.value), disabled: loading, placeholder: "Enter your trapdoor...", rows: 4, style: {
-                        fontFamily: "monospace",
-                        fontSize: "12px",
-                        width: "100%",
-                        padding: "8px",
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                    } })),
-            React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: handleZkProofLogin, disabled: loading || !zkTrapdoor.trim() }, loading ? "Processing..." : "Login Anonymously"),
-            React.createElement("div", { className: "shogun-form-footer" },
-                React.createElement("button", { className: "shogun-toggle-mode", onClick: () => setAuthView("options"), disabled: loading }, "Back to Login Options"))));
-        const renderZkProofSignupResult = () => (React.createElement("div", { className: "shogun-auth-form" },
-            React.createElement("h3", null, "ZK-Proof Account Created!"),
-            React.createElement("div", { style: {
-                    backgroundColor: "#fef3c7",
-                    padding: "12px",
-                    borderRadius: "8px",
-                    marginBottom: "16px",
-                    border: "1px solid #f59e0b",
-                } },
-                React.createElement("p", { style: {
-                        fontSize: "14px",
-                        color: "#92400e",
-                        margin: "0",
-                        fontWeight: "500",
-                    } }, "\u26A0\uFE0F Important: Save Your Trapdoor"),
-                React.createElement("p", { style: { fontSize: "13px", color: "#a16207", margin: "4px 0 0 0" } }, "This trapdoor lets you restore your anonymous identity on new devices. Store it securely and never share it.")),
-            React.createElement("div", { className: "shogun-form-group" },
-                React.createElement("label", null, "Your Trapdoor (Recovery Phrase):"),
-                React.createElement("textarea", { value: zkSignupTrapdoor, readOnly: true, rows: 4, style: {
-                        fontFamily: "monospace",
-                        fontSize: "12px",
-                        width: "100%",
-                        padding: "8px",
-                        border: "2px solid #f59e0b",
-                        borderRadius: "4px",
-                        backgroundColor: "#fffbeb",
-                    } }),
-                React.createElement("button", { type: "button", className: "shogun-submit-button", style: { marginTop: "8px" }, onClick: async () => {
-                        if (!zkSignupTrapdoor) {
-                            return;
-                        }
-                        try {
-                            if (navigator.clipboard) {
-                                await navigator.clipboard.writeText(zkSignupTrapdoor);
-                                setShowZkTrapdoorCopySuccess(true);
-                                setTimeout(() => setShowZkTrapdoorCopySuccess(false), 3000);
-                            }
-                        }
-                        catch (copyError) {
-                            console.warn("Failed to copy trapdoor:", copyError);
-                        }
-                    }, disabled: !zkSignupTrapdoor }, "Copy Trapdoor"),
-                showZkTrapdoorCopySuccess && (React.createElement("p", { style: {
-                        color: "#047857",
-                        fontSize: "12px",
-                        marginTop: "6px",
-                    } }, "Trapdoor copied to clipboard!"))),
-            React.createElement("div", { className: "shogun-form-footer" },
-                React.createElement("button", { type: "button", className: "shogun-submit-button", onClick: finalizeZkProofSignup }, "I Saved My Trapdoor"))));
         const renderWebauthnSignupResult = () => (React.createElement("div", { className: "shogun-auth-form" },
             React.createElement("h3", null, "WebAuthn Account Created!"),
             React.createElement("div", { style: {
@@ -1467,7 +1170,7 @@ export const ShogunButton = (() => {
                     border: "1px solid #22c55e",
                     textAlign: "center",
                 } }, "\u2705 You're now logged in with WebAuthn!"),
-            React.createElement("button", { type: "button", className: "shogun-submit-button", style: { marginTop: "16px" }, onClick: finalizeZkProofSignup }, "Close and Start Using App")));
+            React.createElement("button", { type: "button", className: "shogun-submit-button", style: { marginTop: "16px" }, onClick: finalizeSignup }, "Close and Start Using App")));
         const renderChallengeForm = () => (React.createElement("div", { className: "shogun-auth-form" },
             React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", { htmlFor: "challenge-username" },
@@ -1559,23 +1262,17 @@ export const ShogunButton = (() => {
             modalIsOpen && (React.createElement("div", { className: "shogun-modal-overlay", onClick: closeModal },
                 React.createElement("div", { className: "shogun-modal", onClick: (e) => e.stopPropagation() },
                     React.createElement("div", { className: "shogun-modal-header" },
-                        React.createElement("h2", null, authView === "recover"
-                            ? "Recover Password"
-                            : authView === "showHint"
-                                ? "Password Hint"
-                                : authView === "export"
-                                    ? "Export Gun Pair"
-                                    : authView === "import"
-                                        ? "Import Gun Pair"
-                                        : authView === "webauthn-username"
-                                            ? "WebAuthn"
-                                            : authView === "zkproof-login"
-                                                ? "ZK-Proof Login"
-                                                : authView === "seed-login"
-                                                    ? "Login with Seed"
-                                                    : formMode === "login"
-                                                        ? "Login"
-                                                        : "Sign Up"),
+                        React.createElement("h2", null, authView === "export"
+                            ? "Export Gun Pair"
+                            : authView === "import"
+                                ? "Import Gun Pair"
+                                : authView === "webauthn-username"
+                                    ? "WebAuthn"
+                                    : authView === "seed-login"
+                                        ? "Login with Seed"
+                                        : formMode === "login"
+                                            ? "Login"
+                                            : "Sign Up"),
                         React.createElement("button", { className: "shogun-close-button", onClick: closeModal, "aria-label": "Close" },
                             React.createElement(CloseIcon, null))),
                     React.createElement("div", { className: "shogun-modal-content" },
@@ -1590,8 +1287,6 @@ export const ShogunButton = (() => {
                         authView === "password" && (React.createElement(React.Fragment, null,
                             React.createElement("button", { className: "shogun-back-button", onClick: () => setAuthView("options") }, "\u2190 Back"),
                             renderPasswordForm())),
-                        authView === "recover" && renderRecoveryForm(),
-                        authView === "showHint" && renderHint(),
                         authView === "export" && renderExportForm(),
                         authView === "import" && renderImportForm(),
                         authView === "webauthn-username" &&
@@ -1600,11 +1295,7 @@ export const ShogunButton = (() => {
                             renderWebauthnRecoveryForm(),
                         authView === "webauthn-signup-result" &&
                             renderWebauthnSignupResult(),
-                        authView === "zkproof-login" && renderZkProofLoginForm(),
-                        authView === "zkproof-signup-result" &&
-                            renderZkProofSignupResult(),
-                        authView === "challenge-username" &&
-                            renderChallengeForm()))))));
+                        authView === "challenge-username" && renderChallengeForm()))))));
     };
     Button.displayName = "ShogunButton";
     return Object.assign(Button, {

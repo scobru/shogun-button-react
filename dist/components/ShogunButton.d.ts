@@ -34,14 +34,14 @@ type ShogunButtonProviderProps = {
         userPub: string;
         username: string;
         password?: string;
-        authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof" | "challenge" | "seed" | "pair";
+        authMethod?: "password" | "web3" | "webauthn" | "nostr" | "challenge" | "seed" | "pair";
     }) => void;
     onSignupSuccess?: (data: {
         userPub: string;
         username: string;
         password?: string;
         seedPhrase?: string;
-        authMethod?: "password" | "web3" | "webauthn" | "nostr" | "zkproof" | "challenge" | "seed" | "pair";
+        authMethod?: "password" | "web3" | "webauthn" | "nostr" | "challenge" | "seed" | "pair";
     }) => void;
     onError?: (error: string) => void;
 };

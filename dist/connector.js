@@ -1,6 +1,6 @@
 import { ShogunCore } from "shogun-core";
 export async function shogunConnector(options) {
-    const { gunInstance, appName, timeouts, webauthn, nostr, web3, zkproof, challenge, showWebauthn, showNostr, showMetamask, showZkProof, showChallenge, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, crypto, ...restOptions } = options;
+    const { gunInstance, appName, timeouts, webauthn, nostr, web3, challenge, showWebauthn, showNostr, showMetamask, showChallenge, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, crypto, ...restOptions } = options;
     let core = null;
     let gun = null;
     gun = gunInstance;
@@ -14,10 +14,6 @@ export async function shogunConnector(options) {
         } : undefined,
         web3: (web3 === null || web3 === void 0 ? void 0 : web3.enabled) ? { enabled: true } : undefined,
         nostr: (nostr === null || nostr === void 0 ? void 0 : nostr.enabled) ? { enabled: true } : undefined,
-        zkproof: (zkproof === null || zkproof === void 0 ? void 0 : zkproof.enabled) ? {
-            enabled: true,
-            defaultGroupId: zkproof.defaultGroupId || "shogun-users",
-        } : undefined,
         challenge: (challenge === null || challenge === void 0 ? void 0 : challenge.enabled) ? { enabled: true } : undefined,
         timeouts,
         silent: false, // Enable console logs for debugging

@@ -7,7 +7,6 @@ export interface ShogunConnectorOptions {
     showMetamask?: boolean;
     showWebauthn?: boolean;
     showNostr?: boolean;
-    showZkProof?: boolean;
     showChallenge?: boolean;
     showSeedLogin?: boolean;
     darkMode?: boolean;
@@ -33,12 +32,6 @@ export interface ShogunConnectorOptions {
     };
     web3?: {
         enabled?: boolean;
-    };
-    zkproof?: {
-        enabled?: boolean;
-        defaultGroupId?: string;
-        deterministic?: boolean;
-        minEntropy?: number;
     };
     challenge?: {
         enabled?: boolean;
