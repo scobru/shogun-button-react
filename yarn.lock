@@ -1927,10 +1927,10 @@ shebang-regex@^3.0.0:
   resolved "https://registry.npmjs.org/shebang-regex/-/shebang-regex-3.0.0.tgz"
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
-shogun-core@^6.9.6:
-  version "6.9.6"
-  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-6.9.6.tgz#37f41e3da23b25d4b8083baad50ad22bc047e520"
-  integrity sha512-UggXLa2ex260ErSZb7zkGt5MeI2LAG282xmEoR+p3WEWsNijnIu1pFnhvbDiA5Il2eRjWIDS5jHgR2Onmz/WJg==
+shogun-core@^6.9.7:
+  version "6.9.7"
+  resolved "https://registry.yarnpkg.com/shogun-core/-/shogun-core-6.9.7.tgz#be283d88f6132803f0b43718c324d578089ab8e1"
+  integrity sha512-vVt+nfeo59xPiUsYpGhtovsoldukjTcbblsBv1KhCKRX61u4M2qRWcGiPBCiF4ibzGWGY/IUrm7f30SiL9kbiQ==
   dependencies:
     "@hpke/chacha20poly1305" "^1.7.1"
     "@hpke/hybridkem-x-wing" "^0.6.1"

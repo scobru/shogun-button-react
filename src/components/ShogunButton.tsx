@@ -1167,6 +1167,8 @@ export const ShogunButton: ShogunButtonComponent = (() => {
             formPasswordConfirm,
           );
           if (result && result.success) {
+            // Password hint functionality has been removed from shogun-core
+            // Users should store hints manually in their own data structures if needed
             setModalIsOpen(false);
           } else if (result && result.error) {
             setError(result.error);
@@ -1270,11 +1272,6 @@ export const ShogunButton: ShogunButtonComponent = (() => {
       } finally {
         setLoading(false);
       }
-    };
-
-    const handleForgotPassword = async (e: React.MouseEvent) => {
-      e.preventDefault();
-      setError("Password recovery is no longer supported.");
     };
 
     const handleExportPair = async () => {
