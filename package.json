@@ -41,7 +41,7 @@
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
     "ethers": "^6.13.5",
-    "gun": "^0.2020.1241",
+    "gun": "scobru/gun#main",
     "prettier": "^3.5.3",
     "process": "^0.11.10",
     "react": "^19.2.1",
