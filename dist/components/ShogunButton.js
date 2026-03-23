@@ -1,5 +1,4 @@
 import React, { useContext, useState, createContext, useEffect, useRef, } from "react";
-import { Observable } from "rxjs";
 import "../styles/index.css";
 // Helper type to check if core is ShogunCore
 function isShogunCore(core) {
@@ -17,7 +16,6 @@ const defaultShogunContext = {
     login: async () => ({}),
     signUp: async () => ({}),
     logout: () => { },
-    observe: () => new Observable(),
     setProvider: () => false,
     hasPlugin: () => false,
     getPlugin: () => undefined,
@@ -63,19 +61,6 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         }
         // Poiché il metodo 'on' non esiste su ShogunCore,
         // gestiamo gli stati direttamente nei metodi di login/logout
-    }, [core]);
-    // RxJS observe method
-    const observe = React.useCallback((path) => {
-        var _a;
-        if (!core) {
-            return new Observable();
-        }
-        const rx = (core === null || core === void 0 ? void 0 : core.rx) || ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.rx);
-        if (rx && typeof rx.observe === "function") {
-            const observable = rx.observe(path);
-            return observable;
-        }
-        return new Observable();
     }, [core]);
     // Unified login
     const login = React.useCallback(async (method, ...args) => {
@@ -499,7 +484,6 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         login,
         signUp,
         logout,
-        observe,
         hasPlugin,
         getPlugin,
         exportGunPair,
@@ -560,7 +544,6 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         login,
         signUp,
         logout,
-        observe,
         hasPlugin,
         getPlugin,
         exportGunPair,

@@ -1,6 +1,5 @@
 import React from "react";
 import { ShogunCore } from "shogun-core";
-import { Observable } from "rxjs";
 import "../styles/index.css";
 type ShogunContextType = {
     core: ShogunCore | null;
@@ -11,7 +10,6 @@ type ShogunContextType = {
     login: (method: string, ...args: any[]) => Promise<any>;
     signUp: (method: string, ...args: any[]) => Promise<any>;
     logout: () => void;
-    observe: <T>(path: string) => Observable<T>;
     setProvider: (provider: any) => boolean;
     hasPlugin: (name: string) => boolean;
     getPlugin: <T>(name: string) => T | undefined;

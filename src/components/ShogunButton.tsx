@@ -6,8 +6,6 @@ import React, {
   useRef,
 } from "react";
 import { ShogunCore, WebauthnPlugin } from "shogun-core";
-import { Observable } from "rxjs";
-
 import "../styles/index.css";
 
 // Interface for plugin hooks
@@ -58,8 +56,6 @@ type ShogunContextType = {
   login: (method: string, ...args: any[]) => Promise<any>;
   signUp: (method: string, ...args: any[]) => Promise<any>;
   logout: () => void;
-  // RxJS methods for reactive data
-  observe: <T>(path: string) => Observable<T>;
   // Provider method
   setProvider: (provider: any) => boolean;
   // Plugin methods
@@ -90,7 +86,6 @@ const defaultShogunContext: ShogunContextType = {
   login: async () => ({}),
   signUp: async () => ({}),
   logout: () => {},
-  observe: () => new Observable<any>(),
   setProvider: () => false,
   hasPlugin: () => false,
   getPlugin: () => undefined,
@@ -186,21 +181,7 @@ export function ShogunButtonProvider({
     // gestiamo gli stati direttamente nei metodi di login/logout
   }, [core]);
 
-  // RxJS observe method
-  const observe = React.useCallback(
-    <T,>(path: string): Observable<T> => {
-      if (!core) {
-        return new Observable<T>();
-      }
-      const rx: any = (core as any)?.rx || (core as any)?.db?.rx;
-      if (rx && typeof rx.observe === "function") {
-        const observable = rx.observe(path) as Observable<T>;
-        return observable;
-      }
-      return new Observable<T>();
-    },
-    [core],
-  );
+
 
   // Unified login
   const login = React.useCallback(
@@ -697,7 +678,6 @@ export function ShogunButtonProvider({
       login,
       signUp,
       logout,
-      observe,
       hasPlugin,
       getPlugin,
       exportGunPair,
@@ -750,7 +730,6 @@ export function ShogunButtonProvider({
       login,
       signUp,
       logout,
-      observe,
       hasPlugin,
       getPlugin,
       exportGunPair,
