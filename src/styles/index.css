@@ -180,32 +180,37 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: shogun-fade-in 0.2s ease;
+  animation: shogun-fade-in 0.3s ease-out;
 }
 
 @keyframes shogun-fade-in {
   from {
     opacity: 0;
+    backdrop-filter: blur(0px);
   }
   to {
     opacity: 1;
+    backdrop-filter: blur(8px);
   }
 }
 
 .shogun-modal {
   background-color: var(--shogun-bg);
   border-radius: var(--shogun-border-radius);
-  box-shadow: var(--shogun-shadow);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--shogun-border);
   width: 90%;
   max-width: 400px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: shogun-scale-in 0.2s ease;
+  animation: shogun-scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes shogun-scale-in {
