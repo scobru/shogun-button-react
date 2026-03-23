@@ -41,10 +41,10 @@
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
     "ethers": "^6.13.5",
-    "gun": "git+https://github.com/scobru/gun.git",
+    "gun": "git+https://github.com/scobru/gun",
     "prettier": "^3.5.3",
     "process": "^0.11.10",
-    "shogun-core": "^6.9.9",
+    "shogun-core": "git+https://github.com/scobru/shogun-core",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5"
   },
