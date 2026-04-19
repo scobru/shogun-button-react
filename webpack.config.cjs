@@ -58,6 +58,8 @@ module.exports = {
       os: false,
       path: false,
       fs: false,
+      "node:fs": false,
+      "node:fs/promises": false,
     },
     fullySpecified: false, // Disable fully specified ESM resolution
   },
@@ -66,9 +68,9 @@ module.exports = {
       Buffer: ['buffer', 'Buffer'],
       process: 'process/browser.js',
     }),
-    // Ignore gun-authd during bundle - it's an optional dependency loaded dynamically
+    // Ignore node: prefixed imports which are not available in browser
     new (require('webpack')).IgnorePlugin({
-      resourceRegExp: /^gun-authd$/,
+      resourceRegExp: /^node:/,
     }),
   ],
 }; 

@@ -1,4 +1,4 @@
-import { ShogunCore, IGunInstance } from "shogun-core";
+import { ShogunCore, IZenInstance } from "shogun-core";
 export interface ShogunConnectorOptions {
     appName: string;
     appDescription?: string;
@@ -10,7 +10,7 @@ export interface ShogunConnectorOptions {
     showChallenge?: boolean;
     showSeedLogin?: boolean;
     darkMode?: boolean;
-    gunInstance?: IGunInstance;
+    zenInstance?: IZenInstance;
     crypto?: {
         autoGenerateOnAuth?: boolean;
     };
@@ -36,7 +36,9 @@ export interface ShogunConnectorOptions {
     challenge?: {
         enabled?: boolean;
     };
+    /** @deprecated use zen configuration instead */
     enableGunDebug?: boolean;
+    /** @deprecated use zen configuration instead */
     enableConnectionMonitoring?: boolean;
     defaultPageSize?: number;
     connectionTimeout?: number;
@@ -49,5 +51,5 @@ export interface ShogunConnectorResult {
     getCurrentProviderUrl: () => string | null;
     registerPlugin: (plugin: any) => boolean;
     hasPlugin: (name: string) => boolean;
-    gunPlugin: null;
+    zenPlugin: null;
 }

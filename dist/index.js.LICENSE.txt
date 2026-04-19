@@ -16,5 +16,3 @@
 /*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) */
 
 /*! scure-base - MIT License (c) 2022 Paul Miller (paulmillr.com) */
-
-//!opt && console.log("WHAT IS T?", JSON.stringify(t).length);

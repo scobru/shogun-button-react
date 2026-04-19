@@ -4,7 +4,7 @@ import "../styles/index.css";
 function isShogunCore(core) {
     return (core &&
         typeof core.isLoggedIn === "function" &&
-        typeof core.gun !== "undefined");
+        typeof core.zen !== "undefined");
 }
 // Default context
 const defaultShogunContext = {
@@ -19,9 +19,9 @@ const defaultShogunContext = {
     setProvider: () => false,
     hasPlugin: () => false,
     getPlugin: () => undefined,
-    exportGunPair: async () => "",
-    importGunPair: async () => false,
-    gunPlugin: null,
+    exportZenPair: async () => "",
+    importZenPair: async () => false,
+    zenPlugin: null,
     put: async () => { },
     get: () => null,
     remove: async () => { },
@@ -51,7 +51,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         if (isShogunCore(core)) {
             isLoggedIn = core.isLoggedIn();
             if (isLoggedIn) {
-                pub = (_b = (_a = core.gun.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub;
+                pub = (_b = (_a = core.zen.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub;
             }
         }
         if (isLoggedIn && pub) {
@@ -92,7 +92,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                     }
                     if (isShogunCore(core)) {
                         result = await new Promise((resolve, reject) => {
-                            core.gun.user().auth(pair, (ack) => {
+                            core.zen.user().auth(pair, (ack) => {
                                 if (ack.err) {
                                     reject(new Error(`Pair authentication failed: ${ack.err}`));
                                     return;
@@ -196,7 +196,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             if (result.success) {
                 let userPub = result.userPub || "";
                 if (!userPub && isShogunCore(core)) {
-                    userPub = ((_b = (_a = core.gun.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub) || "";
+                    userPub = ((_b = (_a = core.zen.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub) || "";
                 }
                 const displayName = result.alias || username || userPub.slice(0, 8) + "...";
                 setIsLoggedIn(true);
@@ -326,7 +326,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             if (result.success) {
                 let userPub = result.userPub || "";
                 if (!userPub && isShogunCore(core)) {
-                    userPub = ((_c = (_b = core.gun.user()) === null || _b === void 0 ? void 0 : _b.is) === null || _c === void 0 ? void 0 : _c.pub) || "";
+                    userPub = ((_c = (_b = core.zen.user()) === null || _b === void 0 ? void 0 : _b.is) === null || _c === void 0 ? void 0 : _c.pub) || "";
                 }
                 const displayName = result.alias || username || userPub.slice(0, 8) + "...";
                 setIsLoggedIn(true);
@@ -376,14 +376,14 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                 newProviderUrl = provider;
             }
             if (newProviderUrl) {
-                const gun = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.gun) || (core === null || core === void 0 ? void 0 : core.gun);
-                if (gun && typeof gun.opt === "function") {
+                const zen = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.zen) || (core === null || core === void 0 ? void 0 : core.zen);
+                if (zen && typeof zen.opt === "function") {
                     try {
-                        gun.opt({ peers: [newProviderUrl] });
+                        zen.opt({ peers: [newProviderUrl] });
                         return true;
                     }
                     catch (e) {
-                        console.error("Error adding peer via gun.opt:", e);
+                        console.error("Error adding peer via zen.opt:", e);
                         return false;
                     }
                 }
@@ -407,8 +407,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         }
         return undefined;
     }, [core]);
-    // Export Gun pair functionality
-    const exportGunPair = React.useCallback(async (password) => {
+    // Export Zen pair functionality
+    const exportZenPair = React.useCallback(async (password) => {
+        var _a;
         if (!core) {
             throw new Error("SDK not initialized");
         }
@@ -416,16 +417,17 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             throw new Error("User not authenticated");
         }
         try {
-            const pair = sessionStorage.getItem("gun/pair") || sessionStorage.getItem("pair");
+            const pair = sessionStorage.getItem("zen/pair") || sessionStorage.getItem("pair");
             if (!pair) {
-                throw new Error("No Gun pair available for current user");
+                throw new Error("No Zen pair available for current user");
             }
             let pairData = JSON.stringify(pair);
             // If password provided, encrypt the pair
             if (password && password.trim()) {
-                // Use Gun's SEA for encryption if available
-                if (window.SEA && window.SEA.encrypt) {
-                    pairData = await window.SEA.encrypt(pairData, password);
+                // Use core's zen SEA for encryption if available
+                const sea = ((_a = core.zen) === null || _a === void 0 ? void 0 : _a.SEA) || window.SEA;
+                if (sea && sea.encrypt) {
+                    pairData = await sea.encrypt(pairData, password);
                 }
                 else {
                     console.warn("SEA encryption not available, exporting unencrypted");
@@ -434,11 +436,12 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             return pairData;
         }
         catch (error) {
-            throw new Error(`Failed to export Gun pair: ${error.message}`);
+            throw new Error(`Failed to export Zen pair: ${error.message}`);
         }
     }, [core, isLoggedIn]);
-    // Import Gun pair functionality
-    const importGunPair = React.useCallback(async (pairData, password) => {
+    // Import Zen pair functionality
+    const importZenPair = React.useCallback(async (pairData, password) => {
+        var _a;
         if (!core) {
             throw new Error("SDK not initialized");
         }
@@ -446,8 +449,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             let dataString = pairData;
             // If password provided, decrypt the pair
             if (password && password.trim()) {
-                if (window.SEA && window.SEA.decrypt) {
-                    dataString = await window.SEA.decrypt(pairData, password);
+                const sea = ((_a = core.zen) === null || _a === void 0 ? void 0 : _a.SEA) || window.SEA;
+                if (sea && sea.decrypt) {
+                    dataString = await sea.decrypt(pairData, password);
                     if (!dataString) {
                         throw new Error("Failed to decrypt pair data - wrong password?");
                     }
@@ -466,11 +470,11 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             return result.success;
         }
         catch (error) {
-            throw new Error(`Failed to import Gun pair: ${error.message}`);
+            throw new Error(`Failed to import Zen pair: ${error.message}`);
         }
     }, [core, login]);
-    // Plugin initialization removed - GunAdvancedPlugin no longer available
-    const gunPlugin = null;
+    // Plugin initialization removed
+    const zenPlugin = null;
     const completePendingSignup = React.useCallback(() => {
         setHasPendingSignup(false);
     }, [setHasPendingSignup]);
@@ -486,19 +490,19 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         logout,
         hasPlugin,
         getPlugin,
-        exportGunPair,
-        importGunPair,
+        exportZenPair,
+        importZenPair,
         setProvider,
-        gunPlugin,
+        zenPlugin,
         completePendingSignup,
         hasPendingSignup,
         setHasPendingSignup,
         put: async (path, data) => {
             if (isShogunCore(core)) {
-                if (!core.gun)
-                    throw new Error("Gun instance not available");
+                if (!core.zen)
+                    throw new Error("Zen instance not available");
                 return new Promise((resolve, reject) => {
-                    core.gun.get(path).put(data, (ack) => {
+                    core.zen.get(path).put(data, (ack) => {
                         if (ack.err)
                             reject(new Error(ack.err));
                         else
@@ -512,18 +516,18 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         },
         get: (path) => {
             if (isShogunCore(core)) {
-                if (!core.gun)
+                if (!core.zen)
                     return null;
-                return core.gun.get(path);
+                return core.zen.get(path);
             }
             return null;
         },
         remove: async (path) => {
             if (isShogunCore(core)) {
-                if (!core.gun)
-                    throw new Error("Gun instance not available");
+                if (!core.zen)
+                    throw new Error("Zen instance not available");
                 return new Promise((resolve, reject) => {
-                    core.gun.get(path).put(null, (ack) => {
+                    core.zen.get(path).put(null, (ack) => {
                         if (ack.err)
                             reject(new Error(ack.err));
                         else
@@ -546,9 +550,9 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         logout,
         hasPlugin,
         getPlugin,
-        exportGunPair,
-        importGunPair,
-        gunPlugin,
+        exportZenPair,
+        importZenPair,
+        zenPlugin,
         completePendingSignup,
         hasPendingSignup,
         setHasPendingSignup,
@@ -599,7 +603,7 @@ const ExportIcon = () => (React.createElement("svg", { xmlns: "http://www.w3.org
 // Component for Shogun login button
 export const ShogunButton = (() => {
     const Button = () => {
-        const { isLoggedIn, username, logout, login, signUp, core, options, exportGunPair, importGunPair, hasPlugin, hasPendingSignup, setHasPendingSignup, } = useShogun();
+        const { isLoggedIn, username, logout, login, signUp, core, options, exportZenPair, importZenPair, hasPlugin, hasPendingSignup, setHasPendingSignup, } = useShogun();
         // Form states
         const [modalIsOpen, setModalIsOpen] = useState(false);
         const [formUsername, setFormUsername] = useState("");
@@ -830,7 +834,7 @@ export const ShogunButton = (() => {
             setError("");
             setLoading(true);
             try {
-                const pairData = await exportGunPair(exportPassword || undefined);
+                const pairData = await exportZenPair(exportPassword || undefined);
                 setExportedPair(pairData);
                 // Copy to clipboard
                 if (navigator.clipboard) {
@@ -853,7 +857,7 @@ export const ShogunButton = (() => {
                 if (!importPairData.trim()) {
                     throw new Error("Please enter pair data");
                 }
-                const success = await importGunPair(importPairData, importPassword || undefined);
+                const success = await importZenPair(importPairData, importPassword || undefined);
                 if (success) {
                     setShowImportSuccess(true);
                     // Chiudiamo il modal con un piccolo delay per permettere all'utente di vedere il successo
@@ -948,7 +952,7 @@ export const ShogunButton = (() => {
                 "Login with Seed phrase")),
             formMode === "login" && (React.createElement("button", { type: "button", className: "shogun-auth-option-button", onClick: () => setAuthView("import"), disabled: loading },
                 React.createElement(ImportIcon, null),
-                "Import Gun Pair"))));
+                "Import Zen Pair"))));
         const renderPasswordForm = () => (React.createElement("form", { onSubmit: handleSubmit, className: "shogun-auth-form" },
             React.createElement("div", { className: "shogun-form-group" },
                 React.createElement("label", { htmlFor: "username" },

@@ -13,9 +13,9 @@ type ShogunContextType = {
     setProvider: (provider: any) => boolean;
     hasPlugin: (name: string) => boolean;
     getPlugin: <T>(name: string) => T | undefined;
-    exportGunPair: (password?: string) => Promise<string>;
-    importGunPair: (pairData: string, password?: string) => Promise<boolean>;
-    gunPlugin: null;
+    exportZenPair: (password?: string) => Promise<string>;
+    importZenPair: (pairData: string, password?: string) => Promise<boolean>;
+    zenPlugin: null;
     put: (path: string, data: any) => Promise<void>;
     get: (path: string) => any;
     remove: (path: string) => Promise<void>;

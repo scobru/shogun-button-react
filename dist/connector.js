@@ -1,12 +1,12 @@
 import { ShogunCore } from "shogun-core";
 export async function shogunConnector(options) {
-    const { gunInstance, appName, timeouts, webauthn, nostr, web3, challenge, showWebauthn, showNostr, showMetamask, showChallenge, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, crypto, ...restOptions } = options;
+    const { zenInstance, appName, timeouts, webauthn, nostr, web3, challenge, showWebauthn, showNostr, showMetamask, showChallenge, darkMode, enableGunDebug = true, enableConnectionMonitoring = true, defaultPageSize = 20, connectionTimeout = 10000, debounceInterval = 100, crypto, ...restOptions } = options;
     let core = null;
-    let gun = null;
-    gun = gunInstance;
-    // Create ShogunCore with gunInstance (required in v2.0.0)
+    let zen = null;
+    zen = zenInstance;
+    // Create ShogunCore with zenInstance
     core = new ShogunCore({
-        gunInstance: gun,
+        zenInstance: zen,
         webauthn: (webauthn === null || webauthn === void 0 ? void 0 : webauthn.enabled) ? {
             enabled: true,
             rpName: appName || "Shogun App",
@@ -18,9 +18,9 @@ export async function shogunConnector(options) {
         timeouts,
         silent: false, // Enable console logs for debugging
     });
-    // Note: ShogunCore v2.0.0 initializes automatically in constructor
+    // Note: ShogunCore initializes automatically in constructor
     // No need to call initialize() separately
-    console.log(`[DEBUG] ShogunConnector: ShogunCore initialized with gunInstance`);
+    console.log(`[DEBUG] ShogunConnector: ShogunCore initialized with zenInstance`);
     const setProvider = (provider) => {
         var _a;
         if (!core) {
@@ -35,14 +35,14 @@ export async function shogunConnector(options) {
                 newProviderUrl = provider;
             }
             if (newProviderUrl) {
-                const gun = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.gun) || (core === null || core === void 0 ? void 0 : core.gun);
-                if (gun && typeof gun.opt === "function") {
+                const zen = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.zen) || (core === null || core === void 0 ? void 0 : core.zen);
+                if (zen && typeof zen.opt === "function") {
                     try {
-                        gun.opt({ peers: [newProviderUrl] });
+                        zen.opt({ peers: [newProviderUrl] });
                         return true;
                     }
                     catch (e) {
-                        console.error("Error adding peer via gun.opt:", e);
+                        console.error("Error adding peer via zen.opt:", e);
                         return false;
                     }
                 }
@@ -56,9 +56,9 @@ export async function shogunConnector(options) {
     };
     const getCurrentProviderUrl = () => {
         var _a;
-        const gun = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.gun) || (core === null || core === void 0 ? void 0 : core.gun);
+        const zen = ((_a = core === null || core === void 0 ? void 0 : core.db) === null || _a === void 0 ? void 0 : _a.zen) || (core === null || core === void 0 ? void 0 : core.zen);
         try {
-            const peersObj = gun && gun.back ? gun.back("opt.peers") : undefined;
+            const peersObj = zen && zen.back ? zen.back("opt.peers") : undefined;
             const urls = peersObj && typeof peersObj === "object" ? Object.keys(peersObj) : [];
             return urls.length > 0 ? urls[0] : null;
         }
@@ -90,6 +90,6 @@ export async function shogunConnector(options) {
         getCurrentProviderUrl,
         registerPlugin,
         hasPlugin,
-        gunPlugin: null,
+        zenPlugin: null,
     };
 }

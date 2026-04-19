@@ -10,14 +10,14 @@ A comprehensive React component library for seamless integration of Shogun authe
 - 🎨 **Customizable UI** - Modern, responsive design with dark mode support
 - 🔒 **Multi-Authentication** - Support for Password, MetaMask, WebAuthn, Nostr, and ZK-Proof
 - 🛡️ **WebAuthn Recovery** - Restore hardware credentials on new devices with saved seed phrases
-- 🔑 **Account Management** - Export/import Gun pairs for account backup and recovery
+- 🔑 **Account Management** - Export/import Zen pairs for account backup and recovery
 - 🕵️ **ZK-Proof Trapdoor Handoff** - Display and copy the generated trapdoor during signup to keep anonymous identities portable
 - 📱 **Responsive Design** - Works seamlessly across all device sizes
 - 🌍 **TypeScript Support** - Full type safety and IntelliSense support
-- 🔌 **Plugin System** - Advanced Gun operations with custom hooks
+- 🔌 **Plugin System** - Advanced Zen operations with custom hooks
 - 📊 **Real-time Data** - Reactive data synchronization with RxJS observables
-- ✅ **Robust Foundation** - Built on shogun-core v5.0.0 with 99.86% test coverage
-- 🗄️ **Flexible Storage** - Support for GunDB, SQLite, PostgreSQL, MongoDB via TransportLayer
+- ✅ **Robust Foundation** - Built on shogun-core v6.9.9 with high test coverage
+- 🗄️ **Flexible Storage** - Support for Zen architecture and legacy GunDB via TransportLayer
 
 ## 📦 Requirements
 
@@ -60,9 +60,9 @@ function App() {
     showWebauthn: true,
     showNostr: true,
     showZkProof: true,
-    // Optional peers
+    // Optional Zen relay peers
     peers: [
-      "https://gun-manhattan.herokuapp.com/gun"
+      "https://zen-relay.com"
     ],
   });
 
@@ -135,9 +135,9 @@ const { core, options } = shogunConnector({
 
   // Use new transport layer system
   transport: {
-    type: "gun", // or "sqlite", "postgresql", "mongodb", "custom"
+    type: "zen", // or "sqlite", "postgresql", "mongodb", "custom"
     options: {
-      peers: ["https://gun-manhattan.herokuapp.com/gun"],
+      peers: ["https://zen-relay.com"],
       // Additional transport-specific options
     }
   },
@@ -222,7 +222,7 @@ The main button component that provides a complete authentication UI with modal 
 **Features:**
 - Multi-method authentication selection
 - Password-based login/signup with recovery
-- Gun pair export/import for account backup
+- Zen pair export/import for account backup
 - Responsive modal design
 - Error handling and user feedback
 
@@ -251,8 +251,8 @@ function UserProfile() {
     getPlugin,
 
     // Account management
-    exportGunPair,
-    importGunPair,
+    exportZenPair,
+    importZenPair,
 
     // Data operations
     observe,
@@ -260,12 +260,12 @@ function UserProfile() {
     get,
     remove,
 
-    // Advanced Gun hooks
-    useGunState,
-    useGunCollection,
-    useGunConnection,
-    useGunDebug,
-    useGunRealtime,
+    // Advanced Zen hooks
+    useZenState,
+    useZenCollection,
+    useZenConnection,
+    useZenDebug,
+    useZenRealtime,
   } = useShogun();
 
   // Example: Login with different methods
@@ -330,7 +330,7 @@ function UserProfile() {
   // Example: Account backup and recovery
   const handleExportAccount = async () => {
     try {
-      const pairData = await exportGunPair("my-secure-password");
+      const pairData = await exportZenPair("my-secure-password");
       console.log("Account exported successfully!");
       
       // Save to file or copy to clipboard
@@ -345,7 +345,7 @@ function UserProfile() {
 
   const handleImportAccount = async (pairData: string, password?: string) => {
     try {
-      const success = await importGunPair(pairData, password);
+      const success = await importZenPair(pairData, password);
       if (success) {
         console.log("Account imported successfully!");
       }
@@ -669,12 +669,12 @@ interface ShogunConnectorOptions {
   // Network configuration (backward compatible)
   peers?: string[];
   authToken?: string;
-  gunInstance?: IGunInstance<any>;
-  gunOptions?: any;
+  zenInstance?: IZenInstance;
+  zenOptions?: any;
 
   // Transport layer configuration (new in v5.0.0)
   transport?: {
-    type: "gun" | "sqlite" | "postgresql" | "mongodb" | "custom";
+    type: "zen" | "sqlite" | "postgresql" | "mongodb" | "custom";
     options?: any;
     customTransport?: any;
   };
@@ -686,7 +686,7 @@ interface ShogunConnectorOptions {
     operation?: number;
   };
 
-  // Gun Advanced Plugin configuration
+  // Zen configuration
   enableGunDebug?: boolean;
   enableConnectionMonitoring?: boolean;
   defaultPageSize?: number;
@@ -705,7 +705,7 @@ interface ShogunConnectorResult {
   getCurrentProviderUrl: () => string | null;
   registerPlugin: (plugin: any) => boolean;
   hasPlugin: (name: string) => boolean;
-  gunPlugin: null;
+  zenPlugin: null;
 }
 ```
 

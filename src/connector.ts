@@ -8,7 +8,7 @@ export async function shogunConnector(
   options: ShogunConnectorOptions
 ): Promise<ShogunConnectorResult> {
   const {
-    gunInstance,
+    zenInstance,
     appName,
     timeouts,
     webauthn,
@@ -30,13 +30,13 @@ export async function shogunConnector(
   } = options;
 
   let core: ShogunCore | null = null;
-  let gun: any = null;
+  let zen: any = null;
 
-  gun = gunInstance;
+  zen = zenInstance;
 
-  // Create ShogunCore with gunInstance (required in v2.0.0)
+  // Create ShogunCore with zenInstance
   core = new ShogunCore({
-    gunInstance: gun,
+    zenInstance: zen,
     webauthn: webauthn?.enabled ? {
       enabled: true,
       rpName: appName || "Shogun App",
@@ -49,9 +49,9 @@ export async function shogunConnector(
     silent: false, // Enable console logs for debugging
   });
 
-  // Note: ShogunCore v2.0.0 initializes automatically in constructor
+  // Note: ShogunCore initializes automatically in constructor
   // No need to call initialize() separately
-  console.log(`[DEBUG] ShogunConnector: ShogunCore initialized with gunInstance`);
+  console.log(`[DEBUG] ShogunConnector: ShogunCore initialized with zenInstance`);
 
   const setProvider = (provider: any): boolean => {
     if (!core) {
@@ -67,13 +67,13 @@ export async function shogunConnector(
       }
 
       if (newProviderUrl) {
-        const gun: any = (core as any)?.db?.gun || (core as any)?.gun;
-        if (gun && typeof gun.opt === "function") {
+        const zen: any = (core as any)?.db?.zen || (core as any)?.zen;
+        if (zen && typeof zen.opt === "function") {
           try {
-            gun.opt({ peers: [newProviderUrl] });
+            zen.opt({ peers: [newProviderUrl] });
             return true;
           } catch (e) {
-            console.error("Error adding peer via gun.opt:", e);
+            console.error("Error adding peer via zen.opt:", e);
             return false;
           }
         }
@@ -86,9 +86,9 @@ export async function shogunConnector(
   };
 
   const getCurrentProviderUrl = (): string | null => {
-    const gun: any = (core as any)?.db?.gun || (core as any)?.gun;
+    const zen: any = (core as any)?.db?.zen || (core as any)?.zen;
     try {
-      const peersObj = gun && gun.back ? gun.back("opt.peers") : undefined;
+      const peersObj = zen && zen.back ? zen.back("opt.peers") : undefined;
       const urls =
         peersObj && typeof peersObj === "object" ? Object.keys(peersObj) : [];
       return urls.length > 0 ? urls[0] : null;
@@ -123,6 +123,6 @@ export async function shogunConnector(
     getCurrentProviderUrl,
     registerPlugin,
     hasPlugin,
-    gunPlugin: null,
+    zenPlugin: null,
   };
 }

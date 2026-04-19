@@ -13,7 +13,8 @@
     "react",
     "react-hook",
     "hooks",
-    "authentication"
+    "authentication",
+    "zen"
   ],
   "author": "Scobru",
   "license": "MIT",
@@ -40,7 +41,7 @@
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
     "ethers": "^6.13.5",
-    "gun": "git+https://github.com/scobru/gun",
+    "zen": "https://github.com/scobru/zen",
     "prettier": "^3.5.3",
     "process": "^0.11.10",
     "shogun-core": "git+https://github.com/scobru/shogun-core",
