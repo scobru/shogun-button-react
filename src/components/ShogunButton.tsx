@@ -167,7 +167,7 @@ export function ShogunButtonProvider({
     if (isShogunCore(core)) {
       isLoggedIn = core.isLoggedIn();
       if (isLoggedIn) {
-        pub = core.zen.user()?.is?.pub;
+        pub = core.user?.is?.pub;
       }
     }
 
@@ -218,24 +218,7 @@ export function ShogunButtonProvider({
             }
 
             if (isShogunCore(core)) {
-              result = await new Promise((resolve, reject) => {
-                core.zen.user().auth(pair, (ack: any) => {
-                  if (ack.err) {
-                    reject(new Error(`Pair authentication failed: ${ack.err}`));
-                    return;
-                  }
-
-                  const pub = ack.pub || pair.pub;
-                  const alias = ack.alias || `user_${pub?.substring(0, 8)}`;
-
-                  resolve({
-                    success: true,
-                    userPub: pub,
-                    alias: alias,
-                    method: "pair",
-                  } as AuthResult);
-                });
-              });
+              result = await core.login("pair", "", pair);
             } else {
               throw new Error("Pair authentication requires ShogunCore");
             }
@@ -324,7 +307,7 @@ export function ShogunButtonProvider({
         if (result.success) {
           let userPub = result.userPub || "";
           if (!userPub && isShogunCore(core)) {
-            userPub = core.zen.user()?.is?.pub || "";
+            userPub = core.user?.is?.pub || "";
           }
           const displayName =
             result.alias || username || userPub.slice(0, 8) + "...";
@@ -478,7 +461,7 @@ export function ShogunButtonProvider({
         if (result.success) {
           let userPub = result.userPub || "";
           if (!userPub && isShogunCore(core)) {
-            userPub = core.zen.user()?.is?.pub || "";
+            userPub = core.user?.is?.pub || "";
           }
           const displayName =
             result.alias || username || userPub.slice(0, 8) + "...";
