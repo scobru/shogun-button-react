@@ -51,7 +51,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
         if (isShogunCore(core)) {
             isLoggedIn = core.isLoggedIn();
             if (isLoggedIn) {
-                pub = (_b = (_a = core.zen.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub;
+                pub = (_b = (_a = core.user) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub;
             }
         }
         if (isLoggedIn && pub) {
@@ -91,22 +91,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
                         throw new Error("Invalid pair data provided");
                     }
                     if (isShogunCore(core)) {
-                        result = await new Promise((resolve, reject) => {
-                            core.zen.user().auth(pair, (ack) => {
-                                if (ack.err) {
-                                    reject(new Error(`Pair authentication failed: ${ack.err}`));
-                                    return;
-                                }
-                                const pub = ack.pub || pair.pub;
-                                const alias = ack.alias || `user_${pub === null || pub === void 0 ? void 0 : pub.substring(0, 8)}`;
-                                resolve({
-                                    success: true,
-                                    userPub: pub,
-                                    alias: alias,
-                                    method: "pair",
-                                });
-                            });
-                        });
+                        result = await core.login("pair", "", pair);
                     }
                     else {
                         throw new Error("Pair authentication requires ShogunCore");
@@ -196,7 +181,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             if (result.success) {
                 let userPub = result.userPub || "";
                 if (!userPub && isShogunCore(core)) {
-                    userPub = ((_b = (_a = core.zen.user()) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub) || "";
+                    userPub = ((_b = (_a = core.user) === null || _a === void 0 ? void 0 : _a.is) === null || _b === void 0 ? void 0 : _b.pub) || "";
                 }
                 const displayName = result.alias || username || userPub.slice(0, 8) + "...";
                 setIsLoggedIn(true);
@@ -326,7 +311,7 @@ export function ShogunButtonProvider({ children, core, options, onLoginSuccess, 
             if (result.success) {
                 let userPub = result.userPub || "";
                 if (!userPub && isShogunCore(core)) {
-                    userPub = ((_c = (_b = core.zen.user()) === null || _b === void 0 ? void 0 : _b.is) === null || _c === void 0 ? void 0 : _c.pub) || "";
+                    userPub = ((_c = (_b = core.user) === null || _b === void 0 ? void 0 : _b.is) === null || _c === void 0 ? void 0 : _c.pub) || "";
                 }
                 const displayName = result.alias || username || userPub.slice(0, 8) + "...";
                 setIsLoggedIn(true);
